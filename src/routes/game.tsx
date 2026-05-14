@@ -95,8 +95,8 @@ function Game() {
       <div className="flex flex-1 lg:flex-row flex-col min-h-0">
         <main className="game-stage relative flex-1 flex flex-col min-h-0">
           {/* Table arena — seated like the reference, with explicit space above and a compact hand zone below */}
-          <div className="table-arena flex-1 min-h-0 flex items-center justify-center px-4 sm:px-8 lg:px-10 pt-[8.25rem] sm:pt-[9rem] pb-[8.25rem] sm:pb-[9.25rem]">
-            <div className="relative w-full max-w-[980px] mx-auto">
+          <div className="table-arena absolute inset-0 flex items-center justify-center px-4 sm:px-8 lg:px-10 pt-[8.25rem] sm:pt-[9rem] pb-[10rem] sm:pb-[10.5rem]">
+            <div className="relative w-[min(78vw,980px)] lg:w-[min(70vw,960px)] mx-auto">
               {/* Outer ambient halo — soft glow bleed around the table */}
               <div
                 aria-hidden
@@ -212,10 +212,10 @@ function Game() {
                   const pos = seatPos[i] ?? "top";
                   const cls =
                     pos === "top"
-                      ? "top-0 left-1/2 -translate-x-1/2 -translate-y-[70%]"
+                      ? "top-0 left-1/2 -translate-x-1/2 -translate-y-[48%]"
                       : pos === "left"
-                        ? "left-0 top-1/2 -translate-x-[82%] -translate-y-1/2"
-                        : "right-0 top-1/2 translate-x-[82%] -translate-y-1/2";
+                        ? "left-0 top-1/2 -translate-x-[58%] -translate-y-1/2"
+                        : "right-0 top-1/2 translate-x-[58%] -translate-y-1/2";
                   return (
                     <div
                       key={p.id}
@@ -230,7 +230,7 @@ function Game() {
                 })}
 
                 {/* You seat — bottom of the table */}
-                <div className="absolute z-10 left-1/2 bottom-0 -translate-x-1/2 translate-y-[66%]">
+                <div className="absolute z-10 left-1/2 bottom-0 -translate-x-1/2 translate-y-[60%]">
                   <Opponent player={YOU} placement="bottom" compactMobile self />
                 </div>
               </div>
@@ -238,7 +238,7 @@ function Game() {
           </div>
 
           {/* Bottom action bar + hand — blends into scene with vertical gradient fade */}
-          <div className="sticky bottom-0 z-20 bg-gradient-to-t from-background via-background/72 to-transparent pb-safe">
+          <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-background via-background/72 to-transparent pb-safe">
             {/* Floating action group */}
             <div className="flex items-center justify-between gap-3 px-4 pt-1 pb-0">
               <span
