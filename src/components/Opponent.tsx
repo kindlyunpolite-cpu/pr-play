@@ -26,19 +26,37 @@ interface SeatProps {
   placement?: SeatPlacement;
   /** Smaller portrait + tighter panel, for cramped layouts. */
   compact?: boolean;
+  /** Auto-shrink on small viewports (sm and below). */
+  compactMobile?: boolean;
+  /** Self/own player styling — slightly less dominant. */
+  self?: boolean;
 }
 
 /**
  * Seat: large character portrait that extends above an attached info panel.
  * Designed to sit on the edge of the felt with the portrait overflowing outward.
  */
-export function Opponent({ player, placement = "top", compact = false }: SeatProps) {
+export function Opponent({
+  player,
+  placement = "top",
+  compact = false,
+  compactMobile = false,
+  self = false,
+}: SeatProps) {
   const [expanded, setExpanded] = useState(false);
   const online = player.online ?? true;
   const accent = player.accent ?? "oklch(0.82 0.14 85)";
 
-  const portraitSize = compact ? "h-24 w-20" : "h-32 w-28 sm:h-36 sm:w-32";
-  const panelWidth = compact ? "min-w-[150px] max-w-[170px]" : "min-w-[180px] max-w-[210px]";
+  const portraitSize = compact
+    ? "h-20 w-16"
+    : compactMobile
+      ? (self ? "h-20 w-16 sm:h-28 sm:w-24" : "h-24 w-20 sm:h-36 sm:w-32")
+      : "h-32 w-28 sm:h-36 sm:w-32";
+  const panelWidth = compact
+    ? "min-w-[140px] max-w-[160px]"
+    : compactMobile
+      ? (self ? "min-w-[150px] max-w-[170px] sm:min-w-[170px] sm:max-w-[200px]" : "min-w-[150px] max-w-[170px] sm:min-w-[180px] sm:max-w-[210px]")
+      : "min-w-[180px] max-w-[210px]";
 
   return (
     <div
