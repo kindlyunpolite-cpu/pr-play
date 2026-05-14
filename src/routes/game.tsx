@@ -77,77 +77,79 @@ function Game() {
 
       <div className="flex flex-1 lg:flex-row flex-col min-h-0">
         <main className="relative flex-1 flex flex-col min-h-0">
-          {/* Opponents row — compact, scrollable if 4 */}
-          <div className="px-3 pt-2.5 pb-1.5 flex items-center gap-2 overflow-x-auto no-scrollbar">
+          {/* Opponents — evenly spaced around the top of the table */}
+          <div className="px-3 pt-2.5 pb-1 flex items-center justify-around gap-2 overflow-x-auto no-scrollbar">
             {OPPONENTS.map((p) => (
               <Opponent key={p.id} player={p} compact />
             ))}
           </div>
 
-          {/* Turn banner */}
-          <div className="px-3">
-            <div className="mx-auto inline-flex w-full items-center justify-center gap-2.5 rounded-full border border-border/50 bg-card/60 backdrop-blur-md px-3.5 py-1.5 shadow-sm">
-              <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-60 animate-ping" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
-              </span>
-              <span className="text-xs">
-                <span className="font-semibold">{activePlayer?.name ?? "—"}</span>
-                <span className="text-muted-foreground"> is playing</span>
-              </span>
-              <span className="h-3 w-px bg-border/70" />
-              <Timer className="h-3 w-3 text-muted-foreground" />
-              <span className="text-[11px] font-mono tabular-nums text-muted-foreground">0:18</span>
-            </div>
-          </div>
+          {/* Felt center area — fluid, with floating chips */}
+          <div className="flex-1 min-h-0 px-3 py-2.5">
+            <div
+              className="felt-table relative h-full w-full rounded-[28px] flex items-center justify-center p-4 overflow-hidden"
+              style={{
+                backgroundImage:
+                  "radial-gradient(ellipse at center, color-mix(in oklab, var(--primary) 14%, transparent) 0%, transparent 62%)",
+              }}
+            >
+              {/* Top-left: turn timer */}
+              <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-background/55 backdrop-blur-md px-2.5 py-1 ring-1 ring-border/40 shadow-sm">
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-60 animate-ping" />
+                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
+                </span>
+                <span className="text-[11px] font-semibold truncate max-w-[7rem]">
+                  {activePlayer?.name ?? "You"}
+                </span>
+                <span className="h-3 w-px bg-border/70" />
+                <Timer className="h-3 w-3 text-muted-foreground" />
+                <span className="text-[11px] font-mono tabular-nums text-muted-foreground">0:18</span>
+              </div>
 
-          {/* Felt center area — fluid */}
-          <div className="flex-1 min-h-0 px-3 py-3">
-            <div className="felt-table h-full w-full rounded-[28px] flex items-center justify-center p-4">
-              <div className="flex flex-col items-center gap-3">
-                <div className="flex items-end gap-5 sm:gap-7">
-                  {/* Draw deck */}
-                  <button
-                    type="button"
-                    onClick={handleDraw}
-                    disabled={!myTurn}
-                    className="flex flex-col items-center gap-1.5 rounded-2xl p-1 -m-1 transition active:scale-95 disabled:opacity-60 disabled:active:scale-100"
-                    aria-label="Draw a card"
-                  >
-                    <CardStack
-                      key={drawNonce}
-                      count={3}
-                      maxVisible={3}
-                      size="md"
-                      layout="stack"
-                      className={drawNonce ? "animate-card-draw" : ""}
-                    />
-                    <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/80 tabular-nums">
-                      Deck · 24
-                    </span>
-                  </button>
+              {/* Top-right: active suit */}
+              <div className="absolute top-3 right-3 flex items-center gap-1.5 rounded-full bg-background/55 backdrop-blur-md px-2.5 py-1 ring-1 ring-border/40 shadow-sm">
+                <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
+                  Suit
+                </span>
+                <SuitBadge suit={activeSuit} size="sm" />
+              </div>
 
-                  {/* Discard pile */}
-                  <div className="flex flex-col items-center gap-1.5">
-                    <div key={pileNonce} className={pileNonce ? "animate-pile-bump" : ""}>
-                      <DiscardPile
-                        cards={[{ suit: "clubs", rank: "8" }, TOP_DISCARD]}
-                        size="md"
-                        recent
-                      />
-                    </div>
-                    <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/80">
-                      Pile
-                    </span>
-                  </div>
-                </div>
-
-                {/* Active suit */}
-                <div className="flex items-center gap-2.5 rounded-full bg-background/50 backdrop-blur-md px-3 py-1.5 ring-1 ring-border/40">
-                  <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-                    Suit
+              {/* Deck + pile, centered with generous spacing */}
+              <div className="flex items-center gap-8 sm:gap-12 md:gap-16">
+                {/* Draw deck */}
+                <button
+                  type="button"
+                  onClick={handleDraw}
+                  disabled={!myTurn}
+                  className="flex flex-col items-center gap-2 rounded-2xl p-1 -m-1 transition active:scale-95 disabled:opacity-60 disabled:active:scale-100"
+                  aria-label="Draw a card"
+                >
+                  <CardStack
+                    key={drawNonce}
+                    count={3}
+                    maxVisible={3}
+                    size="md"
+                    layout="stack"
+                    className={drawNonce ? "animate-card-draw" : ""}
+                  />
+                  <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/80 tabular-nums">
+                    Deck · 24
                   </span>
-                  <SuitBadge suit={activeSuit} size="sm" />
+                </button>
+
+                {/* Discard pile */}
+                <div className="flex flex-col items-center gap-2">
+                  <div key={pileNonce} className={pileNonce ? "animate-pile-bump" : ""}>
+                    <DiscardPile
+                      cards={[{ suit: "clubs", rank: "8" }, TOP_DISCARD]}
+                      size="md"
+                      recent
+                    />
+                  </div>
+                  <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/80">
+                    Pile
+                  </span>
                 </div>
               </div>
             </div>
