@@ -164,4 +164,17 @@
     50% { box-shadow: 0 0 0 1.5px var(--color-gold), 0 0 0 8px oklch(0.82 0.14 85 / 0); }
   }
   .animate-turn { animation: pulse-turn 2s ease-out infinite; }
+
+  @keyframes card-played {
+    0% { transform: translateY(-30px) rotate(15deg) scale(1.05); opacity: 0; }
+    60% { transform: translateY(2px) rotate(2deg) scale(1.02); opacity: 1; }
+    100% { transform: rotate(3deg) scale(1); opacity: 1; }
+  }
+  .animate-card-played { animation: card-played 420ms cubic-bezier(0.22, 1, 0.36, 1); }
+
+  @keyframes card-active {
+    0%, 100% { box-shadow: 0 0 0 2px var(--color-gold), 0 0 0 0 oklch(0.82 0.14 85 / 0.4); }
+    50% { box-shadow: 0 0 0 2px var(--color-gold), 0 0 14px 4px oklch(0.82 0.14 85 / 0.35); }
+  }
+  .animate-card-active { animation: card-active 1.6s ease-in-out infinite; }
 }

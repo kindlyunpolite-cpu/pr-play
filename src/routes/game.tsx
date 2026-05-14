@@ -2,7 +2,13 @@ import { createFileRoute } from "@tanstack/react-router";
 import { TopNav } from "@/components/TopNav";
 import { ChatPanel } from "@/components/ChatPanel";
 import { Opponent, type OpponentData } from "@/components/Opponent";
-import { PlayingCard, SuitBadge, type CardData } from "@/components/PlayingCard";
+import {
+  PlayingCard,
+  CardStack,
+  DiscardPile,
+  SuitBadge,
+  type CardData,
+} from "@/components/cards";
 import { useState } from "react";
 import { Timer } from "lucide-react";
 
@@ -25,11 +31,11 @@ const OPPONENTS: OpponentData[] = [
 const HAND: CardData[] = [
   { suit: "hearts", rank: "7" },
   { suit: "hearts", rank: "K" },
-  { suit: "leaves", rank: "9" },
-  { suit: "bells", rank: "10" },
-  { suit: "acorns", rank: "A" },
+  { suit: "clubs", rank: "9" },
+  { suit: "diamonds", rank: "10" },
+  { suit: "spades", rank: "A" },
   { suit: "hearts", rank: "J" },
-  { suit: "bells", rank: "Q" },
+  { suit: "diamonds", rank: "Q" },
 ];
 
 const TOP_DISCARD: CardData = { suit: "hearts", rank: "10" };
@@ -77,11 +83,7 @@ function Game() {
                 <div className="flex items-end gap-5 sm:gap-7">
                   {/* Draw deck */}
                   <div className="flex flex-col items-center gap-1.5">
-                    <div className="relative h-[6.2rem] w-[4.25rem]">
-                      <PlayingCard faceDown size="md" className="absolute top-1 left-1 opacity-50" />
-                      <PlayingCard faceDown size="md" className="absolute top-0.5 left-0.5 opacity-75" />
-                      <PlayingCard faceDown size="md" className="absolute top-0 left-0" />
-                    </div>
+                    <CardStack count={3} maxVisible={3} size="md" layout="stack" />
                     <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/80 tabular-nums">
                       Deck · 24
                     </span>
@@ -89,14 +91,11 @@ function Game() {
 
                   {/* Discard pile */}
                   <div className="flex flex-col items-center gap-1.5">
-                    <div className="relative h-[6.2rem] w-[4.25rem]">
-                      <PlayingCard
-                        card={{ suit: "leaves", rank: "8" }}
-                        size="md"
-                        className="absolute top-0 left-0 -rotate-6 opacity-60"
-                      />
-                      <PlayingCard card={TOP_DISCARD} size="md" className="absolute top-0 left-0 rotate-3" />
-                    </div>
+                    <DiscardPile
+                      cards={[{ suit: "clubs", rank: "8" }, TOP_DISCARD]}
+                      size="md"
+                      recent
+                    />
                     <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/80">
                       Pile
                     </span>
@@ -151,8 +150,13 @@ function Game() {
                   key={i}
                   card={card}
                   size="lg"
-                  playable={myTurn}
-                  selected={selected === i}
+                  state={
+                    selected === i
+                      ? "selected"
+                      : myTurn
+                      ? "playable"
+                      : "disabled"
+                  }
                   onClick={() => setSelected(selected === i ? null : i)}
                   className="shrink-0"
                 />
