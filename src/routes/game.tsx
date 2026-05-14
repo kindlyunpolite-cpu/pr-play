@@ -177,6 +177,7 @@ function Game() {
                 </span>
                 <button
                   disabled={!myTurn}
+                  onClick={handleDraw}
                   className="h-9 min-w-[3.5rem] rounded-full bg-card border border-border/60 px-3 text-xs font-semibold transition active:scale-95 disabled:opacity-40"
                 >
                   Draw
@@ -197,7 +198,15 @@ function Game() {
                       ? "playable"
                       : "disabled"
                   }
-                  onClick={() => setSelected(selected === i ? null : i)}
+                  animation={
+                    playingIdx === i
+                      ? "play"
+                      : !dealt
+                      ? "deal"
+                      : undefined
+                  }
+                  animationDelay={!dealt ? i * 70 : undefined}
+                  onClick={() => handlePlay(i)}
                   className="shrink-0"
                 />
               ))}
