@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { TopNav } from "@/components/TopNav";
 import { ChatPanel } from "@/components/ChatPanel";
-import { Opponent, type OpponentData } from "@/components/Opponent";
+import { Opponent, type OpponentData, type SeatPlacement } from "@/components/Opponent";
 import {
   PlayingCard,
   CardStack,
@@ -12,6 +12,10 @@ import {
 import { useEffect, useState } from "react";
 import { Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
+import portraitPavla from "@/assets/portraits/pavla.png";
+import portraitTomas from "@/assets/portraits/tomas.png";
+import portraitEva from "@/assets/portraits/eva.png";
+import portraitYou from "@/assets/portraits/you.png";
 
 export const Route = createFileRoute("/game")({
   head: () => ({
@@ -24,9 +28,9 @@ export const Route = createFileRoute("/game")({
 });
 
 const OPPONENTS: OpponentData[] = [
-  { id: "1", name: "Pavla", avatar: "🦊", cardCount: 4, isTurn: false },
-  { id: "2", name: "Tomáš", avatar: "🐻", cardCount: 6, isTurn: true },
-  { id: "3", name: "Eva", avatar: "🦉", cardCount: 3, isTurn: false },
+  { id: "1", name: "Pavla", avatar: portraitPavla, cardCount: 4, isTurn: false, rank: 12, wins: 84, chips: 2150, accent: "oklch(0.7 0.18 25)" },
+  { id: "2", name: "Tomáš", avatar: portraitTomas, cardCount: 6, isTurn: true, rank: 3, wins: 212, chips: 5400, badge: "Pro", accent: "oklch(0.78 0.16 60)" },
+  { id: "3", name: "Eva", avatar: portraitEva, cardCount: 3, isTurn: false, rank: 27, wins: 56, chips: 980, accent: "oklch(0.68 0.22 320)" },
 ];
 
 const HAND: CardData[] = [
