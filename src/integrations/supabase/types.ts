@@ -40,6 +40,7 @@ export type Database = {
       players: {
         Row: {
           avatar: string | null
+          connected: boolean
           id: string
           is_host: boolean
           is_ready: boolean
@@ -48,9 +49,11 @@ export type Database = {
           nickname: string
           room_id: string
           seat: number
+          token: string | null
         }
         Insert: {
           avatar?: string | null
+          connected?: boolean
           id?: string
           is_host?: boolean
           is_ready?: boolean
@@ -59,9 +62,11 @@ export type Database = {
           nickname: string
           room_id: string
           seat: number
+          token?: string | null
         }
         Update: {
           avatar?: string | null
+          connected?: boolean
           id?: string
           is_host?: boolean
           is_ready?: boolean
@@ -70,6 +75,7 @@ export type Database = {
           nickname?: string
           room_id?: string
           seat?: number
+          token?: string | null
         }
         Relationships: [
           {
@@ -86,6 +92,7 @@ export type Database = {
           avatar: string | null
           created_at: string
           id: string
+          message: string | null
           nickname: string
           player_id: string | null
           room_id: string
@@ -95,6 +102,7 @@ export type Database = {
           avatar?: string | null
           created_at?: string
           id?: string
+          message?: string | null
           nickname: string
           player_id?: string | null
           room_id: string
@@ -104,6 +112,7 @@ export type Database = {
           avatar?: string | null
           created_at?: string
           id?: string
+          message?: string | null
           nickname?: string
           player_id?: string | null
           room_id?: string
