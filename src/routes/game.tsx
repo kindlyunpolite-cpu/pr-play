@@ -42,9 +42,34 @@ const TOP_DISCARD: CardData = { suit: "hearts", rank: "10" };
 
 function Game() {
   const [selected, setSelected] = useState<number | null>(null);
-  const myTurn = false;
+  const [playingIdx, setPlayingIdx] = useState<number | null>(null);
+  const [pileNonce, setPileNonce] = useState(0);
+  const [drawNonce, setDrawNonce] = useState(0);
+  const [dealt, setDealt] = useState(false);
+  const myTurn = true;
   const activeSuit = TOP_DISCARD.suit;
   const activePlayer = OPPONENTS.find((o) => o.isTurn);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDealt(true), HAND.length * 70 + 600);
+    return () => clearTimeout(t);
+  }, []);
+
+  const handlePlay = (i: number) => {
+    if (!myTurn) return;
+    if (selected !== i) {
+      setSelected(i);
+      return;
+    }
+    setPlayingIdx(i);
+    setTimeout(() => {
+      setPlayingIdx(null);
+      setSelected(null);
+      setPileNonce((n) => n + 1);
+    }, 320);
+  };
+
+  const handleDraw = () => setDrawNonce((n) => n + 1);
 
   return (
     <div className="h-[100dvh] flex flex-col overflow-hidden">
