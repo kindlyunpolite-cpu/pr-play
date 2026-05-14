@@ -139,7 +139,10 @@ function Game() {
               </div>
 
               {/* Deck + pile, centered with generous spacing */}
-              <div className="flex items-center gap-8 sm:gap-12 md:gap-16">
+              {/* Cinematic spotlight halo */}
+              <div className="table-spotlight" aria-hidden="true" />
+
+              <div className="center-stage relative z-[1] flex items-center gap-8 sm:gap-12 md:gap-16">
                 {/* Draw deck */}
                 <button
                   type="button"
