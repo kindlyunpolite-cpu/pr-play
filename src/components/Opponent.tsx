@@ -50,8 +50,8 @@ export function Opponent({
   const portraitSize = compact
     ? "h-20 w-16"
     : compactMobile
-      ? (self ? "h-20 w-16 sm:h-28 sm:w-24" : "h-24 w-20 sm:h-36 sm:w-32")
-      : "h-32 w-28 sm:h-36 sm:w-32";
+      ? (self ? "h-22 w-18 sm:h-32 sm:w-28" : "h-24 w-20 sm:h-40 sm:w-36")
+      : "h-32 w-28 sm:h-40 sm:w-36";
   const panelWidth = compact
     ? "min-w-[140px] max-w-[160px]"
     : compactMobile
@@ -124,16 +124,16 @@ export function Opponent({
         onClick={() => setExpanded((v) => !v)}
         aria-expanded={expanded}
         className={cn(
-          "seat-panel relative z-[2] -mt-2 flex flex-col items-stretch overflow-hidden rounded-xl text-left outline-none",
+          "seat-panel relative z-[2] -mt-3 flex flex-col items-stretch overflow-hidden rounded-lg text-left outline-none",
           "border backdrop-blur-xl transition-all duration-300",
           panelWidth,
           player.isTurn
-            ? "border-[color:var(--gold)]/60 shadow-[0_10px_30px_-8px_rgba(0,0,0,0.7),0_0_24px_-4px_var(--seat-accent)]"
-            : "border-white/10 shadow-[0_8px_20px_-8px_rgba(0,0,0,0.7)] hover:border-white/20",
+            ? "border-[color:var(--gold)]/70 shadow-[0_12px_32px_-8px_rgba(0,0,0,0.78),0_0_28px_-4px_var(--seat-accent)]"
+            : "border-white/12 shadow-[0_10px_24px_-10px_rgba(0,0,0,0.78)] hover:border-[color:var(--gold)]/35",
         )}
         style={{
           background:
-            "linear-gradient(180deg, oklch(0.22 0.03 160 / 0.85) 0%, oklch(0.14 0.02 160 / 0.92) 100%)",
+            "linear-gradient(180deg, oklch(0.18 0.025 160 / 0.92) 0%, oklch(0.105 0.02 160 / 0.96) 100%)",
         }}
       >
         {/* Active scan line on the active player's panel */}
