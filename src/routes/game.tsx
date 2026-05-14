@@ -238,7 +238,7 @@ function Game() {
           <div className="absolute inset-0 z-40 flex items-start justify-center px-4 sm:px-8 lg:px-10 pt-[9.9rem] sm:pt-[10.4rem] pb-[7.5rem] sm:pb-[8rem] pointer-events-none">
             <div className="table-shell relative mx-auto">
               <div className="relative aspect-[16/9.5] w-full">
-                <div className="absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-[7rem] sm:translate-y-[7.5rem] pointer-events-auto">
+                <div className="absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-[9.5rem] sm:translate-y-[10.5rem] pointer-events-auto">
                   <Opponent player={YOU} placement="bottom" compactMobile self />
                 </div>
               </div>
