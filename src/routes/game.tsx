@@ -95,7 +95,7 @@ function Game() {
       <div className="flex flex-1 lg:flex-row flex-col min-h-0">
         <main className="game-stage relative flex-1 flex flex-col min-h-0">
           {/* Table arena — portraits are anchored behind the outer rim, not above the UI chrome */}
-          <div className="table-arena absolute inset-0 z-10 flex items-start justify-center px-4 sm:px-8 lg:px-10 pt-[7.6rem] sm:pt-[8.1rem] pb-[7.5rem] sm:pb-[8rem] pointer-events-none">
+          <div className="table-arena absolute inset-0 z-10 flex items-start justify-center px-4 sm:px-8 lg:px-10 pt-[9.9rem] sm:pt-[10.4rem] pb-[7.5rem] sm:pb-[8rem] pointer-events-none">
             <div className="table-shell relative mx-auto">
               {/* Outer ambient halo — soft glow bleed around the table */}
               <div
@@ -212,10 +212,10 @@ function Game() {
                   const pos = seatPos[i] ?? "top";
                   const cls =
                     pos === "top"
-                      ? "top-0 left-1/2 -translate-x-1/2 -translate-y-[44%] sm:-translate-y-[50%]"
+                      ? "top-[-2.5rem] sm:top-[-3rem] left-1/2 -translate-x-1/2 -translate-y-[66%] sm:-translate-y-[72%]"
                       : pos === "left"
-                        ? "left-0 top-1/2 -translate-x-[50%] sm:-translate-x-[62%] lg:-translate-x-[66%] -translate-y-1/2"
-                        : "right-0 top-1/2 translate-x-[50%] sm:translate-x-[62%] lg:translate-x-[66%] -translate-y-1/2";
+                        ? "left-[-2.5rem] sm:left-[-3rem] top-1/2 -translate-x-[50%] sm:-translate-x-[62%] lg:-translate-x-[66%] -translate-y-1/2"
+                        : "right-[-2.5rem] sm:right-[-3rem] top-1/2 translate-x-[50%] sm:translate-x-[62%] lg:translate-x-[66%] -translate-y-1/2";
                   return (
                     <div
                       key={p.id}
@@ -233,7 +233,7 @@ function Game() {
           </div>
 
           {/* Own seat is a separate top layer so cards/action chrome never crop it. */}
-          <div className="absolute inset-0 z-40 flex items-start justify-center px-4 sm:px-8 lg:px-10 pt-[7.6rem] sm:pt-[8.1rem] pb-[7.5rem] sm:pb-[8rem] pointer-events-none">
+          <div className="absolute inset-0 z-40 flex items-start justify-center px-4 sm:px-8 lg:px-10 pt-[9.9rem] sm:pt-[10.4rem] pb-[7.5rem] sm:pb-[8rem] pointer-events-none">
             <div className="table-shell relative mx-auto">
               <div className="relative aspect-[16/9.5] w-full">
                 <div className="absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-[41%] sm:translate-y-[43%] pointer-events-auto">
