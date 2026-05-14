@@ -184,6 +184,41 @@ export const getRoomState = createServerFn({ method: "POST" })
     return { room, players: players ?? [] };
   });
 
+// ------------- reconnect -------------
+// Validates a stored (playerId, sessionToken) pair and returns the full
+// session so the client can resume right where it left off, preserving seat.
+
+export const reconnect = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z.object({ playerId: PlayerIdSchema, sessionToken: TokenSchema }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const player = await authenticatePlayer(data.playerId, data.sessionToken);
+
+    const { data: room, error: rErr } = await supabaseAdmin
+      .from("rooms")
+      .select("id, code, status, host_player_id, max_players")
+      .eq("id", player.room_id)
+      .maybeSingle();
+    if (rErr || !room) throw new Error("Room no longer exists");
+
+    await supabaseAdmin
+      .from("players")
+      .update({ connected: true, last_seen_at: new Date().toISOString() })
+      .eq("id", player.id);
+
+    return {
+      roomCode: room.code,
+      roomId: room.id,
+      roomStatus: room.status as "waiting" | "playing" | "finished",
+      playerId: player.id,
+      seat: player.seat,
+      nickname: player.nickname,
+      avatar: player.avatar,
+      isHost: player.is_host,
+    };
+  });
+
 // ------------- setReady -------------
 
 export const setReady = createServerFn({ method: "POST" })
@@ -299,7 +334,7 @@ export const heartbeat = createServerFn({ method: "POST" })
     await authenticatePlayer(data.playerId, data.sessionToken);
     await supabaseAdmin
       .from("players")
-      .update({ last_seen_at: new Date().toISOString() })
+      .update({ connected: true, last_seen_at: new Date().toISOString() })
       .eq("id", data.playerId);
     return { ok: true };
   });

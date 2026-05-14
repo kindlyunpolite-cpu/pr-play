@@ -16,8 +16,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { cn } from "@/lib/utils";
-import { loadSession, clearSession } from "@/lib/room-session";
+import { clearSession } from "@/lib/room-session";
 import { useRoomRealtime, type RoomPlayer } from "@/hooks/use-room-realtime";
+import { useReconnect } from "@/hooks/use-reconnect";
 import { setReady, leaveRoom, startGame } from "@/lib/rooms.functions";
 import { toast } from "sonner";
 
@@ -52,7 +53,7 @@ function deriveStatus(p: RoomPlayer): keyof typeof STATUS_META {
 function Waiting() {
   const navigate = useNavigate();
   const search = Route.useSearch();
-  const [session, setSession] = useState(() => loadSession());
+  const { session } = useReconnect();
   const code = search.code ?? session?.roomCode;
 
   const { room, players, loading, connection } = useRoomRealtime(code, session);
@@ -166,7 +167,6 @@ function Waiting() {
       /* ignore */
     } finally {
       clearSession();
-      setSession(null);
       navigate({ to: "/" });
     }
   };
