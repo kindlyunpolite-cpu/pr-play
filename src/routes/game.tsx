@@ -94,12 +94,23 @@ function Game() {
 
       <div className="flex flex-1 lg:flex-row flex-col min-h-0">
         <main className="relative flex-1 flex flex-col min-h-0">
-          {/* Table arena — square-ish, centered, with seats around all four edges */}
-          <div className="flex-1 min-h-0 flex items-center justify-center px-3 sm:px-6 pt-4 pb-2">
-            <div className="relative w-full max-w-[760px] mx-auto">
-              {/* Table itself: rounded-square, more compact */}
+          {/* Table arena — wider rounded rectangle, generous padding so portraits never clip */}
+          <div className="flex-1 min-h-0 flex items-center justify-center px-10 sm:px-20 pt-14 sm:pt-20 pb-28 sm:pb-32">
+            <div className="relative w-full max-w-[860px] mx-auto">
+              {/* Decorative outer rail — thick dimensional table edge */}
               <div
-                className="felt-table relative aspect-[6/5] w-full rounded-[40px] sm:rounded-[48px]"
+                aria-hidden
+                className="absolute -inset-3 sm:-inset-4 rounded-[44px] sm:rounded-[56px] pointer-events-none"
+                style={{
+                  background:
+                    "linear-gradient(180deg, oklch(0.32 0.04 60) 0%, oklch(0.18 0.03 40) 50%, oklch(0.10 0.02 40) 100%)",
+                  boxShadow:
+                    "inset 0 2px 0 oklch(1 0 0 / 0.08), inset 0 -2px 0 oklch(0 0 0 / 0.6), 0 30px 80px -20px oklch(0 0 0 / 0.85), 0 0 0 1px oklch(0.82 0.14 85 / 0.18)",
+                }}
+              />
+              {/* Table itself: rounded rectangle, slightly wider */}
+              <div
+                className="felt-table relative aspect-[16/11] w-full rounded-[36px] sm:rounded-[48px]"
                 style={{
                   backgroundImage:
                     "radial-gradient(ellipse at center, color-mix(in oklab, var(--primary) 10%, transparent) 0%, transparent 62%)",
@@ -182,10 +193,10 @@ function Game() {
                   const pos = seatPos[i] ?? "top";
                   const cls =
                     pos === "top"
-                      ? "top-0 left-1/2 -translate-x-1/2 -translate-y-[55%]"
+                      ? "top-0 left-1/2 -translate-x-1/2 -translate-y-[42%]"
                       : pos === "left"
-                        ? "left-0 top-1/2 -translate-x-[45%] -translate-y-1/2"
-                        : "right-0 top-1/2 translate-x-[45%] -translate-y-1/2";
+                        ? "left-0 top-1/2 -translate-x-[38%] -translate-y-1/2"
+                        : "right-0 top-1/2 translate-x-[38%] -translate-y-1/2";
                   return (
                     <div
                       key={p.id}
@@ -200,7 +211,7 @@ function Game() {
                 })}
 
                 {/* You seat — bottom of the table */}
-                <div className="absolute z-10 left-1/2 bottom-0 -translate-x-1/2 translate-y-[52%]">
+                <div className="absolute z-10 left-1/2 bottom-0 -translate-x-1/2 translate-y-[40%]">
                   <Opponent player={YOU} placement="bottom" compactMobile self />
                 </div>
               </div>
