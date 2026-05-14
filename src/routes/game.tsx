@@ -189,14 +189,23 @@ function Game() {
           {/* Sticky bottom hand */}
           <div className="sticky bottom-0 z-20 border-t border-border/40 bg-gradient-to-t from-background via-background/95 to-background/70 backdrop-blur-xl pb-safe">
             <div className="flex items-center justify-between px-3 pt-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-accent to-primary text-sm shadow-sm shrink-0">
-                  🐺
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="relative h-10 w-10 shrink-0 rounded-full overflow-hidden ring-2 ring-[color:var(--gold)]/60 shadow-[0_0_14px_oklch(0.82_0.14_85/0.35)]">
+                  <img
+                    src={portraitYou}
+                    alt="You"
+                    width={80}
+                    height={80}
+                    loading="lazy"
+                    className="h-full w-full object-cover object-top scale-[1.4] -translate-y-1"
+                  />
                 </div>
-                <span className="text-sm font-semibold">You</span>
-                <span className="text-xs text-muted-foreground tabular-nums">
-                  · {HAND.length}
-                </span>
+                <div className="flex flex-col leading-tight min-w-0">
+                  <span className="text-sm font-semibold tracking-wide">You</span>
+                  <span className="text-[10px] text-muted-foreground tabular-nums">
+                    {HAND.length} cards · 3,200
+                  </span>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <span
