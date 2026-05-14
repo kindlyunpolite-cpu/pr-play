@@ -64,13 +64,8 @@ export function Opponent({
       : placement === "right"
         ? "-translate-x-3 sm:-translate-x-4"
         : "";
-  // Side seats: pull the info panel inward so it overlaps the rim instead of floating beside it.
-  const panelAnchor =
-    placement === "left"
-      ? "translate-x-6 sm:translate-x-8"
-      : placement === "right"
-        ? "-translate-x-6 sm:-translate-x-8"
-        : "";
+  // Info panel sits centered under the portrait for all seats.
+  const panelAnchor = "";
 
   return (
     <div
