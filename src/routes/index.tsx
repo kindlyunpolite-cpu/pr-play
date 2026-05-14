@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { TopNav } from "@/components/TopNav";
 import {
   Plus,
@@ -9,8 +10,12 @@ import {
   Shuffle,
   ArrowRight,
   Users,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createRoom, joinRoom } from "@/lib/rooms.functions";
+import { saveSession } from "@/lib/room-session";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -48,14 +53,46 @@ function Lobby() {
   const [nick, setNick] = useState("");
   const [avatar, setAvatar] = useState("🦊");
   const [code, setCode] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
+  const callCreate = useServerFn(createRoom);
+  const callJoin = useServerFn(joinRoom);
 
   const canSubmit = useMemo(
-    () => nick.trim().length >= 2 && (tab === "create" || code.length === 5),
-    [nick, code, tab],
+    () =>
+      !submitting &&
+      nick.trim().length >= 2 &&
+      (tab === "create" || code.length === 5),
+    [nick, code, tab, submitting],
   );
 
-  const go = () => canSubmit && navigate({ to: "/waiting" });
+  const go = async () => {
+    if (!canSubmit) return;
+    const nickname = nick.trim();
+    setSubmitting(true);
+    try {
+      const result =
+        tab === "create"
+          ? await callCreate({ data: { nickname, avatar } })
+          : await callJoin({ data: { code, nickname, avatar } });
+      saveSession({
+        roomCode: result.roomCode,
+        roomId: result.roomId,
+        playerId: result.playerId,
+        sessionToken: result.sessionToken,
+        seat: result.seat,
+        nickname,
+        avatar,
+      });
+      navigate({ to: "/waiting", search: { code: result.roomCode } });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Something went wrong";
+      toast.error(message.replace(/^Error:\s*/i, ""));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const randomize = () =>
     setNick(NAME_POOL[Math.floor(Math.random() * NAME_POOL.length)]);
 
@@ -182,18 +219,23 @@ function Lobby() {
             disabled={!canSubmit}
             className="group w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 font-semibold text-primary-foreground transition hover:brightness-110 active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {tab === "create" ? (
-              <>
-                <Dice5 className="h-4 w-4" />
-                Create new room
-              </>
+            {submitting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : tab === "create" ? (
+              <Dice5 className="h-4 w-4" />
             ) : (
-              <>
-                <LogIn className="h-4 w-4" />
-                Join room
-              </>
+              <LogIn className="h-4 w-4" />
             )}
-            <ArrowRight className="h-4 w-4 opacity-70 transition group-hover:translate-x-0.5" />
+            {submitting
+              ? tab === "create"
+                ? "Creating room…"
+                : "Joining…"
+              : tab === "create"
+              ? "Create new room"
+              : "Join room"}
+            {!submitting && (
+              <ArrowRight className="h-4 w-4 opacity-70 transition group-hover:translate-x-0.5" />
+            )}
           </button>
         </div>
 
