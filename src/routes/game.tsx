@@ -246,7 +246,7 @@ function Game() {
           {/* Bottom action bar + hand — blends into scene with vertical gradient fade */}
           <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-background via-background/62 to-transparent pb-safe">
             {/* Floating action group */}
-            <div className="flex items-center justify-between gap-3 px-4 pt-1 pb-0">
+            <div className="flex items-center justify-between gap-3 px-4 pt-0 pb-0">
               <span
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em]",
@@ -280,7 +280,7 @@ function Game() {
               </div>
             </div>
 
-            <div className="fan-hand hand-scroll relative flex items-end justify-center overflow-x-auto sm:overflow-visible no-scrollbar px-4 pt-4 pb-1 min-h-[5.75rem] sm:min-h-[6.35rem]">
+            <div className="fan-hand hand-scroll relative flex items-end justify-center overflow-x-auto sm:overflow-visible no-scrollbar px-4 pt-2 pb-1 min-h-[5.1rem] sm:min-h-[5.75rem]">
               {HAND.map((card, i) => {
                 const n = HAND.length;
                 const mid = (n - 1) / 2;
