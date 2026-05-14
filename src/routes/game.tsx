@@ -9,7 +9,7 @@ import {
   SuitBadge,
   type CardData,
 } from "@/components/cards";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Timer } from "lucide-react";
 
 export const Route = createFileRoute("/game")({
