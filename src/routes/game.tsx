@@ -107,20 +107,35 @@ function Game() {
               <div className="flex flex-col items-center gap-3">
                 <div className="flex items-end gap-5 sm:gap-7">
                   {/* Draw deck */}
-                  <div className="flex flex-col items-center gap-1.5">
-                    <CardStack count={3} maxVisible={3} size="md" layout="stack" />
+                  <button
+                    type="button"
+                    onClick={handleDraw}
+                    disabled={!myTurn}
+                    className="flex flex-col items-center gap-1.5 rounded-2xl p-1 -m-1 transition active:scale-95 disabled:opacity-60 disabled:active:scale-100"
+                    aria-label="Draw a card"
+                  >
+                    <CardStack
+                      key={drawNonce}
+                      count={3}
+                      maxVisible={3}
+                      size="md"
+                      layout="stack"
+                      className={drawNonce ? "animate-card-draw" : ""}
+                    />
                     <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/80 tabular-nums">
                       Deck · 24
                     </span>
-                  </div>
+                  </button>
 
                   {/* Discard pile */}
                   <div className="flex flex-col items-center gap-1.5">
-                    <DiscardPile
-                      cards={[{ suit: "clubs", rank: "8" }, TOP_DISCARD]}
-                      size="md"
-                      recent
-                    />
+                    <div key={pileNonce} className={pileNonce ? "animate-pile-bump" : ""}>
+                      <DiscardPile
+                        cards={[{ suit: "clubs", rank: "8" }, TOP_DISCARD]}
+                        size="md"
+                        recent
+                      />
+                    </div>
                     <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/80">
                       Pile
                     </span>
