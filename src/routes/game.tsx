@@ -10,7 +10,7 @@ import {
   type CardData,
 } from "@/components/cards";
 import { useEffect, useState } from "react";
-import { Timer } from "lucide-react";
+import { Timer, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import portraitPavla from "@/assets/portraits/pavla.png";
 import portraitTomas from "@/assets/portraits/tomas.png";
@@ -44,6 +44,18 @@ const HAND: CardData[] = [
 ];
 
 const TOP_DISCARD: CardData = { suit: "hearts", rank: "10" };
+
+const YOU: OpponentData = {
+  id: "me",
+  name: "You",
+  avatar: portraitYou,
+  cardCount: HAND.length,
+  isTurn: true,
+  rank: 8,
+  wins: 142,
+  chips: 3200,
+  accent: "oklch(0.72 0.2 290)",
+};
 
 function Game() {
   const [selected, setSelected] = useState<number | null>(null);
@@ -82,152 +94,157 @@ function Game() {
 
       <div className="flex flex-1 lg:flex-row flex-col min-h-0">
         <main className="relative flex-1 flex flex-col min-h-0">
-          {/* Felt center area — fluid, with seats around the edges */}
-          <div className="flex-1 min-h-0 px-3 pt-20 sm:pt-24 pb-3">
-            <div
-              className="felt-table relative h-full w-full rounded-[28px] flex items-center justify-center p-4"
-              style={{
-                backgroundImage:
-                  "radial-gradient(ellipse at center, color-mix(in oklab, var(--primary) 10%, transparent) 0%, transparent 62%)",
-              }}
-            >
-              {/* Seats around the table — 2–4 player adaptive.
-                  Portraits intentionally extend OUTSIDE the felt edge to feel "seated". */}
-              {OPPONENTS.map((p, i) => {
-                const n = OPPONENTS.length;
-                const seatPos: SeatPlacement[] =
-                  n === 1
-                    ? ["top"]
-                    : n === 2
-                      ? ["left", "right"]
-                      : ["left", "top", "right"];
-                const pos = seatPos[i] ?? "top";
-                const cls =
-                  pos === "top"
-                    ? "top-0 left-1/2 -translate-x-1/2 -translate-y-[58%]"
-                    : pos === "left"
-                      ? "left-0 top-[34%] -translate-x-[42%] -translate-y-1/2"
-                      : "right-0 top-[34%] translate-x-[42%] -translate-y-1/2";
-                return (
-                  <div
-                    key={p.id}
-                    className={cn(
-                      "absolute z-10 transition-all duration-500",
-                      cls,
-                    )}
-                  >
-                    <Opponent player={p} placement={pos} />
-                  </div>
-                );
-              })}
-
-              {/* Top-left: turn timer */}
-              <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-background/55 backdrop-blur-md px-2.5 py-1 ring-1 ring-border/40 shadow-sm">
-                <span className="relative flex h-1.5 w-1.5">
-                  <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-60 animate-ping" />
-                  <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
-                </span>
-                <span className="text-[11px] font-semibold truncate max-w-[7rem]">
-                  {activePlayer?.name ?? "You"}
-                </span>
-                <span className="h-3 w-px bg-border/70" />
-                <Timer className="h-3 w-3 text-muted-foreground" />
-                <span className="text-[11px] font-mono tabular-nums text-muted-foreground">0:18</span>
-              </div>
-
-              {/* Top-right: active suit */}
-              <div className="absolute top-3 right-3 flex items-center gap-1.5 rounded-full bg-background/55 backdrop-blur-md px-2.5 py-1 ring-1 ring-border/40 shadow-sm">
-                <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground">
-                  Suit
-                </span>
-                <SuitBadge suit={activeSuit} size="sm" />
-              </div>
-
-              {/* Deck + pile, centered with generous spacing */}
-              {/* Cinematic spotlight halo */}
-              <div className="table-spotlight" aria-hidden="true" />
-
-              <div className="center-stage relative z-[1] flex items-center gap-8 sm:gap-12 md:gap-16">
-                {/* Draw deck */}
-                <button
-                  type="button"
-                  onClick={handleDraw}
-                  disabled={!myTurn}
-                  className="flex flex-col items-center gap-2 rounded-2xl p-1 -m-1 transition active:scale-95 disabled:opacity-60 disabled:active:scale-100"
-                  aria-label="Draw a card"
-                >
-                  <CardStack
-                    key={drawNonce}
-                    count={3}
-                    maxVisible={3}
-                    size="md"
-                    layout="stack"
-                    className={drawNonce ? "animate-card-draw" : ""}
-                  />
-                  <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/80 tabular-nums">
-                    Deck · 24
+          {/* Table arena — square-ish, centered, with seats around all four edges */}
+          <div className="flex-1 min-h-0 flex items-center justify-center px-3 sm:px-6 pt-4 pb-2">
+            <div className="relative w-full max-w-[760px] mx-auto">
+              {/* Table itself: rounded-square, more compact */}
+              <div
+                className="felt-table relative aspect-[6/5] w-full rounded-[40px] sm:rounded-[48px]"
+                style={{
+                  backgroundImage:
+                    "radial-gradient(ellipse at center, color-mix(in oklab, var(--primary) 10%, transparent) 0%, transparent 62%)",
+                }}
+              >
+                {/* Top-left HUD: turn timer */}
+                <div className="absolute top-3 left-3 z-20 inline-flex items-center gap-1.5 rounded-full bg-black/55 backdrop-blur-md px-2.5 py-1 ring-1 ring-white/8 shadow-sm">
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="absolute inline-flex h-full w-full rounded-full bg-[color:var(--gold)] opacity-60 animate-ping" />
+                    <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[color:var(--gold)]" />
                   </span>
-                </button>
-
-                {/* Discard pile */}
-                <div className="flex flex-col items-center gap-2">
-                  <div key={pileNonce} className={pileNonce ? "animate-pile-bump" : ""}>
-                    <DiscardPile
-                      cards={[{ suit: "clubs", rank: "8" }, TOP_DISCARD]}
-                      size="md"
-                      recent
-                    />
-                  </div>
-                  <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/80">
-                    Pile
+                  <span className="text-[11px] font-semibold truncate max-w-[7rem]">
+                    {activePlayer?.name ?? "You"}
                   </span>
+                  <span className="h-3 w-px bg-white/10" />
+                  <Timer className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-[11px] font-mono tabular-nums text-muted-foreground">0:18</span>
+                </div>
+
+                {/* Top-right HUD: active suit */}
+                <div className="absolute top-3 right-3 z-20 flex items-center gap-2 rounded-full bg-black/55 backdrop-blur-md px-2.5 py-1 ring-1 ring-white/8 shadow-sm">
+                  <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                    Suit
+                  </span>
+                  <div className="rounded-full bg-[color:var(--gold)]/10 ring-1 ring-[color:var(--gold)]/35 px-1.5 py-0.5">
+                    <SuitBadge suit={activeSuit} size="sm" />
+                  </div>
+                </div>
+
+                {/* Cinematic spotlight halo */}
+                <div className="table-spotlight" aria-hidden="true" />
+
+                {/* Center stage: deck + pile */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="center-stage relative z-[1] flex items-center gap-6 sm:gap-10 md:gap-14">
+                    <button
+                      type="button"
+                      onClick={handleDraw}
+                      disabled={!myTurn}
+                      className="flex flex-col items-center gap-2 rounded-2xl p-1 -m-1 transition active:scale-95 disabled:opacity-60 disabled:active:scale-100"
+                      aria-label="Draw a card"
+                    >
+                      <CardStack
+                        key={drawNonce}
+                        count={3}
+                        maxVisible={3}
+                        size="md"
+                        layout="stack"
+                        className={drawNonce ? "animate-card-draw" : ""}
+                      />
+                      <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground/80 tabular-nums">
+                        Deck · 24
+                      </span>
+                    </button>
+
+                    <div className="flex flex-col items-center gap-2">
+                      <div key={pileNonce} className={pileNonce ? "animate-pile-bump" : ""}>
+                        <DiscardPile
+                          cards={[{ suit: "clubs", rank: "8" }, TOP_DISCARD]}
+                          size="md"
+                          recent
+                        />
+                      </div>
+                      <span className="text-[10px] uppercase tracking-[0.18em] text-muted-foreground/80">
+                        Pile
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Seats around the table — portraits overflow the felt edge */}
+                {OPPONENTS.map((p, i) => {
+                  const n = OPPONENTS.length;
+                  const seatPos: SeatPlacement[] =
+                    n === 1
+                      ? ["top"]
+                      : n === 2
+                        ? ["left", "right"]
+                        : ["left", "top", "right"];
+                  const pos = seatPos[i] ?? "top";
+                  const cls =
+                    pos === "top"
+                      ? "top-0 left-1/2 -translate-x-1/2 -translate-y-[55%]"
+                      : pos === "left"
+                        ? "left-0 top-1/2 -translate-x-[45%] -translate-y-1/2"
+                        : "right-0 top-1/2 translate-x-[45%] -translate-y-1/2";
+                  return (
+                    <div
+                      key={p.id}
+                      className={cn(
+                        "absolute z-10 transition-all duration-500",
+                        cls,
+                      )}
+                    >
+                      <Opponent player={p} placement={pos} compactMobile />
+                    </div>
+                  );
+                })}
+
+                {/* You seat — bottom of the table */}
+                <div className="absolute z-10 left-1/2 bottom-0 -translate-x-1/2 translate-y-[52%]">
+                  <Opponent player={YOU} placement="bottom" compactMobile self />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Sticky bottom hand */}
-          <div className="sticky bottom-0 z-20 border-t border-border/40 bg-gradient-to-t from-background via-background/95 to-background/70 backdrop-blur-xl pb-safe">
-            <div className="flex items-center justify-between px-3 pt-2">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="relative h-10 w-10 shrink-0 rounded-full overflow-hidden ring-2 ring-[color:var(--gold)]/60 shadow-[0_0_14px_oklch(0.82_0.14_85/0.35)]">
-                  <img
-                    src={portraitYou}
-                    alt="You"
-                    width={80}
-                    height={80}
-                    loading="lazy"
-                    className="h-full w-full object-cover object-top scale-[1.4] -translate-y-1"
-                  />
-                </div>
-                <div className="flex flex-col leading-tight min-w-0">
-                  <span className="text-sm font-semibold tracking-wide">You</span>
-                  <span className="text-[10px] text-muted-foreground tabular-nums">
-                    {HAND.length} cards · 3,200
-                  </span>
-                </div>
-              </div>
+          {/* Bottom action bar + hand */}
+          <div className="sticky bottom-0 z-20 border-t border-[color:var(--gold)]/10 bg-gradient-to-t from-background via-background/95 to-background/60 backdrop-blur-xl pb-safe">
+            {/* Floating action group */}
+            <div className="flex items-center justify-between gap-3 px-4 pt-2 pb-1">
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em]",
+                  myTurn
+                    ? "bg-gradient-to-r from-[color:var(--gold)]/25 to-transparent text-[color:var(--gold)] ring-1 ring-[color:var(--gold)]/40"
+                    : "bg-white/5 text-muted-foreground ring-1 ring-white/8",
+                )}
+              >
+                <Sparkles className="h-3 w-3" />
+                {myTurn ? "Your turn" : "Waiting"}
+              </span>
+
               <div className="flex items-center gap-2">
-                <span
-                  className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.12em] ${
-                    myTurn
-                      ? "bg-primary text-primary-foreground shadow shadow-primary/30"
-                      : "bg-muted/60 text-muted-foreground"
-                  }`}
-                >
-                  {myTurn ? "Your turn" : "Waiting"}
-                </span>
                 <button
-                  disabled={!myTurn}
                   onClick={handleDraw}
-                  className="h-9 min-w-[3.5rem] rounded-full bg-card border border-border/60 px-3 text-xs font-semibold transition active:scale-95 disabled:opacity-40"
+                  disabled={!myTurn}
+                  className="h-10 rounded-full border border-white/12 bg-white/5 px-4 text-[11px] font-bold uppercase tracking-[0.16em] text-foreground/90 hover:border-[color:var(--gold)]/40 hover:text-[color:var(--gold)] transition active:scale-95 disabled:opacity-40 shadow-[inset_0_1px_0_oklch(1_0_0/0.08)]"
                 >
                   Draw
+                </button>
+                <button
+                  disabled={!myTurn}
+                  className="relative h-10 rounded-full px-5 text-[11px] font-extrabold uppercase tracking-[0.18em] text-[color:var(--primary-foreground)] shadow-[0_8px_24px_-8px_oklch(0.82_0.14_85/0.6),inset_0_1px_0_oklch(1_0_0/0.35)] ring-1 ring-[color:var(--gold)]/60 transition active:scale-95 disabled:opacity-50"
+                  style={{
+                    background:
+                      "linear-gradient(180deg, oklch(0.92 0.12 88) 0%, oklch(0.78 0.16 80) 50%, oklch(0.6 0.14 75) 100%)",
+                  }}
+                >
+                  Play turn
                 </button>
               </div>
             </div>
 
-            <div className="fan-hand hand-scroll relative flex items-end justify-center overflow-x-auto sm:overflow-visible no-scrollbar px-4 pt-6 pb-3 min-h-[10rem]">
+            <div className="fan-hand hand-scroll relative flex items-end justify-center overflow-x-auto sm:overflow-visible no-scrollbar px-4 pt-4 pb-3 min-h-[9rem] sm:min-h-[10rem]">
               {HAND.map((card, i) => {
                 const n = HAND.length;
                 const mid = (n - 1) / 2;
