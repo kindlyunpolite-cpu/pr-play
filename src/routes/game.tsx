@@ -95,7 +95,7 @@ function Game() {
       <div className="flex flex-1 lg:flex-row flex-col min-h-0">
         <main className="game-stage relative flex-1 flex flex-col min-h-0">
           {/* Table arena — seated like the reference, with explicit space above and a compact hand zone below */}
-          <div className="table-arena absolute inset-0 z-10 flex items-center justify-center px-4 sm:px-8 lg:px-10 pt-[8rem] sm:pt-[8.75rem] pb-[8.25rem] sm:pb-[8.75rem]">
+          <div className="table-arena absolute inset-0 z-30 flex items-center justify-center px-4 sm:px-8 lg:px-10 pt-[8rem] sm:pt-[8.75rem] pb-[8.25rem] sm:pb-[8.75rem] pointer-events-none">
             <div className="table-shell relative mx-auto">
               {/* Outer ambient halo — soft glow bleed around the table */}
               <div
@@ -169,7 +169,7 @@ function Game() {
                       type="button"
                       onClick={handleDraw}
                       disabled={!myTurn}
-                      className="flex flex-col items-center gap-2 rounded-2xl p-1 -m-1 transition active:scale-95 disabled:opacity-60 disabled:active:scale-100"
+                      className="pointer-events-auto flex flex-col items-center gap-2 rounded-2xl p-1 -m-1 transition active:scale-95 disabled:opacity-60 disabled:active:scale-100"
                       aria-label="Draw a card"
                     >
                       <CardStack
@@ -274,7 +274,7 @@ function Game() {
               </div>
             </div>
 
-            <div className="fan-hand hand-scroll relative flex items-end justify-center overflow-x-auto sm:overflow-visible no-scrollbar px-4 pt-4 pb-1 min-h-[6.75rem] sm:min-h-[7.35rem]">
+            <div className="fan-hand hand-scroll relative flex items-end justify-center overflow-x-auto sm:overflow-visible no-scrollbar px-4 pt-4 pb-1 min-h-[5.75rem] sm:min-h-[6.35rem]">
               {HAND.map((card, i) => {
                 const n = HAND.length;
                 const mid = (n - 1) / 2;
