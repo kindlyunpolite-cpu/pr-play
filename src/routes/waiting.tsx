@@ -106,9 +106,15 @@ function Waiting() {
         <main className="mx-auto w-full max-w-md flex-1 px-4 py-5 lg:max-w-2xl">
           {/* Status header */}
           <section className="text-center mb-5">
-            <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 backdrop-blur px-3 py-1 text-xs text-muted-foreground">
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-              Waiting for players…
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 backdrop-blur px-3 py-1 text-xs">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60 animate-ping" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+              </span>
+              <span className="text-muted-foreground">Connected</span>
+              <span className="h-3 w-px bg-border/70" />
+              <Loader2 className="h-3 w-3 animate-spin text-primary" />
+              <span className="text-muted-foreground">Waiting for players…</span>
             </div>
             <h1 className="mt-3 font-display text-2xl font-bold">Lobby</h1>
             <p className="mt-1 text-sm text-muted-foreground">
