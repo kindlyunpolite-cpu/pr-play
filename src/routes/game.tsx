@@ -9,7 +9,7 @@ import {
   SuitBadge,
   type CardData,
 } from "@/components/cards";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Timer } from "lucide-react";
 
 export const Route = createFileRoute("/game")({
@@ -42,9 +42,34 @@ const TOP_DISCARD: CardData = { suit: "hearts", rank: "10" };
 
 function Game() {
   const [selected, setSelected] = useState<number | null>(null);
-  const myTurn = false;
+  const [playingIdx, setPlayingIdx] = useState<number | null>(null);
+  const [pileNonce, setPileNonce] = useState(0);
+  const [drawNonce, setDrawNonce] = useState(0);
+  const [dealt, setDealt] = useState(false);
+  const myTurn = true;
   const activeSuit = TOP_DISCARD.suit;
   const activePlayer = OPPONENTS.find((o) => o.isTurn);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDealt(true), HAND.length * 70 + 600);
+    return () => clearTimeout(t);
+  }, []);
+
+  const handlePlay = (i: number) => {
+    if (!myTurn) return;
+    if (selected !== i) {
+      setSelected(i);
+      return;
+    }
+    setPlayingIdx(i);
+    setTimeout(() => {
+      setPlayingIdx(null);
+      setSelected(null);
+      setPileNonce((n) => n + 1);
+    }, 320);
+  };
+
+  const handleDraw = () => setDrawNonce((n) => n + 1);
 
   return (
     <div className="h-[100dvh] flex flex-col overflow-hidden">
@@ -82,20 +107,35 @@ function Game() {
               <div className="flex flex-col items-center gap-3">
                 <div className="flex items-end gap-5 sm:gap-7">
                   {/* Draw deck */}
-                  <div className="flex flex-col items-center gap-1.5">
-                    <CardStack count={3} maxVisible={3} size="md" layout="stack" />
+                  <button
+                    type="button"
+                    onClick={handleDraw}
+                    disabled={!myTurn}
+                    className="flex flex-col items-center gap-1.5 rounded-2xl p-1 -m-1 transition active:scale-95 disabled:opacity-60 disabled:active:scale-100"
+                    aria-label="Draw a card"
+                  >
+                    <CardStack
+                      key={drawNonce}
+                      count={3}
+                      maxVisible={3}
+                      size="md"
+                      layout="stack"
+                      className={drawNonce ? "animate-card-draw" : ""}
+                    />
                     <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/80 tabular-nums">
                       Deck · 24
                     </span>
-                  </div>
+                  </button>
 
                   {/* Discard pile */}
                   <div className="flex flex-col items-center gap-1.5">
-                    <DiscardPile
-                      cards={[{ suit: "clubs", rank: "8" }, TOP_DISCARD]}
-                      size="md"
-                      recent
-                    />
+                    <div key={pileNonce} className={pileNonce ? "animate-pile-bump" : ""}>
+                      <DiscardPile
+                        cards={[{ suit: "clubs", rank: "8" }, TOP_DISCARD]}
+                        size="md"
+                        recent
+                      />
+                    </div>
                     <span className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/80">
                       Pile
                     </span>
@@ -137,6 +177,7 @@ function Game() {
                 </span>
                 <button
                   disabled={!myTurn}
+                  onClick={handleDraw}
                   className="h-9 min-w-[3.5rem] rounded-full bg-card border border-border/60 px-3 text-xs font-semibold transition active:scale-95 disabled:opacity-40"
                 >
                   Draw
@@ -157,7 +198,15 @@ function Game() {
                       ? "playable"
                       : "disabled"
                   }
-                  onClick={() => setSelected(selected === i ? null : i)}
+                  animation={
+                    playingIdx === i
+                      ? "play"
+                      : !dealt
+                      ? "deal"
+                      : undefined
+                  }
+                  animationDelay={!dealt ? i * 70 : undefined}
+                  onClick={() => handlePlay(i)}
                   className="shrink-0"
                 />
               ))}

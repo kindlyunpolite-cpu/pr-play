@@ -177,4 +177,104 @@
     50% { box-shadow: 0 0 0 2px var(--color-gold), 0 0 14px 4px oklch(0.82 0.14 85 / 0.35); }
   }
   .animate-card-active { animation: card-active 1.6s ease-in-out infinite; }
+
+  /* Dealing — slides + flips in from the deck position */
+  @keyframes card-deal {
+    0% {
+      transform: translate3d(var(--deal-from-x, 0), var(--deal-from-y, -120px), 0)
+        rotate(var(--deal-from-rot, -25deg)) scale(0.85);
+      opacity: 0;
+    }
+    60% { opacity: 1; }
+    100% { transform: translate3d(0, 0, 0) rotate(0) scale(1); opacity: 1; }
+  }
+  .animate-card-deal {
+    animation: card-deal 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation-delay: var(--deal-delay, 0ms);
+  }
+
+  /* Draw — pops up from the deck into the hand */
+  @keyframes card-draw {
+    0% { transform: translateY(-40px) scale(0.9); opacity: 0; }
+    60% { transform: translateY(4px) scale(1.03); opacity: 1; }
+    100% { transform: translateY(0) scale(1); opacity: 1; }
+  }
+  .animate-card-draw { animation: card-draw 360ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+  /* Play — lifts off and fades toward the pile */
+  @keyframes card-play {
+    0% { transform: translateY(0) scale(1); opacity: 1; }
+    100% { transform: translateY(-90px) scale(0.92) rotate(6deg); opacity: 0; }
+  }
+  .animate-card-play { animation: card-play 320ms cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+
+  /* Discard pile bump — quick squash when a new card lands */
+  @keyframes pile-bump {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.06); }
+    100% { transform: scale(1); }
+  }
+  .animate-pile-bump { animation: pile-bump 260ms ease-out; }
+
+  /* Tap feedback — quick press */
+  @keyframes card-tap {
+    0% { transform: scale(1); }
+    50% { transform: scale(0.96); }
+    100% { transform: scale(1); }
+  }
+  .animate-card-tap { animation: card-tap 140ms ease-out; }
+
+  /* Winner — gold sheen sweep + glow pulse, no layout shift */
+  @keyframes winner-glow {
+    0%, 100% {
+      box-shadow:
+        0 0 0 2px var(--color-gold),
+        0 0 30px 4px oklch(0.82 0.14 85 / 0.55),
+        0 0 60px 8px oklch(0.82 0.14 85 / 0.25);
+    }
+    50% {
+      box-shadow:
+        0 0 0 2px var(--color-gold),
+        0 0 48px 10px oklch(0.82 0.14 85 / 0.7),
+        0 0 100px 18px oklch(0.82 0.14 85 / 0.35);
+    }
+  }
+  @keyframes winner-sheen {
+    0% { background-position: -150% 0; }
+    100% { background-position: 250% 0; }
+  }
+  .animate-winner {
+    position: relative;
+    animation: winner-glow 1.6s ease-in-out infinite;
+    overflow: hidden;
+  }
+  .animate-winner::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      105deg,
+      transparent 35%,
+      oklch(1 0 0 / 0.6) 50%,
+      transparent 65%
+    );
+    background-size: 200% 100%;
+    animation: winner-sheen 1.8s linear infinite;
+    mix-blend-mode: overlay;
+    border-radius: inherit;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-card-deal,
+    .animate-card-draw,
+    .animate-card-play,
+    .animate-card-played,
+    .animate-card-tap,
+    .animate-pile-bump,
+    .animate-winner,
+    .animate-winner::after,
+    .animate-card-active,
+    .animate-turn { animation: none !important; }
+  }
 }
