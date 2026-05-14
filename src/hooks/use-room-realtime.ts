@@ -3,39 +3,15 @@ import { useServerFn } from "@tanstack/react-start";
 import type { RealtimeChannel } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { getRoomState, heartbeat } from "@/lib/rooms.functions";
-import type { RoomSession } from "@/lib/room-session";
+import type {
+  ConnectionStatus,
+  RoomMessage,
+  RoomPlayer,
+  RoomSession,
+  RoomState,
+} from "@/types/room";
 
-export interface RoomPlayer {
-  id: string;
-  nickname: string;
-  avatar: string | null;
-  is_host: boolean;
-  is_ready: boolean;
-  seat: number;
-  joined_at: string;
-  last_seen_at: string;
-}
-
-export interface RoomState {
-  id: string;
-  code: string;
-  status: "waiting" | "playing" | "finished";
-  host_player_id: string | null;
-  max_players: number;
-  created_at: string;
-}
-
-export interface RoomMessage {
-  id: string;
-  room_id: string;
-  player_id: string | null;
-  nickname: string;
-  avatar: string | null;
-  text: string;
-  created_at: string;
-}
-
-export type ConnectionStatus = "connecting" | "connected" | "reconnecting" | "offline";
+export type { ConnectionStatus, RoomMessage, RoomPlayer, RoomState };
 
 /**
  * Subscribes to room + players + messages for the given room code.
