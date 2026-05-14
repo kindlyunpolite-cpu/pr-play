@@ -32,11 +32,11 @@ const OPPONENTS: OpponentData[] = [
 const HAND: CardData[] = [
   { suit: "hearts", rank: "7" },
   { suit: "hearts", rank: "K" },
-  { suit: "leaves", rank: "9" },
-  { suit: "bells", rank: "10" },
-  { suit: "acorns", rank: "A" },
+  { suit: "clubs", rank: "9" },
+  { suit: "diamonds", rank: "10" },
+  { suit: "spades", rank: "A" },
   { suit: "hearts", rank: "J" },
-  { suit: "bells", rank: "Q" },
+  { suit: "diamonds", rank: "Q" },
 ];
 
 const TOP_DISCARD: CardData = { suit: "hearts", rank: "10" };
