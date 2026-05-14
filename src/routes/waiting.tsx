@@ -16,7 +16,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { cn } from "@/lib/utils";
-import { loadSession, clearSession } from "@/lib/room-session";
+import { clearSession } from "@/lib/room-session";
 import { useRoomRealtime, type RoomPlayer } from "@/hooks/use-room-realtime";
 import { useReconnect } from "@/hooks/use-reconnect";
 import { setReady, leaveRoom, startGame } from "@/lib/rooms.functions";
