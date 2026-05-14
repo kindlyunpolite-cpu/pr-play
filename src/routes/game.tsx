@@ -95,7 +95,7 @@ function Game() {
       <div className="flex flex-1 lg:flex-row flex-col min-h-0">
         <main className="relative flex-1 flex flex-col min-h-0">
           {/* Table arena — wider rounded rectangle, generous padding so portraits never clip */}
-          <div className="flex-1 min-h-0 flex items-center justify-center px-10 sm:px-20 pt-14 sm:pt-20 pb-28 sm:pb-32">
+          <div className="flex-1 min-h-0 flex items-center justify-center px-10 sm:px-16 pt-20 sm:pt-24 pb-28 sm:pb-32">
             <div className="relative w-full max-w-[860px] mx-auto">
               {/* Decorative outer rail — thick dimensional table edge */}
               <div
