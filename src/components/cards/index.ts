@@ -5,3 +5,4 @@ export { PlayingCard } from "./PlayingCard";
 export { HiddenCard } from "./HiddenCard";
 export { CardStack } from "./CardStack";
 export { DiscardPile } from "./DiscardPile";
+export { SuitBadge } from "./SuitBadge";
