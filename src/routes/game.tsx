@@ -215,10 +215,10 @@ function Game() {
                   const pos = seatPos[i] ?? "top";
                   const cls =
                     pos === "top"
-                      ? "top-0 left-1/2 -translate-x-1/2 -translate-y-[5.25rem] sm:-translate-y-[6.25rem]"
+                      ? "top-0 left-1/2 -translate-x-1/2 -translate-y-[6rem] sm:-translate-y-[7rem]"
                       : pos === "left"
-                        ? "left-0 top-1/2 -translate-x-[3rem] sm:-translate-x-[4rem] -translate-y-1/2"
-                        : "right-0 top-1/2 translate-x-[3rem] sm:translate-x-[4rem] -translate-y-1/2";
+                        ? "left-0 top-1/2 -translate-x-[3.75rem] sm:-translate-x-[4.75rem] -translate-y-1/2"
+                        : "right-0 top-1/2 translate-x-[3.75rem] sm:translate-x-[4.75rem] -translate-y-1/2";
                   return (
                     <div
                       key={p.id}
