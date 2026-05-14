@@ -211,7 +211,7 @@ function Game() {
                 })}
 
                 {/* You seat — bottom of the table */}
-                <div className="absolute z-10 left-1/2 bottom-0 -translate-x-1/2 translate-y-[40%]">
+                <div className="absolute z-10 left-1/2 bottom-0 -translate-x-1/2 translate-y-[28%]">
                   <Opponent player={YOU} placement="bottom" compactMobile self />
                 </div>
               </div>
