@@ -214,8 +214,8 @@ function Game() {
                     pos === "top"
                       ? "top-[-2.5rem] sm:top-[-3rem] left-1/2 -translate-x-1/2 -translate-y-[66%] sm:-translate-y-[72%]"
                       : pos === "left"
-                        ? "left-[-2.5rem] sm:left-[-3rem] top-1/2 -translate-x-[50%] sm:-translate-x-[62%] lg:-translate-x-[66%] -translate-y-1/2"
-                        : "right-[-2.5rem] sm:right-[-3rem] top-1/2 translate-x-[50%] sm:translate-x-[62%] lg:translate-x-[66%] -translate-y-1/2";
+                        ? "left-[-2.5rem] sm:left-[-3rem] top-1/2 -translate-x-[50%] sm:-translate-x-[62%] lg:-translate-x-[61%] -translate-y-1/2"
+                        : "right-[-2.5rem] sm:right-[-3rem] top-1/2 translate-x-[50%] sm:translate-x-[62%] lg:translate-x-[61%] -translate-y-1/2";
                   return (
                     <div
                       key={p.id}
