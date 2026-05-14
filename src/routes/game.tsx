@@ -200,7 +200,10 @@ function Game() {
                   </div>
                 </div>
 
-                {/* Seats around the table — portraits sit outside the rail, panels attached to the edge */}
+              </div>
+
+              {/* Opponent seats are anchored to the OUTER rim, not the felt edge. */}
+              <div className="absolute -inset-10 sm:-inset-12 z-30 pointer-events-none">
                 {OPPONENTS.map((p, i) => {
                   const n = OPPONENTS.length;
                   const seatPos: SeatPlacement[] =
@@ -210,19 +213,17 @@ function Game() {
                         ? ["left", "right"]
                         : ["left", "top", "right"];
                   const pos = seatPos[i] ?? "top";
-                  // Anchor each whole profile at the OUTER rail edge; side panels stay
-                  // centered below their portraits and may overlap the rim.
                   const cls =
                     pos === "top"
-                      ? "top-0 left-1/2 -translate-x-1/2 -translate-y-[9.5rem] sm:-translate-y-[10.5rem]"
+                      ? "top-0 left-1/2 -translate-x-1/2 -translate-y-[6rem] sm:-translate-y-[7rem]"
                       : pos === "left"
-                        ? "left-0 top-1/2 -translate-x-[7rem] sm:-translate-x-[8rem] -translate-y-1/2"
-                        : "right-0 top-1/2 translate-x-[7rem] sm:translate-x-[8rem] -translate-y-1/2";
+                        ? "left-0 top-1/2 -translate-x-[3.75rem] sm:-translate-x-[4.75rem] -translate-y-1/2"
+                        : "right-0 top-1/2 translate-x-[3.75rem] sm:translate-x-[4.75rem] -translate-y-1/2";
                   return (
                     <div
                       key={p.id}
                       className={cn(
-                        "absolute z-10 pointer-events-auto transition-all duration-500",
+                        "absolute pointer-events-auto transition-all duration-500",
                         cls,
                       )}
                     >
