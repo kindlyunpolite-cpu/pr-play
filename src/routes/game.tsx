@@ -4,7 +4,6 @@ import { ChatPanel } from "@/components/ChatPanel";
 import { Opponent, type OpponentData } from "@/components/Opponent";
 import {
   PlayingCard,
-  HiddenCard,
   CardStack,
   DiscardPile,
   SuitBadge,
