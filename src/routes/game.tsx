@@ -95,7 +95,7 @@ function Game() {
       <div className="flex flex-1 lg:flex-row flex-col min-h-0">
         <main className="game-stage relative flex-1 flex flex-col min-h-0">
           {/* Table arena — seated like the reference, with explicit space above and a compact hand zone below */}
-          <div className="table-arena absolute inset-0 z-30 flex items-center justify-center px-4 sm:px-8 lg:px-10 pt-[8rem] sm:pt-[8.75rem] pb-[8.25rem] sm:pb-[8.75rem] pointer-events-none">
+          <div className="table-arena absolute inset-0 z-10 flex items-center justify-center px-4 sm:px-8 lg:px-10 pt-[8rem] sm:pt-[8.75rem] pb-[8.25rem] sm:pb-[8.75rem] pointer-events-none">
             <div className="table-shell relative mx-auto">
               {/* Outer ambient halo — soft glow bleed around the table */}
               <div
@@ -220,7 +220,7 @@ function Game() {
                     <div
                       key={p.id}
                       className={cn(
-                        "absolute z-10 transition-all duration-500",
+                        "absolute z-10 pointer-events-auto transition-all duration-500",
                         cls,
                       )}
                     >
@@ -228,9 +228,15 @@ function Game() {
                     </div>
                   );
                 })}
+              </div>
+            </div>
+          </div>
 
-                {/* You seat — bottom of the table */}
-                <div className="absolute z-50 left-1/2 bottom-0 -translate-x-1/2 translate-y-[32%] sm:translate-y-[34%]">
+          {/* Own seat is a separate top layer so cards/action chrome never crop it. */}
+          <div className="absolute inset-0 z-40 flex items-center justify-center px-4 sm:px-8 lg:px-10 pt-[8rem] sm:pt-[8.75rem] pb-[8.25rem] sm:pb-[8.75rem] pointer-events-none">
+            <div className="table-shell relative mx-auto">
+              <div className="relative aspect-[16/9.5] w-full">
+                <div className="absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-[24%] sm:translate-y-[27%] pointer-events-auto">
                   <Opponent player={YOU} placement="bottom" compactMobile self />
                 </div>
               </div>
