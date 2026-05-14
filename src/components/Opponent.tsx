@@ -59,13 +59,13 @@ export function Opponent({
       : "min-w-[180px] max-w-[210px]";
   const portraitAnchor =
     placement === "left"
-      ? "-translate-x-8 sm:-translate-x-12"
+      ? "-translate-x-6 sm:-translate-x-9"
       : placement === "right"
-        ? "translate-x-8 sm:translate-x-12"
+        ? "translate-x-6 sm:translate-x-9"
         : placement === "top"
-          ? "-translate-y-1 sm:-translate-y-3"
+          ? "translate-y-1 sm:translate-y-0"
           : self
-            ? "-translate-y-1 sm:-translate-y-2"
+            ? "translate-y-0 sm:translate-y-1"
             : "";
 
   return (
