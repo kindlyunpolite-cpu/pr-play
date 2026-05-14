@@ -167,7 +167,6 @@ function Waiting() {
       /* ignore */
     } finally {
       clearSession();
-      setSession(null);
       navigate({ to: "/" });
     }
   };
