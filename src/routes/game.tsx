@@ -210,14 +210,14 @@ function Game() {
                         ? ["left", "right"]
                         : ["left", "top", "right"];
                   const pos = seatPos[i] ?? "top";
-                  // Anchor portraits so their base sits on the OUTER edge of the rim,
-                  // info bubble overlaps the rim into the felt.
+                  // Anchor each whole profile at the OUTER rail edge; side panels stay
+                  // centered below their portraits and may overlap the rim.
                   const cls =
                     pos === "top"
                       ? "top-0 left-1/2 -translate-x-1/2 -translate-y-[8.25rem] sm:-translate-y-[9.25rem]"
                       : pos === "left"
-                        ? "left-0 top-1/2 -translate-x-[6.5rem] sm:-translate-x-[7.5rem] -translate-y-1/2"
-                        : "right-0 top-1/2 translate-x-[6.5rem] sm:translate-x-[7.5rem] -translate-y-1/2";
+                        ? "left-0 top-1/2 -translate-x-[5.25rem] sm:-translate-x-[6rem] -translate-y-1/2"
+                        : "right-0 top-1/2 translate-x-[5.25rem] sm:translate-x-[6rem] -translate-y-1/2";
                   return (
                     <div
                       key={p.id}
@@ -238,7 +238,7 @@ function Game() {
           <div className="absolute inset-0 z-40 flex items-start justify-center px-4 sm:px-8 lg:px-10 pt-[9.9rem] sm:pt-[10.4rem] pb-[7.5rem] sm:pb-[8rem] pointer-events-none">
             <div className="table-shell relative mx-auto">
               <div className="relative aspect-[16/9.5] w-full">
-                <div className="absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-[9.5rem] sm:translate-y-[10.5rem] pointer-events-auto">
+                <div className="absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-[7.35rem] sm:translate-y-[8.35rem] pointer-events-auto">
                   <Opponent player={YOU} placement="bottom" compactMobile self />
                 </div>
               </div>
