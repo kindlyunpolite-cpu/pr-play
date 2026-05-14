@@ -53,14 +53,46 @@ function Lobby() {
   const [nick, setNick] = useState("");
   const [avatar, setAvatar] = useState("🦊");
   const [code, setCode] = useState("");
+  const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
+  const callCreate = useServerFn(createRoom);
+  const callJoin = useServerFn(joinRoom);
 
   const canSubmit = useMemo(
-    () => nick.trim().length >= 2 && (tab === "create" || code.length === 5),
-    [nick, code, tab],
+    () =>
+      !submitting &&
+      nick.trim().length >= 2 &&
+      (tab === "create" || code.length === 5),
+    [nick, code, tab, submitting],
   );
 
-  const go = () => canSubmit && navigate({ to: "/waiting" });
+  const go = async () => {
+    if (!canSubmit) return;
+    const nickname = nick.trim();
+    setSubmitting(true);
+    try {
+      const result =
+        tab === "create"
+          ? await callCreate({ data: { nickname, avatar } })
+          : await callJoin({ data: { code, nickname, avatar } });
+      saveSession({
+        roomCode: result.roomCode,
+        roomId: result.roomId,
+        playerId: result.playerId,
+        sessionToken: result.sessionToken,
+        seat: result.seat,
+        nickname,
+        avatar,
+      });
+      navigate({ to: "/waiting", search: { code: result.roomCode } });
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Something went wrong";
+      toast.error(message.replace(/^Error:\s*/i, ""));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const randomize = () =>
     setNick(NAME_POOL[Math.floor(Math.random() * NAME_POOL.length)]);
 
