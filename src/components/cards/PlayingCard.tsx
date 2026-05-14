@@ -26,24 +26,40 @@ const CENTER_GLYPH: Record<CardSize, string> = {
   xl: "h-12 w-12",
 };
 
+export type CardAnimation = "deal" | "draw" | "play" | "tap" | "winner";
+
 export interface PlayingCardProps {
   card: CardData;
   size?: CardSize;
   state?: CardState;
+  /** One-shot animation triggered by the parent (key changes re-trigger). */
+  animation?: CardAnimation;
+  /** Stagger delay (ms) — used by deal animations across a hand. */
+  animationDelay?: number;
   className?: string;
   style?: React.CSSProperties;
   onClick?: () => void;
   ariaLabel?: string;
 }
 
+const ANIMATION_CLASSES: Record<CardAnimation, string> = {
+  deal: "animate-card-deal",
+  draw: "animate-card-draw",
+  play: "animate-card-play",
+  tap: "animate-card-tap",
+  winner: "animate-winner",
+};
+
 /**
  * Full face-up playing card. Pure CSS + inline SVG suit.
- * State drives the visual treatment (hover, selected, disabled, active glow…).
+ * `state` controls persistent visuals; `animation` triggers one-shots.
  */
 export function PlayingCard({
   card,
   size = "md",
   state = "idle",
+  animation,
+  animationDelay,
   className,
   style,
   onClick,
@@ -55,11 +71,18 @@ export function PlayingCard({
   const stateClasses: Record<CardState, string> = {
     idle: "",
     playable:
-      "cursor-pointer hover:-translate-y-3 active:-translate-y-1 hover:shadow-xl",
+      "cursor-pointer hover:-translate-y-3 hover:shadow-xl active:scale-95 active:-translate-y-1",
     disabled: "opacity-45 saturate-50 cursor-not-allowed",
     selected: "-translate-y-5 ring-2 ring-[color:var(--color-gold)] glow-primary",
     active: "ring-2 ring-[color:var(--color-gold)] animate-card-active",
     recent: "animate-card-played",
+  };
+
+  const composedStyle: React.CSSProperties = {
+    ...style,
+    ...(animationDelay != null
+      ? ({ "--deal-delay": `${animationDelay}ms` } as React.CSSProperties)
+      : null),
   };
 
   return (
@@ -68,12 +91,13 @@ export function PlayingCard({
       onClick={onClick}
       disabled={state === "disabled"}
       aria-label={ariaLabel ?? `${card.rank} of ${card.suit}`}
-      style={style}
+      style={composedStyle}
       className={cn(
-        "card-face shrink-0 relative flex flex-col justify-between p-1.5 transition-all duration-300 ease-out will-change-transform select-none",
+        "card-face shrink-0 relative flex flex-col justify-between p-1.5 transition-transform duration-300 ease-out will-change-transform select-none",
         SIZE_CLASSES[size],
         red ? "text-[color:var(--suit-red)]" : "text-[color:var(--suit-dark)]",
         stateClasses[state],
+        animation && ANIMATION_CLASSES[animation],
         !interactive && state !== "disabled" && "cursor-default",
         className,
       )}
@@ -98,3 +122,4 @@ export function PlayingCard({
     </button>
   );
 }
+
