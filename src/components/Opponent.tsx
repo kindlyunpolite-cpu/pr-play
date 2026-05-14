@@ -64,13 +64,8 @@ export function Opponent({
       : placement === "right"
         ? "-translate-x-3 sm:-translate-x-4"
         : "";
-  // Side seats: pull the info panel inward so it overlaps the rim instead of floating beside it.
-  const panelAnchor =
-    placement === "left"
-      ? "translate-x-6 sm:translate-x-8"
-      : placement === "right"
-        ? "-translate-x-6 sm:-translate-x-8"
-        : "";
+  // Info panel sits centered under the portrait for all seats.
+  const panelAnchor = "";
 
   return (
     <div
@@ -124,7 +119,7 @@ export function Opponent({
               : undefined,
           }}
         />
-        {player.isTurn && (
+        {player.isTurn && placement !== "top" && placement !== "bottom" && (
           <Crown
             className="absolute -top-1 left-1/2 -translate-x-1/2 z-[2] h-5 w-5 fill-[color:var(--gold)] text-[color:var(--gold)] drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]"
           />
