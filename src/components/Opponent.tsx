@@ -23,14 +23,14 @@ export function Opponent({
         "flex items-center gap-2 rounded-full bg-card/70 backdrop-blur-md transition-all duration-300 shrink-0",
         compact ? "px-2 py-1" : "px-2.5 py-1.5",
         player.isTurn
-          ? "ring-turn animate-turn bg-card/90"
-          : "ring-1 ring-border/60 opacity-85",
+          ? "ring-turn animate-turn bg-card/95 scale-[1.04]"
+          : "ring-1 ring-border/50 opacity-70",
       )}
     >
       <div className="relative shrink-0">
         <div
           className={cn(
-            "flex items-center justify-center rounded-full bg-gradient-to-br from-accent/90 to-primary/90 shadow-inner",
+            "flex items-center justify-center rounded-full bg-gradient-to-br from-accent/90 to-primary/90 shadow-inner transition-all",
             compact ? "h-7 w-7 text-sm" : "h-8 w-8 text-base",
             player.isTurn && "ring-2 ring-primary ring-offset-2 ring-offset-card",
           )}
@@ -42,7 +42,14 @@ export function Opponent({
         )}
       </div>
       <div className="flex flex-col leading-tight pr-1 min-w-0">
-        <span className="text-[11px] font-semibold truncate max-w-[72px]">{player.name}</span>
+        <span
+          className={cn(
+            "text-[11px] font-semibold truncate max-w-[80px]",
+            player.isTurn ? "text-foreground" : "text-foreground/80",
+          )}
+        >
+          {player.name}
+        </span>
         <div className="flex items-center gap-1">
           <span className="text-[9px] text-muted-foreground tabular-nums">{player.cardCount}</span>
           <div className="flex gap-[1px]">
