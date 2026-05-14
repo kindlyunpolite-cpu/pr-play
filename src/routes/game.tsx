@@ -214,8 +214,8 @@ function Game() {
                     pos === "top"
                       ? "top-0 left-1/2 -translate-x-1/2 -translate-y-[48%]"
                       : pos === "left"
-                        ? "left-0 top-1/2 -translate-x-[42%] -translate-y-1/2"
-                        : "right-0 top-1/2 translate-x-[42%] -translate-y-1/2";
+                        ? "left-0 top-1/2 -translate-x-[24%] -translate-y-1/2"
+                        : "right-0 top-1/2 translate-x-[24%] -translate-y-1/2";
                   return (
                     <div
                       key={p.id}
@@ -230,7 +230,7 @@ function Game() {
                 })}
 
                 {/* You seat — bottom of the table */}
-                <div className="absolute z-30 left-1/2 bottom-0 -translate-x-1/2 translate-y-[60%]">
+                <div className="absolute z-30 left-1/2 bottom-0 -translate-x-1/2 translate-y-[52%]">
                   <Opponent player={YOU} placement="bottom" compactMobile self />
                 </div>
               </div>
@@ -274,7 +274,7 @@ function Game() {
               </div>
             </div>
 
-            <div className="fan-hand hand-scroll relative flex items-end justify-center overflow-x-auto sm:overflow-visible no-scrollbar px-4 pt-2 pb-2 min-h-[7.5rem] sm:min-h-[8.5rem]">
+            <div className="fan-hand hand-scroll relative flex items-end justify-center overflow-x-auto sm:overflow-visible no-scrollbar px-4 pt-8 pb-2 min-h-[8rem] sm:min-h-[8.75rem]">
               {HAND.map((card, i) => {
                 const n = HAND.length;
                 const mid = (n - 1) / 2;
@@ -293,7 +293,7 @@ function Game() {
                         : `translateY(${arc}px) rotate(${rot}deg)`,
                       transformOrigin: "bottom center",
                       zIndex: isSelected ? 50 : 10 + i,
-                      marginLeft: i === 0 ? 0 : "-1.75rem",
+                      marginLeft: i === 0 ? 0 : "-1.9rem",
                     }}
                   >
                     <div className="transition-transform duration-300 ease-out group-hover:-translate-y-5 group-hover:scale-[1.05] group-focus-within:-translate-y-5 group-active:translate-y-0 group-active:scale-95">
