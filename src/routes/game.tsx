@@ -11,6 +11,7 @@ import {
 } from "@/components/cards";
 import { useEffect, useState } from "react";
 import { Timer } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/game")({
   head: () => ({
