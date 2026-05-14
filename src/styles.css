@@ -177,6 +177,15 @@
     background:
       radial-gradient(ellipse at center, oklch(0 0 0 / 0.22) 0%, transparent 72%);
   }
+  .table-shell {
+    width: min(74vw, 900px);
+  }
+  @media (min-width: 1024px) {
+    .table-shell { width: min(58vw, 880px); }
+  }
+  @media (max-width: 899px) {
+    .table-shell { width: min(86vw, 760px); }
+  }
   .game-stage::before {
     content: "";
     position: absolute;
