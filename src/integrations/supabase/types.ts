@@ -14,7 +14,151 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      player_secrets: {
+        Row: {
+          player_id: string
+          session_token: string
+        }
+        Insert: {
+          player_id: string
+          session_token: string
+        }
+        Update: {
+          player_id?: string
+          session_token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_secrets_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: true
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      players: {
+        Row: {
+          avatar: string | null
+          id: string
+          is_host: boolean
+          is_ready: boolean
+          joined_at: string
+          last_seen_at: string
+          nickname: string
+          room_id: string
+          seat: number
+        }
+        Insert: {
+          avatar?: string | null
+          id?: string
+          is_host?: boolean
+          is_ready?: boolean
+          joined_at?: string
+          last_seen_at?: string
+          nickname: string
+          room_id: string
+          seat: number
+        }
+        Update: {
+          avatar?: string | null
+          id?: string
+          is_host?: boolean
+          is_ready?: boolean
+          joined_at?: string
+          last_seen_at?: string
+          nickname?: string
+          room_id?: string
+          seat?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "players_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      room_messages: {
+        Row: {
+          avatar: string | null
+          created_at: string
+          id: string
+          nickname: string
+          player_id: string | null
+          room_id: string
+          text: string
+        }
+        Insert: {
+          avatar?: string | null
+          created_at?: string
+          id?: string
+          nickname: string
+          player_id?: string | null
+          room_id: string
+          text: string
+        }
+        Update: {
+          avatar?: string | null
+          created_at?: string
+          id?: string
+          nickname?: string
+          player_id?: string | null
+          room_id?: string
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_messages_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_messages_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      rooms: {
+        Row: {
+          code: string
+          created_at: string
+          finished_at: string | null
+          host_player_id: string | null
+          id: string
+          max_players: number
+          started_at: string | null
+          status: Database["public"]["Enums"]["room_status"]
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          finished_at?: string | null
+          host_player_id?: string | null
+          id?: string
+          max_players?: number
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["room_status"]
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          finished_at?: string | null
+          host_player_id?: string | null
+          id?: string
+          max_players?: number
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["room_status"]
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +167,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      room_status: "waiting" | "playing" | "finished"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +294,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      room_status: ["waiting", "playing", "finished"],
+    },
   },
 } as const
