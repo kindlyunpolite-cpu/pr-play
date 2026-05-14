@@ -2,7 +2,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { TopNav } from "@/components/TopNav";
 import { ChatPanel } from "@/components/ChatPanel";
 import { Opponent, type OpponentData } from "@/components/Opponent";
-import { PlayingCard, SuitBadge, type CardData } from "@/components/PlayingCard";
+import {
+  PlayingCard,
+  HiddenCard,
+  CardStack,
+  DiscardPile,
+  SuitBadge,
+  type CardData,
+} from "@/components/cards";
 import { useState } from "react";
 import { Timer } from "lucide-react";
 
