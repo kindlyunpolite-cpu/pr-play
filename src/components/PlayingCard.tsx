@@ -40,10 +40,10 @@ export function PlayingCard({
   style?: React.CSSProperties;
 }) {
   const sizes = {
-    xs: "w-8 h-12 text-[10px] rounded-md",
-    sm: "w-12 h-[4.5rem] text-xs rounded-lg",
-    md: "w-16 h-24 text-sm rounded-xl",
-    lg: "w-20 h-30 text-base rounded-xl",
+    xs: "w-8 h-12 text-[10px] rounded-[6px]",
+    sm: "w-12 h-[4.5rem] text-xs rounded-[10px]",
+    md: "w-[4.5rem] h-[6.6rem] text-sm rounded-2xl",
+    lg: "w-20 h-30 text-base rounded-2xl",
   };
 
   if (faceDown || !card) {
