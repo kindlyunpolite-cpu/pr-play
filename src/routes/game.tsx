@@ -200,7 +200,7 @@ function Game() {
                   </div>
                 </div>
 
-                {/* Seats around the table — portraits overflow the felt edge */}
+                {/* Seats around the table — portraits sit outside the rail, panels attached to the edge */}
                 {OPPONENTS.map((p, i) => {
                   const n = OPPONENTS.length;
                   const seatPos: SeatPlacement[] =
@@ -212,10 +212,10 @@ function Game() {
                   const pos = seatPos[i] ?? "top";
                   const cls =
                     pos === "top"
-                      ? "top-0 left-1/2 -translate-x-1/2 -translate-y-[28%]"
+                      ? "top-0 left-1/2 -translate-x-1/2 -translate-y-[70%]"
                       : pos === "left"
-                        ? "left-0 top-1/2 -translate-x-[22%] -translate-y-1/2"
-                        : "right-0 top-1/2 translate-x-[22%] -translate-y-1/2";
+                        ? "left-0 top-1/2 -translate-x-[82%] -translate-y-1/2"
+                        : "right-0 top-1/2 translate-x-[82%] -translate-y-1/2";
                   return (
                     <div
                       key={p.id}
@@ -230,7 +230,7 @@ function Game() {
                 })}
 
                 {/* You seat — bottom of the table */}
-                <div className="absolute z-10 left-1/2 bottom-0 -translate-x-1/2 translate-y-[18%]">
+                <div className="absolute z-10 left-1/2 bottom-0 -translate-x-1/2 translate-y-[66%]">
                   <Opponent player={YOU} placement="bottom" compactMobile self />
                 </div>
               </div>
@@ -238,9 +238,9 @@ function Game() {
           </div>
 
           {/* Bottom action bar + hand — blends into scene with vertical gradient fade */}
-          <div className="sticky bottom-0 z-20 bg-gradient-to-t from-background via-background/85 to-transparent pb-safe">
+          <div className="sticky bottom-0 z-20 bg-gradient-to-t from-background via-background/72 to-transparent pb-safe">
             {/* Floating action group */}
-            <div className="flex items-center justify-between gap-3 px-4 pt-2 pb-1">
+            <div className="flex items-center justify-between gap-3 px-4 pt-1 pb-0">
               <span
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em]",
@@ -257,7 +257,7 @@ function Game() {
                 <button
                   onClick={handleDraw}
                   disabled={!myTurn}
-                  className="h-10 rounded-full border border-white/12 bg-white/5 px-4 text-[11px] font-bold uppercase tracking-[0.16em] text-foreground/90 hover:border-[color:var(--gold)]/40 hover:text-[color:var(--gold)] transition active:scale-95 disabled:opacity-40 shadow-[inset_0_1px_0_oklch(1_0_0/0.08)]"
+                  className="control-pill h-10 px-4 text-[11px] font-bold uppercase tracking-[0.16em] text-foreground/90 hover:border-[color:var(--gold)]/45 hover:text-[color:var(--gold)] transition active:scale-95 disabled:opacity-40"
                 >
                   Draw
                 </button>
@@ -274,7 +274,7 @@ function Game() {
               </div>
             </div>
 
-            <div className="fan-hand hand-scroll relative flex items-end justify-center overflow-x-auto sm:overflow-visible no-scrollbar px-4 pt-4 pb-3 min-h-[9rem] sm:min-h-[10rem]">
+            <div className="fan-hand hand-scroll relative flex items-end justify-center overflow-x-auto sm:overflow-visible no-scrollbar px-4 pt-2 pb-2 min-h-[7.5rem] sm:min-h-[8.5rem]">
               {HAND.map((card, i) => {
                 const n = HAND.length;
                 const mid = (n - 1) / 2;
