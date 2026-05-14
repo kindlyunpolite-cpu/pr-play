@@ -50,13 +50,23 @@ export function Opponent({
   const portraitSize = compact
     ? "h-20 w-16"
     : compactMobile
-      ? (self ? "h-22 w-18 sm:h-32 sm:w-28" : "h-24 w-20 sm:h-40 sm:w-36")
-      : "h-32 w-28 sm:h-40 sm:w-36";
+      ? (self ? "h-22 w-18 sm:h-30 sm:w-26" : "h-24 w-20 sm:h-32 sm:w-28")
+      : "h-28 w-24 sm:h-32 sm:w-28";
   const panelWidth = compact
     ? "min-w-[140px] max-w-[160px]"
     : compactMobile
       ? (self ? "min-w-[150px] max-w-[170px] sm:min-w-[170px] sm:max-w-[200px]" : "min-w-[150px] max-w-[170px] sm:min-w-[180px] sm:max-w-[210px]")
       : "min-w-[180px] max-w-[210px]";
+  const portraitAnchor =
+    placement === "left"
+      ? "-translate-x-6 sm:-translate-x-9"
+      : placement === "right"
+        ? "translate-x-6 sm:translate-x-9"
+        : placement === "top"
+          ? "translate-y-1 sm:translate-y-0"
+          : self
+            ? "translate-y-0 sm:translate-y-1"
+            : "";
 
   return (
     <div
@@ -70,6 +80,7 @@ export function Opponent({
         className={cn(
           "relative shrink-0 transition-all duration-500 ease-out",
           portraitSize,
+          portraitAnchor,
           player.isTurn ? "scale-[1.04]" : "scale-100",
         )}
       >

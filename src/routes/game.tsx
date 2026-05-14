@@ -94,8 +94,8 @@ function Game() {
 
       <div className="flex flex-1 lg:flex-row flex-col min-h-0">
         <main className="game-stage relative flex-1 flex flex-col min-h-0">
-          {/* Table arena — seated like the reference, with explicit space above and a compact hand zone below */}
-          <div className="table-arena absolute inset-0 z-10 flex items-start justify-center sm:items-center px-4 sm:px-8 lg:px-10 pt-[8rem] sm:pt-[8.75rem] pb-[8.25rem] sm:pb-[8.75rem] pointer-events-none">
+          {/* Table arena — portraits are anchored behind the outer rim, not above the UI chrome */}
+          <div className="table-arena absolute inset-0 z-10 flex items-start justify-center px-4 sm:px-8 lg:px-10 pt-[7.6rem] sm:pt-[8.1rem] pb-[7.5rem] sm:pb-[8rem] pointer-events-none">
             <div className="table-shell relative mx-auto">
               {/* Outer ambient halo — soft glow bleed around the table */}
               <div
@@ -212,10 +212,10 @@ function Game() {
                   const pos = seatPos[i] ?? "top";
                   const cls =
                     pos === "top"
-                      ? "top-0 left-1/2 -translate-x-1/2 -translate-y-[32%] sm:-translate-y-[36%]"
+                      ? "top-0 left-1/2 -translate-x-1/2 -translate-y-[44%] sm:-translate-y-[50%]"
                       : pos === "left"
-                        ? "left-0 top-1/2 -translate-x-[18%] sm:-translate-x-[44%] lg:-translate-x-[50%] -translate-y-1/2"
-                        : "right-0 top-1/2 translate-x-[18%] sm:translate-x-[44%] lg:translate-x-[50%] -translate-y-1/2";
+                        ? "left-0 top-1/2 -translate-x-[50%] sm:-translate-x-[62%] lg:-translate-x-[66%] -translate-y-1/2"
+                        : "right-0 top-1/2 translate-x-[50%] sm:translate-x-[62%] lg:translate-x-[66%] -translate-y-1/2";
                   return (
                     <div
                       key={p.id}
@@ -233,10 +233,10 @@ function Game() {
           </div>
 
           {/* Own seat is a separate top layer so cards/action chrome never crop it. */}
-          <div className="absolute inset-0 z-40 flex items-start justify-center sm:items-center px-4 sm:px-8 lg:px-10 pt-[8rem] sm:pt-[8.75rem] pb-[8.25rem] sm:pb-[8.75rem] pointer-events-none">
+          <div className="absolute inset-0 z-40 flex items-start justify-center px-4 sm:px-8 lg:px-10 pt-[7.6rem] sm:pt-[8.1rem] pb-[7.5rem] sm:pb-[8rem] pointer-events-none">
             <div className="table-shell relative mx-auto">
               <div className="relative aspect-[16/9.5] w-full">
-                <div className="absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-[24%] sm:translate-y-[27%] pointer-events-auto">
+                <div className="absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-[41%] sm:translate-y-[43%] pointer-events-auto">
                   <Opponent player={YOU} placement="bottom" compactMobile self />
                 </div>
               </div>
@@ -246,7 +246,7 @@ function Game() {
           {/* Bottom action bar + hand — blends into scene with vertical gradient fade */}
           <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-background via-background/62 to-transparent pb-safe">
             {/* Floating action group */}
-            <div className="flex items-center justify-between gap-3 px-4 pt-1 pb-0">
+            <div className="flex items-center justify-between gap-3 px-4 pt-0 pb-0">
               <span
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em]",
@@ -280,7 +280,7 @@ function Game() {
               </div>
             </div>
 
-            <div className="fan-hand hand-scroll relative flex items-end justify-center overflow-x-auto sm:overflow-visible no-scrollbar px-4 pt-4 pb-1 min-h-[5.75rem] sm:min-h-[6.35rem]">
+            <div className="fan-hand hand-scroll relative flex items-end justify-center overflow-x-auto sm:overflow-visible no-scrollbar px-4 pt-2 pb-1 min-h-[5.1rem] sm:min-h-[5.75rem]">
               {HAND.map((card, i) => {
                 const n = HAND.length;
                 const mid = (n - 1) / 2;
