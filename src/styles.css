@@ -91,8 +91,10 @@
   html { -webkit-text-size-adjust: 100%; touch-action: manipulation; }
   body {
     background:
-      radial-gradient(ellipse at top, oklch(0.24 0.05 160) 0%, transparent 60%),
-      radial-gradient(ellipse at bottom, oklch(0.16 0.03 160) 0%, transparent 60%),
+      radial-gradient(ellipse 80% 55% at 50% 0%, oklch(0.18 0.04 175) 0%, transparent 58%),
+      radial-gradient(ellipse 70% 40% at 16% 48%, oklch(0.34 0.08 42 / 0.20) 0%, transparent 62%),
+      radial-gradient(ellipse 70% 42% at 84% 46%, oklch(0.46 0.16 315 / 0.14) 0%, transparent 64%),
+      radial-gradient(ellipse at bottom, oklch(0.09 0.03 160) 0%, transparent 62%),
       var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
