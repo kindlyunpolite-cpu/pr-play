@@ -57,21 +57,19 @@ export function Opponent({
     : compactMobile
       ? (self ? "min-w-[150px] max-w-[170px] sm:min-w-[170px] sm:max-w-[200px]" : "min-w-[150px] max-w-[170px] sm:min-w-[180px] sm:max-w-[210px]")
       : "min-w-[180px] max-w-[210px]";
+  // Side seats: nudge portrait TOWARD the rim so it visually rests on the rail.
   const portraitAnchor =
     placement === "left"
-      ? "-translate-x-6 sm:-translate-x-9"
+      ? "translate-x-3 sm:translate-x-4"
       : placement === "right"
-        ? "translate-x-6 sm:translate-x-9"
-        : placement === "top"
-          ? "translate-y-1 sm:translate-y-0"
-          : self
-            ? "translate-y-0 sm:translate-y-1"
-            : "";
+        ? "-translate-x-3 sm:-translate-x-4"
+        : "";
+  // Side seats: pull the info panel inward so it overlaps the rim instead of floating beside it.
   const panelAnchor =
     placement === "left"
-      ? "translate-x-10 sm:translate-x-14"
+      ? "translate-x-6 sm:translate-x-8"
       : placement === "right"
-        ? "-translate-x-10 sm:-translate-x-14"
+        ? "-translate-x-6 sm:-translate-x-8"
         : "";
 
   return (
