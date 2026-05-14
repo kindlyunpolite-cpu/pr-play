@@ -50,8 +50,8 @@ export function Opponent({
   const portraitSize = compact
     ? "h-20 w-16"
     : compactMobile
-      ? (self ? "h-22 w-18 sm:h-32 sm:w-28" : "h-24 w-20 sm:h-40 sm:w-36")
-      : "h-32 w-28 sm:h-40 sm:w-36";
+      ? (self ? "h-22 w-18 sm:h-30 sm:w-26" : "h-24 w-20 sm:h-32 sm:w-28")
+      : "h-28 w-24 sm:h-32 sm:w-28";
   const panelWidth = compact
     ? "min-w-[140px] max-w-[160px]"
     : compactMobile
