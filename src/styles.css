@@ -181,7 +181,7 @@
     width: min(74vw, 900px);
   }
   @media (min-width: 1024px) {
-    .table-shell { width: min(58vw, 880px); }
+    .table-shell { width: min(54vw, 820px); }
   }
   @media (max-width: 899px) {
     .table-shell { width: min(86vw, 760px); }
