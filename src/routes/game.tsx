@@ -41,43 +41,43 @@ function Game() {
   const activePlayer = OPPONENTS.find((o) => o.isTurn);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="h-[100dvh] flex flex-col overflow-hidden">
       <TopNav roomCode="K7XQ2" />
 
-      <div className="flex flex-1 lg:flex-row flex-col">
-        <main className="flex-1 px-3 sm:px-5 py-3 sm:py-5 flex flex-col gap-3">
-          {/* Turn banner */}
-          <div className="mx-auto inline-flex items-center gap-2.5 rounded-full border border-border/50 bg-card/60 backdrop-blur-md px-3.5 py-1.5 shadow-sm">
-            <span className="relative flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-60 animate-ping" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
-            </span>
-            <span className="text-xs">
-              <span className="font-semibold">{activePlayer?.name ?? "—"}</span>
-              <span className="text-muted-foreground"> is playing</span>
-            </span>
-            <span className="h-3 w-px bg-border/70" />
-            <Timer className="h-3 w-3 text-muted-foreground" />
-            <span className="text-[11px] font-mono tabular-nums text-muted-foreground">0:18</span>
+      <div className="flex flex-1 lg:flex-row flex-col min-h-0">
+        <main className="relative flex-1 flex flex-col min-h-0">
+          {/* Opponents row — compact, scrollable if 4 */}
+          <div className="px-3 pt-2.5 pb-1.5 flex items-center gap-2 overflow-x-auto no-scrollbar">
+            {OPPONENTS.map((p) => (
+              <Opponent key={p.id} player={p} compact />
+            ))}
           </div>
 
-          {/* Felt table */}
-          <div className="felt-table relative flex-1 rounded-[28px] sm:rounded-[36px] p-4 sm:p-6 flex flex-col">
-            {/* Top opponent */}
-            <div className="flex justify-center">
-              <Opponent player={OPPONENTS[1]} position="top" />
+          {/* Turn banner */}
+          <div className="px-3">
+            <div className="mx-auto inline-flex w-full items-center justify-center gap-2.5 rounded-full border border-border/50 bg-card/60 backdrop-blur-md px-3.5 py-1.5 shadow-sm">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-primary opacity-60 animate-ping" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+              </span>
+              <span className="text-xs">
+                <span className="font-semibold">{activePlayer?.name ?? "—"}</span>
+                <span className="text-muted-foreground"> is playing</span>
+              </span>
+              <span className="h-3 w-px bg-border/70" />
+              <Timer className="h-3 w-3 text-muted-foreground" />
+              <span className="text-[11px] font-mono tabular-nums text-muted-foreground">0:18</span>
             </div>
+          </div>
 
-            {/* Side opponents + center */}
-            <div className="flex-1 flex items-center justify-between gap-2 sm:gap-4 py-3">
-              <Opponent player={OPPONENTS[0]} position="left" />
-
-              {/* Center area */}
-              <div className="flex flex-col items-center gap-4">
-                <div className="flex items-end gap-4 sm:gap-6">
+          {/* Felt center area — fluid */}
+          <div className="flex-1 min-h-0 px-3 py-3">
+            <div className="felt-table h-full w-full rounded-[28px] flex items-center justify-center p-4">
+              <div className="flex flex-col items-center gap-3">
+                <div className="flex items-end gap-5 sm:gap-7">
                   {/* Draw deck */}
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="relative h-[6.6rem] w-[4.5rem]">
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div className="relative h-[6.2rem] w-[4.25rem]">
                       <PlayingCard faceDown size="md" className="absolute top-1 left-1 opacity-50" />
                       <PlayingCard faceDown size="md" className="absolute top-0.5 left-0.5 opacity-75" />
                       <PlayingCard faceDown size="md" className="absolute top-0 left-0" />
@@ -88,8 +88,8 @@ function Game() {
                   </div>
 
                   {/* Discard pile */}
-                  <div className="flex flex-col items-center gap-2">
-                    <div className="relative h-[6.6rem] w-[4.5rem]">
+                  <div className="flex flex-col items-center gap-1.5">
+                    <div className="relative h-[6.2rem] w-[4.25rem]">
                       <PlayingCard
                         card={{ suit: "leaves", rank: "8" }}
                         size="md"
@@ -111,21 +111,19 @@ function Game() {
                   <SuitBadge suit={activeSuit} size="sm" />
                 </div>
               </div>
-
-              <Opponent player={OPPONENTS[2]} position="right" />
             </div>
           </div>
 
-          {/* My hand */}
-          <div className="pt-1">
-            <div className="mb-2.5 flex items-center justify-between px-1">
-              <div className="flex items-center gap-2">
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-accent to-primary text-sm shadow-sm">
+          {/* Sticky bottom hand */}
+          <div className="sticky bottom-0 z-20 border-t border-border/40 bg-gradient-to-t from-background via-background/95 to-background/70 backdrop-blur-xl pb-safe">
+            <div className="flex items-center justify-between px-3 pt-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-accent to-primary text-sm shadow-sm shrink-0">
                   🐺
                 </div>
                 <span className="text-sm font-semibold">You</span>
                 <span className="text-xs text-muted-foreground tabular-nums">
-                  · {HAND.length} cards
+                  · {HAND.length}
                 </span>
               </div>
               <div className="flex items-center gap-2">
@@ -140,34 +138,25 @@ function Game() {
                 </span>
                 <button
                   disabled={!myTurn}
-                  className="rounded-full bg-card/80 border border-border/60 px-3 py-1 text-xs font-medium transition hover:bg-card disabled:opacity-40"
+                  className="h-9 min-w-[3.5rem] rounded-full bg-card border border-border/60 px-3 text-xs font-semibold transition active:scale-95 disabled:opacity-40"
                 >
                   Draw
                 </button>
               </div>
             </div>
 
-            <div className="relative flex justify-center items-end h-32 overflow-x-auto no-scrollbar px-2">
-              <div className="flex items-end pt-4">
-                {HAND.map((card, i) => {
-                  const offset = i - (HAND.length - 1) / 2;
-                  return (
-                    <PlayingCard
-                      key={i}
-                      card={card}
-                      size="md"
-                      playable={myTurn}
-                      selected={selected === i}
-                      onClick={() => setSelected(selected === i ? null : i)}
-                      className="-mr-7 last:mr-0"
-                      style={{
-                        transform: `rotate(${offset * 3.5}deg) translateY(${Math.abs(offset) * 3}px)`,
-                        zIndex: i,
-                      }}
-                    />
-                  );
-                })}
-              </div>
+            <div className="hand-scroll flex items-end gap-2 overflow-x-auto no-scrollbar px-4 pt-3 pb-2">
+              {HAND.map((card, i) => (
+                <PlayingCard
+                  key={i}
+                  card={card}
+                  size="lg"
+                  playable={myTurn}
+                  selected={selected === i}
+                  onClick={() => setSelected(selected === i ? null : i)}
+                  className="shrink-0"
+                />
+              ))}
             </div>
           </div>
         </main>
