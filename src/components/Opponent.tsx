@@ -14,7 +14,6 @@ export function Opponent({
   compact = false,
 }: {
   player: OpponentData;
-  position?: "top" | "left" | "right";
   compact?: boolean;
 }) {
   return (

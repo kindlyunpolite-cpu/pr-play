@@ -1,17 +1,11 @@
 // Browser-only helpers for storing the current room session
 // (player id + session token issued by the server when creating/joining a room).
 
-const STORAGE_KEY = "prsi.session.v1";
+import type { RoomSession } from "@/types/room";
 
-export interface RoomSession {
-  roomCode: string;
-  roomId: string;
-  playerId: string;
-  sessionToken: string;
-  seat: number;
-  nickname: string;
-  avatar?: string | null;
-}
+export type { RoomSession };
+
+const STORAGE_KEY = "prsi.session.v1";
 
 export function loadSession(): RoomSession | null {
   if (typeof window === "undefined") return null;
