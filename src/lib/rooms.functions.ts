@@ -334,7 +334,7 @@ export const heartbeat = createServerFn({ method: "POST" })
     await authenticatePlayer(data.playerId, data.sessionToken);
     await supabaseAdmin
       .from("players")
-      .update({ last_seen_at: new Date().toISOString() })
+      .update({ connected: true, last_seen_at: new Date().toISOString() })
       .eq("id", data.playerId);
     return { ok: true };
   });
