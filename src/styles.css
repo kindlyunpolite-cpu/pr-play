@@ -107,15 +107,20 @@
 @layer utilities {
   .felt-table {
     background:
-      repeating-linear-gradient(45deg, oklch(1 0 0 / 0.012) 0 1px, transparent 1px 3px),
-      repeating-linear-gradient(-45deg, oklch(0 0 0 / 0.022) 0 1px, transparent 1px 3px),
-      radial-gradient(ellipse 50% 42% at 50% 48%, oklch(0.30 0.07 160) 0%, transparent 72%),
-      radial-gradient(ellipse at 50% 35%, oklch(0.22 0.05 160) 0%, oklch(0.14 0.03 160) 55%, oklch(0.08 0.02 160) 100%);
+      /* Subtle woven texture */
+      repeating-linear-gradient(45deg, oklch(1 0 0 / 0.014) 0 1px, transparent 1px 3px),
+      repeating-linear-gradient(-45deg, oklch(0 0 0 / 0.025) 0 1px, transparent 1px 3px),
+      /* Center hotspot under the cards */
+      radial-gradient(ellipse 30% 26% at 50% 50%, oklch(0.42 0.08 160) 0%, oklch(0.32 0.07 160) 35%, transparent 75%),
+      /* Mid felt with cinematic vignette */
+      radial-gradient(ellipse 60% 50% at 50% 48%, oklch(0.30 0.07 160) 0%, transparent 78%),
+      /* Outer dark fade */
+      radial-gradient(ellipse at 50% 35%, oklch(0.22 0.05 160) 0%, oklch(0.13 0.03 160) 55%, oklch(0.06 0.02 160) 100%);
     box-shadow:
       inset 0 1px 0 oklch(1 0 0 / 0.06),
-      inset 0 0 180px oklch(0 0 0 / 0.7),
-      inset 0 0 0 1px oklch(0.82 0.14 85 / 0.14),
-      inset 0 -60px 120px -50px oklch(0 0 0 / 0.65),
+      inset 0 0 220px oklch(0 0 0 / 0.78),
+      inset 0 0 0 1px oklch(0.82 0.14 85 / 0.16),
+      inset 0 -80px 140px -60px oklch(0 0 0 / 0.7),
       0 40px 100px -30px oklch(0 0 0 / 0.85);
   }
   .felt-table::before {
@@ -126,39 +131,49 @@
     border-radius: inherit;
     pointer-events: none;
     box-shadow:
-      inset 0 0 0 1px oklch(0.82 0.14 85 / 0.18),
-      inset 0 0 24px oklch(0.55 0.18 220 / 0.08),
-      inset 0 -2px 0 0 oklch(0 0 0 / 0.45);
+      inset 0 0 0 1px oklch(0.82 0.14 85 / 0.20),
+      inset 0 0 30px oklch(0.55 0.18 220 / 0.10),
+      inset 0 -2px 0 0 oklch(0 0 0 / 0.5);
+  }
+  .felt-table::after {
+    /* Atmospheric depth fog — subtle haze around edges */
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse 90% 70% at 50% 50%, transparent 50%, oklch(0 0 0 / 0.35) 100%);
   }
   .table-spotlight {
     position: absolute;
     left: 50%;
     top: 50%;
-    width: min(440px, 70%);
+    width: min(480px, 75%);
     aspect-ratio: 1;
     transform: translate(-50%, -50%);
     pointer-events: none;
     border-radius: 50%;
     background:
       radial-gradient(circle at center,
-        oklch(0.82 0.14 85 / 0.13) 0%,
-        oklch(0.82 0.14 85 / 0.05) 32%,
+        oklch(0.82 0.14 85 / 0.18) 0%,
+        oklch(0.82 0.14 85 / 0.07) 30%,
         transparent 65%);
-    filter: blur(3px);
+    filter: blur(4px);
   }
   .table-spotlight::after {
     content: "";
     position: absolute;
-    inset: 28%;
+    inset: 30%;
     border-radius: 50%;
-    background: radial-gradient(circle, oklch(1 0 0 / 0.06) 0%, transparent 70%);
+    background: radial-gradient(circle, oklch(1 0 0 / 0.08) 0%, transparent 70%);
   }
   .center-stage {
     position: relative;
-    padding: 1.25rem 1.5rem;
+    padding: 1.25rem 1.75rem;
     border-radius: 9999px;
     background:
-      radial-gradient(ellipse at center, oklch(0 0 0 / 0.18) 0%, transparent 70%);
+      radial-gradient(ellipse at center, oklch(0 0 0 / 0.22) 0%, transparent 72%);
   }
   .card-face {
     background: linear-gradient(180deg, oklch(0.995 0.005 90) 0%, oklch(0.94 0.012 90) 100%);

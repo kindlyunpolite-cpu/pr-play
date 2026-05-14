@@ -95,17 +95,36 @@ function Game() {
       <div className="flex flex-1 lg:flex-row flex-col min-h-0">
         <main className="relative flex-1 flex flex-col min-h-0">
           {/* Table arena — wider rounded rectangle, generous padding so portraits never clip */}
-          <div className="flex-1 min-h-0 flex items-center justify-center px-10 sm:px-16 pt-20 sm:pt-24 pb-28 sm:pb-32">
+          <div className="flex-1 min-h-0 flex items-center justify-center px-10 sm:px-16 pt-28 sm:pt-32 pb-36 sm:pb-40">
             <div className="relative w-full max-w-[860px] mx-auto">
-              {/* Decorative outer rail — thick dimensional table edge */}
+              {/* Outer ambient halo — soft glow bleed around the table */}
               <div
                 aria-hidden
-                className="absolute -inset-3 sm:-inset-4 rounded-[44px] sm:rounded-[56px] pointer-events-none"
+                className="absolute -inset-16 rounded-[64px] pointer-events-none opacity-70"
                 style={{
                   background:
-                    "linear-gradient(180deg, oklch(0.32 0.04 60) 0%, oklch(0.18 0.03 40) 50%, oklch(0.10 0.02 40) 100%)",
+                    "radial-gradient(ellipse at center, oklch(0.82 0.14 85 / 0.06) 0%, oklch(0.55 0.18 220 / 0.04) 35%, transparent 70%)",
+                  filter: "blur(20px)",
+                }}
+              />
+              {/* Decorative outer rail — thick layered dimensional table edge */}
+              <div
+                aria-hidden
+                className="absolute -inset-5 sm:-inset-6 rounded-[48px] sm:rounded-[60px] pointer-events-none"
+                style={{
+                  background:
+                    "linear-gradient(180deg, oklch(0.36 0.05 60) 0%, oklch(0.22 0.04 50) 35%, oklch(0.12 0.02 40) 75%, oklch(0.08 0.02 40) 100%)",
                   boxShadow:
-                    "inset 0 2px 0 oklch(1 0 0 / 0.08), inset 0 -2px 0 oklch(0 0 0 / 0.6), 0 30px 80px -20px oklch(0 0 0 / 0.85), 0 0 0 1px oklch(0.82 0.14 85 / 0.18)",
+                    "inset 0 3px 0 oklch(1 0 0 / 0.10), inset 0 -3px 0 oklch(0 0 0 / 0.7), inset 0 0 0 1px oklch(0.82 0.14 85 / 0.22), inset 0 0 40px oklch(0 0 0 / 0.55), 0 40px 100px -20px oklch(0 0 0 / 0.9), 0 0 0 1px oklch(0 0 0 / 0.6)",
+                }}
+              />
+              {/* Inner gold piping ring — thin accent between rail and felt */}
+              <div
+                aria-hidden
+                className="absolute -inset-1 rounded-[40px] sm:rounded-[52px] pointer-events-none"
+                style={{
+                  boxShadow:
+                    "inset 0 0 0 1px oklch(0.82 0.14 85 / 0.35), 0 0 14px -2px oklch(0.82 0.14 85 / 0.18)",
                 }}
               />
               {/* Table itself: rounded rectangle, slightly wider */}
@@ -193,10 +212,10 @@ function Game() {
                   const pos = seatPos[i] ?? "top";
                   const cls =
                     pos === "top"
-                      ? "top-0 left-1/2 -translate-x-1/2 -translate-y-[42%]"
+                      ? "top-0 left-1/2 -translate-x-1/2 -translate-y-[28%]"
                       : pos === "left"
-                        ? "left-0 top-1/2 -translate-x-[28%] -translate-y-1/2"
-                        : "right-0 top-1/2 translate-x-[28%] -translate-y-1/2";
+                        ? "left-0 top-1/2 -translate-x-[22%] -translate-y-1/2"
+                        : "right-0 top-1/2 translate-x-[22%] -translate-y-1/2";
                   return (
                     <div
                       key={p.id}
@@ -211,15 +230,15 @@ function Game() {
                 })}
 
                 {/* You seat — bottom of the table */}
-                <div className="absolute z-10 left-1/2 bottom-0 -translate-x-1/2 translate-y-[28%]">
+                <div className="absolute z-10 left-1/2 bottom-0 -translate-x-1/2 translate-y-[18%]">
                   <Opponent player={YOU} placement="bottom" compactMobile self />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Bottom action bar + hand */}
-          <div className="sticky bottom-0 z-20 border-t border-[color:var(--gold)]/10 bg-gradient-to-t from-background via-background/95 to-background/60 backdrop-blur-xl pb-safe">
+          {/* Bottom action bar + hand — blends into scene with vertical gradient fade */}
+          <div className="sticky bottom-0 z-20 bg-gradient-to-t from-background via-background/85 to-transparent pb-safe">
             {/* Floating action group */}
             <div className="flex items-center justify-between gap-3 px-4 pt-2 pb-1">
               <span

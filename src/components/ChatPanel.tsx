@@ -101,8 +101,9 @@ export function ChatPanel() {
 
       <aside
         className={cn(
-          "fixed inset-x-0 bottom-0 z-40 flex max-h-[82dvh] flex-col rounded-t-2xl border-t border-border bg-popover/95 backdrop-blur-xl shadow-2xl transition-transform duration-300",
-          "lg:static lg:max-h-none lg:h-full lg:w-full lg:max-w-xs lg:rounded-none lg:border-l lg:border-t-0 lg:translate-y-0 lg:shadow-none",
+          "fixed inset-x-0 bottom-0 z-40 flex max-h-[82dvh] flex-col rounded-t-2xl border-t border-[color:var(--gold)]/15 bg-popover/95 backdrop-blur-xl shadow-2xl transition-transform duration-300",
+          "lg:static lg:max-h-none lg:h-full lg:w-full lg:max-w-[18rem] lg:rounded-none lg:border-l lg:border-[color:var(--gold)]/10 lg:border-t-0 lg:translate-y-0 lg:shadow-none",
+          "lg:bg-gradient-to-b lg:from-background/40 lg:via-background/20 lg:to-background/40 lg:backdrop-blur-md",
           open ? "translate-y-0" : "translate-y-full lg:translate-y-0",
         )}
         role="dialog"
