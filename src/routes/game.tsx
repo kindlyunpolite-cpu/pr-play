@@ -93,43 +93,43 @@ function Game() {
       <TopNav roomCode="K7XQ2" />
 
       <div className="flex flex-1 lg:flex-row flex-col min-h-0">
-        <main className="relative flex-1 flex flex-col min-h-0">
-          {/* Table arena — wider rounded rectangle, generous padding so portraits never clip */}
-          <div className="flex-1 min-h-0 flex items-center justify-center px-10 sm:px-16 pt-28 sm:pt-32 pb-36 sm:pb-40">
-            <div className="relative w-full max-w-[860px] mx-auto">
+        <main className="game-stage relative flex-1 flex flex-col min-h-0">
+          {/* Table arena — seated like the reference, with explicit space above and a compact hand zone below */}
+          <div className="table-arena flex-1 min-h-0 flex items-center justify-center px-4 sm:px-8 lg:px-10 pt-[8.25rem] sm:pt-[9rem] pb-[8.25rem] sm:pb-[9.25rem]">
+            <div className="relative w-full max-w-[980px] mx-auto">
               {/* Outer ambient halo — soft glow bleed around the table */}
               <div
                 aria-hidden
-                className="absolute -inset-16 rounded-[64px] pointer-events-none opacity-70"
+                className="absolute -inset-20 rounded-[72px] pointer-events-none opacity-90"
                 style={{
                   background:
-                    "radial-gradient(ellipse at center, oklch(0.82 0.14 85 / 0.06) 0%, oklch(0.55 0.18 220 / 0.04) 35%, transparent 70%)",
-                  filter: "blur(20px)",
+                    "radial-gradient(ellipse at center, oklch(0.82 0.14 85 / 0.10) 0%, oklch(0.55 0.18 220 / 0.08) 34%, transparent 72%)",
+                  filter: "blur(24px)",
                 }}
               />
               {/* Decorative outer rail — thick layered dimensional table edge */}
               <div
                 aria-hidden
-                className="absolute -inset-5 sm:-inset-6 rounded-[48px] sm:rounded-[60px] pointer-events-none"
+                className="absolute -inset-8 sm:-inset-10 rounded-[58px] sm:rounded-[72px] pointer-events-none"
                 style={{
                   background:
-                    "linear-gradient(180deg, oklch(0.36 0.05 60) 0%, oklch(0.22 0.04 50) 35%, oklch(0.12 0.02 40) 75%, oklch(0.08 0.02 40) 100%)",
+                    "linear-gradient(180deg, oklch(0.29 0.035 70) 0%, oklch(0.16 0.025 70) 36%, oklch(0.075 0.015 80) 72%, oklch(0.045 0.012 120) 100%)",
                   boxShadow:
-                    "inset 0 3px 0 oklch(1 0 0 / 0.10), inset 0 -3px 0 oklch(0 0 0 / 0.7), inset 0 0 0 1px oklch(0.82 0.14 85 / 0.22), inset 0 0 40px oklch(0 0 0 / 0.55), 0 40px 100px -20px oklch(0 0 0 / 0.9), 0 0 0 1px oklch(0 0 0 / 0.6)",
+                    "inset 0 4px 0 oklch(1 0 0 / 0.10), inset 0 -7px 0 oklch(0 0 0 / 0.82), inset 0 0 0 1px oklch(0.82 0.14 85 / 0.24), inset 0 0 0 8px oklch(0 0 0 / 0.22), inset 0 0 46px oklch(0 0 0 / 0.70), 0 46px 110px -22px oklch(0 0 0 / 0.95), 0 0 0 1px oklch(0 0 0 / 0.72)",
                 }}
               />
               {/* Inner gold piping ring — thin accent between rail and felt */}
               <div
                 aria-hidden
-                className="absolute -inset-1 rounded-[40px] sm:rounded-[52px] pointer-events-none"
+                className="absolute -inset-2 rounded-[44px] sm:rounded-[58px] pointer-events-none"
                 style={{
                   boxShadow:
-                    "inset 0 0 0 1px oklch(0.82 0.14 85 / 0.35), 0 0 14px -2px oklch(0.82 0.14 85 / 0.18)",
+                    "inset 0 0 0 1px oklch(0.82 0.14 85 / 0.38), inset 0 0 0 5px oklch(0 0 0 / 0.28), 0 0 18px -2px oklch(0.82 0.14 85 / 0.25)",
                 }}
               />
               {/* Table itself: rounded rectangle, slightly wider */}
               <div
-                className="felt-table relative aspect-[16/11] w-full rounded-[36px] sm:rounded-[48px]"
+                className="felt-table relative aspect-[16/9.5] w-full rounded-[34px] sm:rounded-[48px]"
                 style={{
                   backgroundImage:
                     "radial-gradient(ellipse at center, color-mix(in oklab, var(--primary) 10%, transparent) 0%, transparent 62%)",
