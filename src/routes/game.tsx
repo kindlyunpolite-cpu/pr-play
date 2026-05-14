@@ -96,7 +96,7 @@ function Game() {
         <main className="game-stage relative flex-1 flex flex-col min-h-0">
           {/* Table arena — seated like the reference, with explicit space above and a compact hand zone below */}
           <div className="table-arena absolute inset-0 flex items-center justify-center px-4 sm:px-8 lg:px-10 pt-[8.25rem] sm:pt-[9rem] pb-[10rem] sm:pb-[10.5rem]">
-            <div className="relative w-[min(78vw,980px)] lg:w-[min(70vw,960px)] mx-auto">
+            <div className="table-shell relative mx-auto">
               {/* Outer ambient halo — soft glow bleed around the table */}
               <div
                 aria-hidden
@@ -214,8 +214,8 @@ function Game() {
                     pos === "top"
                       ? "top-0 left-1/2 -translate-x-1/2 -translate-y-[48%]"
                       : pos === "left"
-                        ? "left-0 top-1/2 -translate-x-[58%] -translate-y-1/2"
-                        : "right-0 top-1/2 translate-x-[58%] -translate-y-1/2";
+                        ? "left-0 top-1/2 -translate-x-[42%] -translate-y-1/2"
+                        : "right-0 top-1/2 translate-x-[42%] -translate-y-1/2";
                   return (
                     <div
                       key={p.id}
@@ -230,7 +230,7 @@ function Game() {
                 })}
 
                 {/* You seat — bottom of the table */}
-                <div className="absolute z-10 left-1/2 bottom-0 -translate-x-1/2 translate-y-[60%]">
+                <div className="absolute z-30 left-1/2 bottom-0 -translate-x-1/2 translate-y-[60%]">
                   <Opponent player={YOU} placement="bottom" compactMobile self />
                 </div>
               </div>
