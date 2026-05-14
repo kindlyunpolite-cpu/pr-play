@@ -214,10 +214,10 @@ function Game() {
                   // centered below their portraits and may overlap the rim.
                   const cls =
                     pos === "top"
-                      ? "top-0 left-1/2 -translate-x-1/2 -translate-y-[9.5rem] sm:-translate-y-[10.5rem]"
+                      ? "-top-10 left-1/2 -translate-x-1/2 -translate-y-[9.5rem] sm:-translate-y-[10.5rem]"
                       : pos === "left"
-                        ? "left-0 top-1/2 -translate-x-[7rem] sm:-translate-x-[8rem] -translate-y-1/2"
-                        : "right-0 top-1/2 translate-x-[7rem] sm:translate-x-[8rem] -translate-y-1/2";
+                        ? "-left-12 top-1/2 -translate-x-[7rem] sm:-translate-x-[8rem] -translate-y-1/2"
+                        : "-right-12 top-1/2 translate-x-[7rem] sm:translate-x-[8rem] -translate-y-1/2";
                   return (
                     <div
                       key={p.id}
