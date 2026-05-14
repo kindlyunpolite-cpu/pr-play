@@ -212,10 +212,10 @@ function Game() {
                   const pos = seatPos[i] ?? "top";
                   const cls =
                     pos === "top"
-                      ? "top-0 left-1/2 -translate-x-1/2 -translate-y-[52%] sm:-translate-y-[62%]"
+                      ? "top-0 left-1/2 -translate-x-1/2 -translate-y-[44%] sm:-translate-y-[50%]"
                       : pos === "left"
-                        ? "left-0 top-1/2 -translate-x-[42%] sm:-translate-x-[56%] lg:-translate-x-[60%] -translate-y-1/2"
-                        : "right-0 top-1/2 translate-x-[42%] sm:translate-x-[56%] lg:translate-x-[60%] -translate-y-1/2";
+                        ? "left-0 top-1/2 -translate-x-[50%] sm:-translate-x-[62%] lg:-translate-x-[66%] -translate-y-1/2"
+                        : "right-0 top-1/2 translate-x-[50%] sm:translate-x-[62%] lg:translate-x-[66%] -translate-y-1/2";
                   return (
                     <div
                       key={p.id}
@@ -236,7 +236,7 @@ function Game() {
           <div className="absolute inset-0 z-40 flex items-start justify-center px-4 sm:px-8 lg:px-10 pt-[7.6rem] sm:pt-[8.1rem] pb-[7.5rem] sm:pb-[8rem] pointer-events-none">
             <div className="table-shell relative mx-auto">
               <div className="relative aspect-[16/9.5] w-full">
-                <div className="absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-[44%] sm:translate-y-[46%] pointer-events-auto">
+                <div className="absolute left-1/2 bottom-0 -translate-x-1/2 translate-y-[41%] sm:translate-y-[43%] pointer-events-auto">
                   <Opponent player={YOU} placement="bottom" compactMobile self />
                 </div>
               </div>
