@@ -265,7 +265,13 @@
     border-radius: inherit;
   }
 
+  @keyframes seat-scan {
+    0% { transform: translateX(-100%); }
+    60%, 100% { transform: translateX(100%); }
+  }
+
   @media (prefers-reduced-motion: reduce) {
+
     .animate-card-deal,
     .animate-card-draw,
     .animate-card-play,

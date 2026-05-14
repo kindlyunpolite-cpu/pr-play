@@ -27,19 +27,29 @@ export const Route = createFileRoute("/waiting")({
   component: Waiting,
 });
 
+type ConnStatus = "online" | "connecting" | "offline";
+
 interface Player {
   id: string;
   name: string;
   avatar: string;
   host: boolean;
   ready: boolean;
+  status: ConnStatus;
+  ping?: number;
 }
 
 const INITIAL_PLAYERS: Player[] = [
-  { id: "me", name: "You", avatar: "🐺", host: true, ready: true },
-  { id: "p2", name: "Pavla", avatar: "🦊", host: false, ready: true },
-  { id: "p3", name: "Tomáš", avatar: "🐻", host: false, ready: false },
+  { id: "me", name: "You", avatar: "🐺", host: true, ready: true, status: "online", ping: 24 },
+  { id: "p2", name: "Pavla", avatar: "🦊", host: false, ready: true, status: "online", ping: 58 },
+  { id: "p3", name: "Tomáš", avatar: "🐻", host: false, ready: false, status: "connecting", ping: 142 },
 ];
+
+const STATUS_META: Record<ConnStatus, { label: string; dot: string; ring: string }> = {
+  online: { label: "Online", dot: "bg-emerald-400", ring: "ring-emerald-400/40" },
+  connecting: { label: "Connecting", dot: "bg-amber-400", ring: "ring-amber-400/40" },
+  offline: { label: "Offline", dot: "bg-muted-foreground/50", ring: "ring-muted-foreground/30" },
+};
 
 function Waiting() {
   const navigate = useNavigate();
@@ -96,9 +106,15 @@ function Waiting() {
         <main className="mx-auto w-full max-w-md flex-1 px-4 py-5 lg:max-w-2xl">
           {/* Status header */}
           <section className="text-center mb-5">
-            <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 backdrop-blur px-3 py-1 text-xs text-muted-foreground">
-              <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />
-              Waiting for players…
+            <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 backdrop-blur px-3 py-1 text-xs">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60 animate-ping" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+              </span>
+              <span className="text-muted-foreground">Connected</span>
+              <span className="h-3 w-px bg-border/70" />
+              <Loader2 className="h-3 w-3 animate-spin text-primary" />
+              <span className="text-muted-foreground">Waiting for players…</span>
             </div>
             <h1 className="mt-3 font-display text-2xl font-bold">Lobby</h1>
             <p className="mt-1 text-sm text-muted-foreground">
@@ -174,43 +190,86 @@ function Waiting() {
             </div>
 
             <ul className="space-y-2">
-              {players.map((p) => (
-                <li
-                  key={p.id}
-                  className={cn(
-                    "flex items-center gap-3 rounded-2xl border bg-card/60 backdrop-blur p-3 transition",
-                    p.ready
-                      ? "border-primary/40"
-                      : "border-border",
-                  )}
-                >
-                  <div className="relative shrink-0">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-primary text-2xl shadow-inner">
-                      {p.avatar}
-                    </div>
-                    {p.host && (
-                      <Crown className="absolute -top-1.5 -right-1.5 h-4 w-4 text-primary fill-primary drop-shadow" />
+              {players.map((p) => {
+                const meta = STATUS_META[p.status];
+                return (
+                  <li
+                    key={p.id}
+                    className={cn(
+                      "flex items-center gap-3 rounded-2xl border bg-card/60 backdrop-blur p-3 transition animate-fade-in",
+                      p.ready ? "border-primary/40" : "border-border",
                     )}
+                  >
+                    <div className="relative shrink-0">
+                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-primary text-2xl shadow-inner">
+                        {p.avatar}
+                      </div>
+                      {p.host && (
+                        <Crown className="absolute -top-1.5 -right-1.5 h-4 w-4 text-primary fill-primary drop-shadow" />
+                      )}
+                      <span
+                        className={cn(
+                          "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-card",
+                          meta.dot,
+                          p.status === "connecting" && "animate-pulse",
+                        )}
+                        aria-label={meta.label}
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="font-semibold truncate">{p.name}</span>
+                        {p.host && (
+                          <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider gold-text">
+                            Host
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <span>{meta.label}</span>
+                        {p.ping != null && p.status === "online" && (
+                          <>
+                            <span className="text-muted-foreground/40">·</span>
+                            <span className="tabular-nums">{p.ping}ms</span>
+                          </>
+                        )}
+                        <span className="text-muted-foreground/40">·</span>
+                        <span className={p.ready ? "text-primary" : ""}>
+                          {p.ready ? "Ready" : "Not ready"}
+                        </span>
+                      </div>
+                    </div>
+                    <span
+                      className={cn(
+                        "h-2.5 w-2.5 rounded-full transition",
+                        p.ready ? "bg-primary shadow shadow-primary/40" : "bg-muted-foreground/30",
+                      )}
+                    />
+                  </li>
+                );
+              })}
+
+              {Array.from({ length: slots }).map((_, i) => (
+                <li
+                  key={`empty-${i}`}
+                  className="relative flex items-center gap-3 overflow-hidden rounded-2xl border border-dashed border-border/50 p-3 text-muted-foreground"
+                  style={{ animationDelay: `${i * 200}ms` }}
+                >
+                  <span
+                    className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-primary/5 to-transparent animate-[seat-scan_2.4s_ease-in-out_infinite]"
+                    style={{ animationDelay: `${i * 400}ms` }}
+                  />
+                  <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/40">
+                    <UserPlus className="h-5 w-5" />
+                    <span className="absolute inset-0 rounded-2xl ring-1 ring-primary/20 animate-pulse" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="font-semibold truncate">{p.name}</span>
-                      {p.host && (
-                        <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider gold-text">
-                          Host
-                        </span>
-                      )}
+                    <span className="text-sm">Open seat</span>
+                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/70">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Waiting for player…
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      {p.ready ? "Ready" : "Not ready"}
-                    </span>
                   </div>
-                  <span
-                    className={cn(
-                      "h-2.5 w-2.5 rounded-full transition",
-                      p.ready ? "bg-primary shadow shadow-primary/40" : "bg-muted-foreground/40",
-                    )}
-                  />
                 </li>
               ))}
 
