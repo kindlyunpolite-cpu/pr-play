@@ -219,18 +219,23 @@ function Lobby() {
             disabled={!canSubmit}
             className="group w-full flex items-center justify-center gap-2 rounded-xl bg-primary py-3.5 font-semibold text-primary-foreground transition hover:brightness-110 active:scale-[0.99] disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {tab === "create" ? (
-              <>
-                <Dice5 className="h-4 w-4" />
-                Create new room
-              </>
+            {submitting ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : tab === "create" ? (
+              <Dice5 className="h-4 w-4" />
             ) : (
-              <>
-                <LogIn className="h-4 w-4" />
-                Join room
-              </>
+              <LogIn className="h-4 w-4" />
             )}
-            <ArrowRight className="h-4 w-4 opacity-70 transition group-hover:translate-x-0.5" />
+            {submitting
+              ? tab === "create"
+                ? "Creating room…"
+                : "Joining…"
+              : tab === "create"
+              ? "Create new room"
+              : "Join room"}
+            {!submitting && (
+              <ArrowRight className="h-4 w-4 opacity-70 transition group-hover:translate-x-0.5" />
+            )}
           </button>
         </div>
 
