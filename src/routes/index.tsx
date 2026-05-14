@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { TopNav } from "@/components/TopNav";
 import {
   Plus,
@@ -9,8 +10,12 @@ import {
   Shuffle,
   ArrowRight,
   Users,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { createRoom, joinRoom } from "@/lib/rooms.functions";
+import { saveSession } from "@/lib/room-session";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
   head: () => ({
