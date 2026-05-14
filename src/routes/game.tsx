@@ -93,43 +93,43 @@ function Game() {
       <TopNav roomCode="K7XQ2" />
 
       <div className="flex flex-1 lg:flex-row flex-col min-h-0">
-        <main className="relative flex-1 flex flex-col min-h-0">
-          {/* Table arena — wider rounded rectangle, generous padding so portraits never clip */}
-          <div className="flex-1 min-h-0 flex items-center justify-center px-10 sm:px-16 pt-28 sm:pt-32 pb-36 sm:pb-40">
-            <div className="relative w-full max-w-[860px] mx-auto">
+        <main className="game-stage relative flex-1 flex flex-col min-h-0">
+          {/* Table arena — seated like the reference, with explicit space above and a compact hand zone below */}
+          <div className="table-arena absolute inset-0 flex items-center justify-center px-4 sm:px-8 lg:px-10 pt-[8.25rem] sm:pt-[9rem] pb-[10rem] sm:pb-[10.5rem]">
+            <div className="table-shell relative mx-auto">
               {/* Outer ambient halo — soft glow bleed around the table */}
               <div
                 aria-hidden
-                className="absolute -inset-16 rounded-[64px] pointer-events-none opacity-70"
+                className="absolute -inset-20 rounded-[72px] pointer-events-none opacity-90"
                 style={{
                   background:
-                    "radial-gradient(ellipse at center, oklch(0.82 0.14 85 / 0.06) 0%, oklch(0.55 0.18 220 / 0.04) 35%, transparent 70%)",
-                  filter: "blur(20px)",
+                    "radial-gradient(ellipse at center, oklch(0.82 0.14 85 / 0.10) 0%, oklch(0.55 0.18 220 / 0.08) 34%, transparent 72%)",
+                  filter: "blur(24px)",
                 }}
               />
               {/* Decorative outer rail — thick layered dimensional table edge */}
               <div
                 aria-hidden
-                className="absolute -inset-5 sm:-inset-6 rounded-[48px] sm:rounded-[60px] pointer-events-none"
+                className="absolute -inset-8 sm:-inset-10 rounded-[58px] sm:rounded-[72px] pointer-events-none"
                 style={{
                   background:
-                    "linear-gradient(180deg, oklch(0.36 0.05 60) 0%, oklch(0.22 0.04 50) 35%, oklch(0.12 0.02 40) 75%, oklch(0.08 0.02 40) 100%)",
+                    "linear-gradient(180deg, oklch(0.29 0.035 70) 0%, oklch(0.16 0.025 70) 36%, oklch(0.075 0.015 80) 72%, oklch(0.045 0.012 120) 100%)",
                   boxShadow:
-                    "inset 0 3px 0 oklch(1 0 0 / 0.10), inset 0 -3px 0 oklch(0 0 0 / 0.7), inset 0 0 0 1px oklch(0.82 0.14 85 / 0.22), inset 0 0 40px oklch(0 0 0 / 0.55), 0 40px 100px -20px oklch(0 0 0 / 0.9), 0 0 0 1px oklch(0 0 0 / 0.6)",
+                    "inset 0 4px 0 oklch(1 0 0 / 0.10), inset 0 -7px 0 oklch(0 0 0 / 0.82), inset 0 0 0 1px oklch(0.82 0.14 85 / 0.24), inset 0 0 0 8px oklch(0 0 0 / 0.22), inset 0 0 46px oklch(0 0 0 / 0.70), 0 46px 110px -22px oklch(0 0 0 / 0.95), 0 0 0 1px oklch(0 0 0 / 0.72)",
                 }}
               />
               {/* Inner gold piping ring — thin accent between rail and felt */}
               <div
                 aria-hidden
-                className="absolute -inset-1 rounded-[40px] sm:rounded-[52px] pointer-events-none"
+                className="absolute -inset-2 rounded-[44px] sm:rounded-[58px] pointer-events-none"
                 style={{
                   boxShadow:
-                    "inset 0 0 0 1px oklch(0.82 0.14 85 / 0.35), 0 0 14px -2px oklch(0.82 0.14 85 / 0.18)",
+                    "inset 0 0 0 1px oklch(0.82 0.14 85 / 0.38), inset 0 0 0 5px oklch(0 0 0 / 0.28), 0 0 18px -2px oklch(0.82 0.14 85 / 0.25)",
                 }}
               />
               {/* Table itself: rounded rectangle, slightly wider */}
               <div
-                className="felt-table relative aspect-[16/11] w-full rounded-[36px] sm:rounded-[48px]"
+                className="felt-table relative aspect-[16/9.5] w-full rounded-[34px] sm:rounded-[48px]"
                 style={{
                   backgroundImage:
                     "radial-gradient(ellipse at center, color-mix(in oklab, var(--primary) 10%, transparent) 0%, transparent 62%)",
@@ -200,7 +200,7 @@ function Game() {
                   </div>
                 </div>
 
-                {/* Seats around the table — portraits overflow the felt edge */}
+                {/* Seats around the table — portraits sit outside the rail, panels attached to the edge */}
                 {OPPONENTS.map((p, i) => {
                   const n = OPPONENTS.length;
                   const seatPos: SeatPlacement[] =
@@ -212,10 +212,10 @@ function Game() {
                   const pos = seatPos[i] ?? "top";
                   const cls =
                     pos === "top"
-                      ? "top-0 left-1/2 -translate-x-1/2 -translate-y-[28%]"
+                      ? "top-0 left-1/2 -translate-x-1/2 -translate-y-[48%]"
                       : pos === "left"
-                        ? "left-0 top-1/2 -translate-x-[22%] -translate-y-1/2"
-                        : "right-0 top-1/2 translate-x-[22%] -translate-y-1/2";
+                        ? "left-0 top-1/2 -translate-x-[24%] -translate-y-1/2"
+                        : "right-0 top-1/2 translate-x-[24%] -translate-y-1/2";
                   return (
                     <div
                       key={p.id}
@@ -230,7 +230,7 @@ function Game() {
                 })}
 
                 {/* You seat — bottom of the table */}
-                <div className="absolute z-10 left-1/2 bottom-0 -translate-x-1/2 translate-y-[18%]">
+                <div className="absolute z-30 left-1/2 bottom-0 -translate-x-1/2 translate-y-[38%]">
                   <Opponent player={YOU} placement="bottom" compactMobile self />
                 </div>
               </div>
@@ -238,9 +238,9 @@ function Game() {
           </div>
 
           {/* Bottom action bar + hand — blends into scene with vertical gradient fade */}
-          <div className="sticky bottom-0 z-20 bg-gradient-to-t from-background via-background/85 to-transparent pb-safe">
+          <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-background via-background/72 to-transparent pb-safe">
             {/* Floating action group */}
-            <div className="flex items-center justify-between gap-3 px-4 pt-2 pb-1">
+            <div className="flex items-center justify-between gap-3 px-4 pt-1 pb-0">
               <span
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em]",
@@ -257,7 +257,7 @@ function Game() {
                 <button
                   onClick={handleDraw}
                   disabled={!myTurn}
-                  className="h-10 rounded-full border border-white/12 bg-white/5 px-4 text-[11px] font-bold uppercase tracking-[0.16em] text-foreground/90 hover:border-[color:var(--gold)]/40 hover:text-[color:var(--gold)] transition active:scale-95 disabled:opacity-40 shadow-[inset_0_1px_0_oklch(1_0_0/0.08)]"
+                  className="control-pill h-10 px-4 text-[11px] font-bold uppercase tracking-[0.16em] text-foreground/90 hover:border-[color:var(--gold)]/45 hover:text-[color:var(--gold)] transition active:scale-95 disabled:opacity-40"
                 >
                   Draw
                 </button>
@@ -274,7 +274,7 @@ function Game() {
               </div>
             </div>
 
-            <div className="fan-hand hand-scroll relative flex items-end justify-center overflow-x-auto sm:overflow-visible no-scrollbar px-4 pt-4 pb-3 min-h-[9rem] sm:min-h-[10rem]">
+            <div className="fan-hand hand-scroll relative flex items-end justify-center overflow-x-auto sm:overflow-visible no-scrollbar px-4 pt-8 pb-2 min-h-[8rem] sm:min-h-[8.75rem]">
               {HAND.map((card, i) => {
                 const n = HAND.length;
                 const mid = (n - 1) / 2;
@@ -293,7 +293,7 @@ function Game() {
                         : `translateY(${arc}px) rotate(${rot}deg)`,
                       transformOrigin: "bottom center",
                       zIndex: isSelected ? 50 : 10 + i,
-                      marginLeft: i === 0 ? 0 : "-1.75rem",
+                      marginLeft: i === 0 ? 0 : "-1.9rem",
                     }}
                   >
                     <div className="transition-transform duration-300 ease-out group-hover:-translate-y-5 group-hover:scale-[1.05] group-focus-within:-translate-y-5 group-active:translate-y-0 group-active:scale-95">

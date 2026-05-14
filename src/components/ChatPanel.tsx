@@ -103,7 +103,7 @@ export function ChatPanel() {
         className={cn(
           "fixed inset-x-0 bottom-0 z-40 flex max-h-[82dvh] flex-col rounded-t-2xl border-t border-[color:var(--gold)]/15 bg-popover/95 backdrop-blur-xl shadow-2xl transition-transform duration-300",
           "lg:static lg:max-h-none lg:h-full lg:w-full lg:max-w-[18rem] lg:rounded-none lg:border-l lg:border-[color:var(--gold)]/10 lg:border-t-0 lg:translate-y-0 lg:shadow-none",
-          "lg:bg-gradient-to-b lg:from-background/40 lg:via-background/20 lg:to-background/40 lg:backdrop-blur-md",
+          "lg:bg-gradient-to-b lg:from-background/36 lg:via-background/14 lg:to-background/42 lg:backdrop-blur-xl",
           open ? "translate-y-0" : "translate-y-full lg:translate-y-0",
         )}
         role="dialog"
@@ -114,7 +114,7 @@ export function ChatPanel() {
           <span className="h-1 w-10 rounded-full bg-muted-foreground/30" />
         </div>
 
-        <header className="flex h-12 items-center justify-between px-4 lg:h-14 lg:border-b lg:border-border">
+        <header className="flex h-12 items-center justify-between px-4 lg:h-14 lg:border-b lg:border-[color:var(--gold)]/10">
           <div className="flex items-center gap-2">
             <MessageCircle className="h-4 w-4 text-primary" />
             <h3 className="font-display text-sm font-semibold">Table chat</h3>
@@ -175,10 +175,10 @@ export function ChatPanel() {
                     )}
                     <div
                       className={cn(
-                        "rounded-2xl px-3 py-1.5 text-sm leading-snug shadow-sm",
+                         "rounded-2xl px-3 py-1.5 text-sm leading-snug shadow-[0_8px_20px_-14px_rgba(0,0,0,0.9)]",
                         m.mine
-                          ? "bg-primary text-primary-foreground rounded-tr-sm"
-                          : "bg-muted text-foreground rounded-tl-sm",
+                          ? "bg-[color:var(--gold)] text-[color:var(--primary-foreground)] rounded-tr-sm"
+                          : "bg-white/7 text-foreground rounded-tl-sm border border-white/5",
                       )}
                     >
                       {m.text}
@@ -195,19 +195,19 @@ export function ChatPanel() {
             e.preventDefault();
             send();
           }}
-          className="flex items-center gap-2 border-t border-border/60 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
+          className="flex items-center gap-2 border-t border-[color:var(--gold)]/10 p-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
         >
           <input
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="Message the table…"
             maxLength={240}
-            className="flex-1 rounded-full border border-input bg-background/60 px-4 py-2 text-sm outline-none transition focus:border-primary focus:bg-background"
+            className="control-pill flex-1 px-4 py-2 text-sm outline-none transition focus:border-[color:var(--gold)]/45"
           />
           <button
             type="submit"
             disabled={!text.trim()}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground transition active:scale-95 disabled:opacity-40"
+            className="flex h-9 w-9 items-center justify-center rounded-full bg-[color:var(--gold)] text-[color:var(--primary-foreground)] transition active:scale-95 disabled:opacity-40 shadow-[0_8px_24px_-10px_oklch(0.82_0.14_85/0.6)]"
             aria-label="Send message"
           >
             <Send className="h-4 w-4" />

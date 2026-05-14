@@ -4,7 +4,7 @@ import { Home, Users, Settings, LogOut } from "lucide-react";
 export function TopNav({ roomCode }: { roomCode?: string }) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   return (
-    <header className="sticky top-0 z-30 border-b border-[color:var(--gold)]/15 bg-gradient-to-b from-black/85 via-background/85 to-background/70 backdrop-blur-xl shadow-[0_8px_24px_-12px_rgba(0,0,0,0.8)]">
+    <header className="sticky top-0 z-30 border-b border-[color:var(--gold)]/12 bg-gradient-to-b from-black/90 via-background/74 to-background/44 backdrop-blur-xl shadow-[0_12px_30px_-18px_rgba(0,0,0,0.95)]">
       <div className="mx-auto grid h-16 max-w-6xl grid-cols-[1fr_auto_1fr] items-center px-4 sm:px-6">
         {/* Logo */}
         <Link to="/" className="flex items-center gap-2.5 justify-self-start group">
@@ -25,7 +25,7 @@ export function TopNav({ roomCode }: { roomCode?: string }) {
         {/* Center: room code or nav */}
         <div className="justify-self-center">
           {roomCode ? (
-            <div className="flex items-center gap-2 rounded-full border border-[color:var(--gold)]/40 bg-black/45 pl-3 pr-1 py-1 shadow-[inset_0_1px_0_oklch(1_0_0/0.06),0_4px_14px_-6px_rgba(0,0,0,0.7)]">
+            <div className="control-pill flex items-center gap-2 pl-3 pr-1 py-1">
               <span className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground/80">
                 Room
               </span>
@@ -46,7 +46,7 @@ export function TopNav({ roomCode }: { roomCode?: string }) {
           {roomCode ? (
             <button
               type="button"
-              className="group inline-flex items-center gap-1.5 rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-foreground/90 hover:border-[color:var(--gold)]/50 hover:text-[color:var(--gold)] hover:bg-[color:var(--gold)]/8 transition-all shadow-[inset_0_1px_0_oklch(1_0_0/0.06)]"
+              className="control-pill group inline-flex items-center gap-1.5 px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.18em] text-foreground/90 hover:border-[color:var(--gold)]/50 hover:text-[color:var(--gold)] transition-all"
             >
               <span className="hidden sm:inline">Leave room</span>
               <span className="sm:hidden">Leave</span>
