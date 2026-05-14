@@ -55,7 +55,7 @@ function Waiting() {
   const [session, setSession] = useState(() => loadSession());
   const code = search.code ?? session?.roomCode;
 
-  const { room, players, loading } = useRoomRealtime(code, session);
+  const { room, players, loading, connection } = useRoomRealtime(code, session);
   const callSetReady = useServerFn(setReady);
   const callLeave = useServerFn(leaveRoom);
   const callStart = useServerFn(startGame);
