@@ -53,7 +53,7 @@ function deriveStatus(p: RoomPlayer): keyof typeof STATUS_META {
 function Waiting() {
   const navigate = useNavigate();
   const search = Route.useSearch();
-  const [session, setSession] = useState(() => loadSession());
+  const { session, status: reconnectStatus } = useReconnect();
   const code = search.code ?? session?.roomCode;
 
   const { room, players, loading, connection } = useRoomRealtime(code, session);
