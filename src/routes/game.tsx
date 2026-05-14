@@ -77,15 +77,8 @@ function Game() {
 
       <div className="flex flex-1 lg:flex-row flex-col min-h-0">
         <main className="relative flex-1 flex flex-col min-h-0">
-          {/* Opponents — evenly spaced around the top of the table */}
-          <div className="px-3 pt-2.5 pb-1 flex items-center justify-around gap-2 overflow-x-auto no-scrollbar">
-            {OPPONENTS.map((p) => (
-              <Opponent key={p.id} player={p} compact />
-            ))}
-          </div>
-
-          {/* Felt center area — fluid, with floating chips */}
-          <div className="flex-1 min-h-0 px-3 py-2.5">
+          {/* Felt center area — fluid, with seats around the edges */}
+          <div className="flex-1 min-h-0 px-3 py-3">
             <div
               className="felt-table relative h-full w-full rounded-[28px] flex items-center justify-center p-4 overflow-hidden"
               style={{
@@ -93,6 +86,36 @@ function Game() {
                   "radial-gradient(ellipse at center, color-mix(in oklab, var(--primary) 14%, transparent) 0%, transparent 62%)",
               }}
             >
+              {/* Seats around the table — 2–4 player adaptive */}
+              {OPPONENTS.map((p, i) => {
+                const n = OPPONENTS.length;
+                // Position by count: 1=top, 2=left+right, 3=left+top+right
+                const seatPos =
+                  n === 1
+                    ? ["top"]
+                    : n === 2
+                    ? ["left", "right"]
+                    : ["left", "top", "right"];
+                const pos = seatPos[i];
+                const cls =
+                  pos === "top"
+                    ? "top-3 left-1/2 -translate-x-1/2"
+                    : pos === "left"
+                    ? "left-3 top-1/2 -translate-y-1/2"
+                    : "right-3 top-1/2 -translate-y-1/2";
+                return (
+                  <div
+                    key={p.id}
+                    className={`absolute ${cls} z-10 transition-all duration-300`}
+                    style={{
+                      filter: p.isTurn ? "none" : "saturate(0.85)",
+                    }}
+                  >
+                    <Opponent player={p} compact />
+                  </div>
+                );
+              })}
+
               {/* Top-left: turn timer */}
               <div className="absolute top-3 left-3 inline-flex items-center gap-1.5 rounded-full bg-background/55 backdrop-blur-md px-2.5 py-1 ring-1 ring-border/40 shadow-sm">
                 <span className="relative flex h-1.5 w-1.5">
