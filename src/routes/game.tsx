@@ -151,8 +151,13 @@ function Game() {
                   key={i}
                   card={card}
                   size="lg"
-                  playable={myTurn}
-                  selected={selected === i}
+                  state={
+                    selected === i
+                      ? "selected"
+                      : myTurn
+                      ? "playable"
+                      : "disabled"
+                  }
                   onClick={() => setSelected(selected === i ? null : i)}
                   className="shrink-0"
                 />
