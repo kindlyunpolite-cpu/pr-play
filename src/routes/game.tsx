@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { TopNav } from "@/components/TopNav";
 import { ChatPanel } from "@/components/ChatPanel";
-import { Opponent, type OpponentData } from "@/components/Opponent";
+import { Opponent, type OpponentData, type SeatPlacement } from "@/components/Opponent";
 import {
   PlayingCard,
   CardStack,
@@ -12,6 +12,10 @@ import {
 import { useEffect, useState } from "react";
 import { Timer } from "lucide-react";
 import { cn } from "@/lib/utils";
+import portraitPavla from "@/assets/portraits/pavla.png";
+import portraitTomas from "@/assets/portraits/tomas.png";
+import portraitEva from "@/assets/portraits/eva.png";
+import portraitYou from "@/assets/portraits/you.png";
 
 export const Route = createFileRoute("/game")({
   head: () => ({
@@ -24,9 +28,9 @@ export const Route = createFileRoute("/game")({
 });
 
 const OPPONENTS: OpponentData[] = [
-  { id: "1", name: "Pavla", avatar: "🦊", cardCount: 4, isTurn: false },
-  { id: "2", name: "Tomáš", avatar: "🐻", cardCount: 6, isTurn: true },
-  { id: "3", name: "Eva", avatar: "🦉", cardCount: 3, isTurn: false },
+  { id: "1", name: "Pavla", avatar: portraitPavla, cardCount: 4, isTurn: false, rank: 12, wins: 84, chips: 2150, accent: "oklch(0.7 0.18 25)" },
+  { id: "2", name: "Tomáš", avatar: portraitTomas, cardCount: 6, isTurn: true, rank: 3, wins: 212, chips: 5400, badge: "Pro", accent: "oklch(0.78 0.16 60)" },
+  { id: "3", name: "Eva", avatar: portraitEva, cardCount: 3, isTurn: false, rank: 27, wins: 56, chips: 980, accent: "oklch(0.68 0.22 320)" },
 ];
 
 const HAND: CardData[] = [
@@ -79,40 +83,40 @@ function Game() {
       <div className="flex flex-1 lg:flex-row flex-col min-h-0">
         <main className="relative flex-1 flex flex-col min-h-0">
           {/* Felt center area — fluid, with seats around the edges */}
-          <div className="flex-1 min-h-0 px-3 py-3">
+          <div className="flex-1 min-h-0 px-3 pt-20 sm:pt-24 pb-3">
             <div
-              className="felt-table relative h-full w-full rounded-[28px] flex items-center justify-center p-4 overflow-hidden"
+              className="felt-table relative h-full w-full rounded-[28px] flex items-center justify-center p-4"
               style={{
                 backgroundImage:
-                  "radial-gradient(ellipse at center, color-mix(in oklab, var(--primary) 14%, transparent) 0%, transparent 62%)",
+                  "radial-gradient(ellipse at center, color-mix(in oklab, var(--primary) 10%, transparent) 0%, transparent 62%)",
               }}
             >
-              {/* Seats around the table — 2–4 player adaptive */}
+              {/* Seats around the table — 2–4 player adaptive.
+                  Portraits intentionally extend OUTSIDE the felt edge to feel "seated". */}
               {OPPONENTS.map((p, i) => {
                 const n = OPPONENTS.length;
-                // Position by count: 1=top, 2=left+right, 3=left+top+right
-                const seatPos =
+                const seatPos: SeatPlacement[] =
                   n === 1
                     ? ["top"]
                     : n === 2
-                    ? ["left", "right"]
-                    : ["left", "top", "right"];
-                const pos = seatPos[i];
+                      ? ["left", "right"]
+                      : ["left", "top", "right"];
+                const pos = seatPos[i] ?? "top";
                 const cls =
                   pos === "top"
-                    ? "top-3 left-1/2 -translate-x-1/2"
+                    ? "top-0 left-1/2 -translate-x-1/2 -translate-y-[58%]"
                     : pos === "left"
-                    ? "left-3 top-1/2 -translate-y-1/2"
-                    : "right-3 top-1/2 -translate-y-1/2";
+                      ? "left-0 top-[34%] -translate-x-[42%] -translate-y-1/2"
+                      : "right-0 top-[34%] translate-x-[42%] -translate-y-1/2";
                 return (
                   <div
                     key={p.id}
-                    className={`absolute ${cls} z-10 transition-all duration-300`}
-                    style={{
-                      filter: p.isTurn ? "none" : "saturate(0.85)",
-                    }}
+                    className={cn(
+                      "absolute z-10 transition-all duration-500",
+                      cls,
+                    )}
                   >
-                    <Opponent player={p} compact />
+                    <Opponent player={p} placement={pos} />
                   </div>
                 );
               })}
@@ -185,14 +189,23 @@ function Game() {
           {/* Sticky bottom hand */}
           <div className="sticky bottom-0 z-20 border-t border-border/40 bg-gradient-to-t from-background via-background/95 to-background/70 backdrop-blur-xl pb-safe">
             <div className="flex items-center justify-between px-3 pt-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-gradient-to-br from-accent to-primary text-sm shadow-sm shrink-0">
-                  🐺
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="relative h-10 w-10 shrink-0 rounded-full overflow-hidden ring-2 ring-[color:var(--gold)]/60 shadow-[0_0_14px_oklch(0.82_0.14_85/0.35)]">
+                  <img
+                    src={portraitYou}
+                    alt="You"
+                    width={80}
+                    height={80}
+                    loading="lazy"
+                    className="h-full w-full object-cover object-top scale-[1.4] -translate-y-1"
+                  />
                 </div>
-                <span className="text-sm font-semibold">You</span>
-                <span className="text-xs text-muted-foreground tabular-nums">
-                  · {HAND.length}
-                </span>
+                <div className="flex flex-col leading-tight min-w-0">
+                  <span className="text-sm font-semibold tracking-wide">You</span>
+                  <span className="text-[10px] text-muted-foreground tabular-nums">
+                    {HAND.length} cards · 3,200
+                  </span>
+                </div>
               </div>
               <div className="flex items-center gap-2">
                 <span
