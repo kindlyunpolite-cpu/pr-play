@@ -1,5 +1,4 @@
 import { cn } from "@/lib/utils";
-import { PlayingCard } from "./PlayingCard";
 import { Crown } from "lucide-react";
 
 export interface OpponentData {
@@ -12,66 +11,49 @@ export interface OpponentData {
 
 export function Opponent({
   player,
-  position,
+  compact = false,
 }: {
   player: OpponentData;
-  position: "top" | "left" | "right";
+  position?: "top" | "left" | "right";
+  compact?: boolean;
 }) {
-  const fanCount = Math.min(player.cardCount, 6);
-  const isVertical = position !== "top";
-
   return (
     <div
       className={cn(
-        "flex items-center gap-2",
-        isVertical ? "flex-col" : "flex-col",
-        "transition-all duration-300",
+        "flex items-center gap-2 rounded-full bg-card/70 backdrop-blur-md transition-all duration-300 shrink-0",
+        compact ? "px-2 py-1" : "px-2.5 py-1.5",
+        player.isTurn
+          ? "ring-turn animate-turn bg-card/90"
+          : "ring-1 ring-border/60 opacity-85",
       )}
     >
-      <div
-        className={cn(
-          "flex items-center gap-2 rounded-full bg-card/70 backdrop-blur-md px-2.5 py-1.5 transition-all duration-300",
-          player.isTurn
-            ? "ring-turn animate-turn bg-card/90"
-            : "ring-1 ring-border/60 opacity-80",
-        )}
-      >
-        <div className="relative">
-          <div
-            className={cn(
-              "flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-accent/90 to-primary/90 text-base shadow-inner",
-              player.isTurn && "ring-2 ring-primary ring-offset-2 ring-offset-card",
-            )}
-          >
-            {player.avatar}
-          </div>
-          {player.isTurn && (
-            <Crown className="absolute -top-2.5 left-1/2 -translate-x-1/2 h-3.5 w-3.5 text-primary fill-primary drop-shadow" />
+      <div className="relative shrink-0">
+        <div
+          className={cn(
+            "flex items-center justify-center rounded-full bg-gradient-to-br from-accent/90 to-primary/90 shadow-inner",
+            compact ? "h-7 w-7 text-sm" : "h-8 w-8 text-base",
+            player.isTurn && "ring-2 ring-primary ring-offset-2 ring-offset-card",
           )}
+        >
+          {player.avatar}
         </div>
-        <div className="flex flex-col leading-tight pr-1">
-          <span className="text-xs font-semibold truncate max-w-[80px]">{player.name}</span>
-          <span className="text-[10px] text-muted-foreground tabular-nums">
-            {player.cardCount} <span className="opacity-70">cards</span>
-          </span>
-        </div>
+        {player.isTurn && (
+          <Crown className="absolute -top-2 left-1/2 -translate-x-1/2 h-3 w-3 text-primary fill-primary drop-shadow" />
+        )}
       </div>
-
-      <div className="relative flex h-9 items-center justify-center">
-        {Array.from({ length: fanCount }).map((_, i) => (
-          <PlayingCard
-            key={i}
-            faceDown
-            size="xs"
-            className="absolute transition-transform duration-300"
-            style={{
-              transform: `translateX(${(i - (fanCount - 1) / 2) * 9}px) rotate(${
-                (i - (fanCount - 1) / 2) * 5
-              }deg)`,
-              zIndex: i,
-            }}
-          />
-        ))}
+      <div className="flex flex-col leading-tight pr-1 min-w-0">
+        <span className="text-[11px] font-semibold truncate max-w-[72px]">{player.name}</span>
+        <div className="flex items-center gap-1">
+          <span className="text-[9px] text-muted-foreground tabular-nums">{player.cardCount}</span>
+          <div className="flex gap-[1px]">
+            {Array.from({ length: Math.min(player.cardCount, 5) }).map((_, i) => (
+              <div
+                key={i}
+                className="h-2 w-[3px] rounded-sm bg-[color:var(--card-back)] opacity-80"
+              />
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
