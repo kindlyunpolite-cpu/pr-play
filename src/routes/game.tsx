@@ -11,6 +11,7 @@ import {
 } from "@/components/cards";
 import { useEffect, useState } from "react";
 import { Timer } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/game")({
   head: () => ({
@@ -213,31 +214,52 @@ function Game() {
               </div>
             </div>
 
-            <div className="hand-scroll flex items-end gap-2 overflow-x-auto no-scrollbar px-4 pt-3 pb-2">
-              {HAND.map((card, i) => (
-                <PlayingCard
-                  key={i}
-                  card={card}
-                  size="lg"
-                  state={
-                    selected === i
-                      ? "selected"
-                      : myTurn
-                      ? "playable"
-                      : "disabled"
-                  }
-                  animation={
-                    playingIdx === i
-                      ? "play"
-                      : !dealt
-                      ? "deal"
-                      : undefined
-                  }
-                  animationDelay={!dealt ? i * 70 : undefined}
-                  onClick={() => handlePlay(i)}
-                  className="shrink-0"
-                />
-              ))}
+            <div className="fan-hand hand-scroll relative flex items-end justify-center overflow-x-auto sm:overflow-visible no-scrollbar px-4 pt-6 pb-3 min-h-[10rem]">
+              {HAND.map((card, i) => {
+                const n = HAND.length;
+                const mid = (n - 1) / 2;
+                const offset = i - mid;
+                const spread = Math.min(7, 26 / Math.max(n, 1));
+                const rot = offset * spread;
+                const arc = offset * offset * 1.6;
+                const isSelected = selected === i;
+                return (
+                  <div
+                    key={i}
+                    className="fan-card-wrap group relative shrink-0 transition-transform duration-300 ease-out will-change-transform"
+                    style={{
+                      transform: isSelected
+                        ? `translateY(-22px) rotate(${rot * 0.3}deg) scale(1.06)`
+                        : `translateY(${arc}px) rotate(${rot}deg)`,
+                      transformOrigin: "bottom center",
+                      zIndex: isSelected ? 50 : 10 + i,
+                      marginLeft: i === 0 ? 0 : "-1.75rem",
+                    }}
+                  >
+                    <div className="transition-transform duration-300 ease-out group-hover:-translate-y-5 group-hover:scale-[1.05] group-focus-within:-translate-y-5 group-active:translate-y-0 group-active:scale-95">
+                      <PlayingCard
+                        card={card}
+                        size="lg"
+                        state={myTurn ? "idle" : "disabled"}
+                        animation={
+                          playingIdx === i
+                            ? "play"
+                            : !dealt
+                            ? "deal"
+                            : undefined
+                        }
+                        animationDelay={!dealt ? i * 70 : undefined}
+                        onClick={() => handlePlay(i)}
+                        className={cn(
+                          "shrink-0 shadow-xl shadow-black/50 cursor-pointer",
+                          isSelected &&
+                            "ring-2 ring-[color:var(--color-gold)] glow-primary",
+                        )}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </main>
