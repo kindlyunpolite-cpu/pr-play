@@ -83,40 +83,40 @@ function Game() {
       <div className="flex flex-1 lg:flex-row flex-col min-h-0">
         <main className="relative flex-1 flex flex-col min-h-0">
           {/* Felt center area — fluid, with seats around the edges */}
-          <div className="flex-1 min-h-0 px-3 py-3">
+          <div className="flex-1 min-h-0 px-3 pt-20 sm:pt-24 pb-3">
             <div
-              className="felt-table relative h-full w-full rounded-[28px] flex items-center justify-center p-4 overflow-hidden"
+              className="felt-table relative h-full w-full rounded-[28px] flex items-center justify-center p-4"
               style={{
                 backgroundImage:
-                  "radial-gradient(ellipse at center, color-mix(in oklab, var(--primary) 14%, transparent) 0%, transparent 62%)",
+                  "radial-gradient(ellipse at center, color-mix(in oklab, var(--primary) 10%, transparent) 0%, transparent 62%)",
               }}
             >
-              {/* Seats around the table — 2–4 player adaptive */}
+              {/* Seats around the table — 2–4 player adaptive.
+                  Portraits intentionally extend OUTSIDE the felt edge to feel "seated". */}
               {OPPONENTS.map((p, i) => {
                 const n = OPPONENTS.length;
-                // Position by count: 1=top, 2=left+right, 3=left+top+right
-                const seatPos =
+                const seatPos: SeatPlacement[] =
                   n === 1
                     ? ["top"]
                     : n === 2
-                    ? ["left", "right"]
-                    : ["left", "top", "right"];
-                const pos = seatPos[i];
+                      ? ["left", "right"]
+                      : ["left", "top", "right"];
+                const pos = seatPos[i] ?? "top";
                 const cls =
                   pos === "top"
-                    ? "top-3 left-1/2 -translate-x-1/2"
+                    ? "top-0 left-1/2 -translate-x-1/2 -translate-y-[58%]"
                     : pos === "left"
-                    ? "left-3 top-1/2 -translate-y-1/2"
-                    : "right-3 top-1/2 -translate-y-1/2";
+                      ? "left-0 top-[34%] -translate-x-[42%] -translate-y-1/2"
+                      : "right-0 top-[34%] translate-x-[42%] -translate-y-1/2";
                 return (
                   <div
                     key={p.id}
-                    className={`absolute ${cls} z-10 transition-all duration-300`}
-                    style={{
-                      filter: p.isTurn ? "none" : "saturate(0.85)",
-                    }}
+                    className={cn(
+                      "absolute z-10 transition-all duration-500",
+                      cls,
+                    )}
                   >
-                    <Opponent player={p} compact />
+                    <Opponent player={p} placement={pos} />
                   </div>
                 );
               })}
