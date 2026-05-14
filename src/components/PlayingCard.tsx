@@ -61,11 +61,11 @@ export function PlayingCard({
       onClick={onClick}
       style={style}
       className={cn(
-        "card-face shrink-0 relative flex flex-col items-center justify-between p-1.5 transition-all duration-200",
+        "card-face shrink-0 relative flex flex-col items-center justify-between p-1.5 transition-all duration-300 ease-out will-change-transform",
         sizes[size],
         red ? "text-[color:var(--suit-red)]" : "text-[color:var(--suit-dark)]",
-        selected && "-translate-y-4 glow-primary",
-        playable && !selected && "hover:-translate-y-2 cursor-pointer",
+        selected && "-translate-y-5 glow-primary",
+        playable && !selected && "hover:-translate-y-3 active:-translate-y-1 cursor-pointer",
         !playable && !onClick && "cursor-default",
         className,
       )}
