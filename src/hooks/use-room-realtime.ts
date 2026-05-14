@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
+import type { RealtimeChannel } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { getRoomState, heartbeat } from "@/lib/rooms.functions";
 import type { RoomSession } from "@/lib/room-session";
@@ -34,54 +35,70 @@ export interface RoomMessage {
   created_at: string;
 }
 
+export type ConnectionStatus = "connecting" | "connected" | "reconnecting" | "offline";
+
 /**
  * Subscribes to room + players + messages for the given room code.
- * Also pings the server every 20s so the player's last_seen_at stays fresh.
+ *
+ * Features:
+ * - Live joins, leaves, ready/host updates, room status, chat
+ * - Auto-resync after tab wake, network reconnect, or channel error
+ * - Visibility-aware heartbeat (no wasted pings when tab is hidden)
+ * - Stable single channel per room id (StrictMode-safe)
  */
 export function useRoomRealtime(code: string | undefined, session: RoomSession | null) {
   const [room, setRoom] = useState<RoomState | null>(null);
   const [players, setPlayers] = useState<RoomPlayer[]>([]);
   const [messages, setMessages] = useState<RoomMessage[]>([]);
   const [loading, setLoading] = useState(true);
+  const [connection, setConnection] = useState<ConnectionStatus>("connecting");
+
   const fetchRoom = useServerFn(getRoomState);
   const ping = useServerFn(heartbeat);
+  const channelRef = useRef<RealtimeChannel | null>(null);
   const roomIdRef = useRef<string | null>(null);
 
-  // Initial fetch
-  useEffect(() => {
+  // Full resync — used on initial load and after reconnect
+  const resync = useCallback(async () => {
     if (!code) return;
-    let cancelled = false;
-    setLoading(true);
-    fetchRoom({ data: { code } })
-      .then(async (data) => {
-        if (cancelled || !data) {
-          if (!cancelled) setLoading(false);
-          return;
-        }
-        setRoom(data.room as RoomState);
-        setPlayers(data.players as RoomPlayer[]);
-        roomIdRef.current = data.room.id;
-        const { data: msgs } = await supabase
-          .from("room_messages")
-          .select("*")
-          .eq("room_id", data.room.id)
-          .order("created_at", { ascending: true })
-          .limit(200);
-        if (!cancelled && msgs) setMessages(msgs as RoomMessage[]);
-        if (!cancelled) setLoading(false);
-      })
-      .catch(() => !cancelled && setLoading(false));
-    return () => {
-      cancelled = true;
-    };
+    try {
+      const data = await fetchRoom({ data: { code } });
+      if (!data) {
+        setLoading(false);
+        return;
+      }
+      setRoom(data.room as RoomState);
+      setPlayers(data.players as RoomPlayer[]);
+      roomIdRef.current = data.room.id;
+
+      const { data: msgs } = await supabase
+        .from("room_messages")
+        .select("*")
+        .eq("room_id", data.room.id)
+        .order("created_at", { ascending: true })
+        .limit(200);
+      if (msgs) setMessages(msgs as RoomMessage[]);
+    } catch {
+      /* swallow — connection state will reflect failure */
+    } finally {
+      setLoading(false);
+    }
   }, [code, fetchRoom]);
 
-  // Realtime subscriptions
+  // Initial load + when code changes
+  useEffect(() => {
+    if (!code) return;
+    setLoading(true);
+    void resync();
+  }, [code, resync]);
+
+  // Realtime subscription, rebuilt only when room id changes
   useEffect(() => {
     const roomId = room?.id;
     if (!roomId) return;
+
     const channel = supabase
-      .channel(`room:${roomId}`)
+      .channel(`room:${roomId}`, { config: { broadcast: { ack: false } } })
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "rooms", filter: `id=eq.${roomId}` },
@@ -96,7 +113,7 @@ export function useRoomRealtime(code: string | undefined, session: RoomSession |
         (payload) => {
           setPlayers((prev) => {
             if (payload.eventType === "INSERT") {
-              const next = [...prev, payload.new as RoomPlayer];
+              const next = [...prev.filter((p) => p.id !== (payload.new as RoomPlayer).id), payload.new as RoomPlayer];
               return next.sort((a, b) => a.seat - b.seat);
             }
             if (payload.eventType === "UPDATE") {
@@ -115,26 +132,92 @@ export function useRoomRealtime(code: string | undefined, session: RoomSession |
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "room_messages", filter: `room_id=eq.${roomId}` },
         (payload) => {
-          setMessages((prev) => [...prev, payload.new as RoomMessage]);
+          const msg = payload.new as RoomMessage;
+          setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
         },
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          setConnection("connected");
+        } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+          setConnection("reconnecting");
+          // Resync once the socket recovers
+          void resync();
+        } else if (status === "CLOSED") {
+          setConnection((prev) => (prev === "connected" ? "reconnecting" : prev));
+        }
+      });
+
+    channelRef.current = channel;
     return () => {
+      channelRef.current = null;
       supabase.removeChannel(channel);
     };
-  }, [room?.id]);
+  }, [room?.id, resync]);
 
-  // Heartbeat
+  // Visibility + network reconnect: refresh state when tab/network wakes up
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        void resync();
+        // Nudge realtime: if socket dropped while hidden, re-subscribing happens
+        // automatically via supabase-js, but a state refresh closes any gap.
+      }
+    };
+    const onOnline = () => {
+      setConnection("reconnecting");
+      void resync();
+    };
+    const onOffline = () => setConnection("offline");
+
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      setConnection("offline");
+    }
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+    };
+  }, [resync]);
+
+  // Heartbeat — only while tab is visible to save battery on mobile
   useEffect(() => {
     if (!session) return;
+    let id: number | undefined;
+
     const tick = () =>
       ping({ data: { playerId: session.playerId, sessionToken: session.sessionToken } }).catch(
         () => {},
       );
-    tick();
-    const id = window.setInterval(tick, 20_000);
-    return () => window.clearInterval(id);
+
+    const start = () => {
+      if (id !== undefined) return;
+      tick();
+      id = window.setInterval(tick, 20_000);
+    };
+    const stop = () => {
+      if (id !== undefined) {
+        window.clearInterval(id);
+        id = undefined;
+      }
+    };
+    const onVis = () => {
+      if (document.visibilityState === "visible") start();
+      else stop();
+    };
+
+    if (typeof document === "undefined" || document.visibilityState === "visible") start();
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVis);
+    };
   }, [session, ping]);
 
-  return { room, players, messages, loading };
+  return { room, players, messages, loading, connection };
 }

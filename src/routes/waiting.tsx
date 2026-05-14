@@ -55,7 +55,7 @@ function Waiting() {
   const [session, setSession] = useState(() => loadSession());
   const code = search.code ?? session?.roomCode;
 
-  const { room, players, loading } = useRoomRealtime(code, session);
+  const { room, players, loading, connection } = useRoomRealtime(code, session);
   const callSetReady = useServerFn(setReady);
   const callLeave = useServerFn(leaveRoom);
   const callStart = useServerFn(startGame);
@@ -226,10 +226,31 @@ function Waiting() {
           <section className="text-center mb-5">
             <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 backdrop-blur px-3 py-1 text-xs">
               <span className="relative flex h-2 w-2">
-                <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60 animate-ping" />
-                <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-400" />
+                <span
+                  className={cn(
+                    "absolute inline-flex h-full w-full rounded-full opacity-60",
+                    connection === "connected" && "bg-emerald-400 animate-ping",
+                    connection === "reconnecting" && "bg-amber-400 animate-ping",
+                    connection === "connecting" && "bg-amber-400 animate-ping",
+                    connection === "offline" && "bg-muted-foreground/40",
+                  )}
+                />
+                <span
+                  className={cn(
+                    "relative inline-flex h-2 w-2 rounded-full",
+                    connection === "connected" && "bg-emerald-400",
+                    connection === "reconnecting" && "bg-amber-400",
+                    connection === "connecting" && "bg-amber-400",
+                    connection === "offline" && "bg-muted-foreground/60",
+                  )}
+                />
               </span>
-              <span className="text-muted-foreground">Connected</span>
+              <span className="text-muted-foreground">
+                {connection === "connected" && "Connected"}
+                {connection === "connecting" && "Connecting…"}
+                {connection === "reconnecting" && "Reconnecting…"}
+                {connection === "offline" && "Offline"}
+              </span>
               <span className="h-3 w-px bg-border/70" />
               <Loader2 className="h-3 w-3 animate-spin text-primary" />
               <span className="text-muted-foreground">Waiting for players…</span>
