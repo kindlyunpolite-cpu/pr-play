@@ -67,6 +67,12 @@ export function Opponent({
           : self
             ? "translate-y-0 sm:translate-y-1"
             : "";
+  const panelAnchor =
+    placement === "left"
+      ? "translate-x-10 sm:translate-x-14"
+      : placement === "right"
+        ? "-translate-x-10 sm:-translate-x-14"
+        : "";
 
   return (
     <div
@@ -138,6 +144,7 @@ export function Opponent({
           "seat-panel relative z-[2] -mt-3 flex flex-col items-stretch overflow-hidden rounded-lg text-left outline-none",
           "border backdrop-blur-xl transition-all duration-300",
           panelWidth,
+          panelAnchor,
           player.isTurn
             ? "border-[color:var(--gold)]/70 shadow-[0_12px_32px_-8px_rgba(0,0,0,0.78),0_0_28px_-4px_var(--seat-accent)]"
             : "border-white/12 shadow-[0_10px_24px_-10px_rgba(0,0,0,0.78)] hover:border-[color:var(--gold)]/35",
