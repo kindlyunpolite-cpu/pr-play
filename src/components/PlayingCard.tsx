@@ -40,10 +40,10 @@ export function PlayingCard({
   style?: React.CSSProperties;
 }) {
   const sizes = {
-    xs: "w-8 h-12 text-[10px] rounded-md",
-    sm: "w-12 h-[4.5rem] text-xs rounded-lg",
-    md: "w-16 h-24 text-sm rounded-xl",
-    lg: "w-20 h-30 text-base rounded-xl",
+    xs: "w-8 h-12 text-[10px] rounded-[6px]",
+    sm: "w-12 h-[4.5rem] text-xs rounded-[10px]",
+    md: "w-[4.5rem] h-[6.6rem] text-sm rounded-2xl",
+    lg: "w-20 h-30 text-base rounded-2xl",
   };
 
   if (faceDown || !card) {
@@ -61,11 +61,11 @@ export function PlayingCard({
       onClick={onClick}
       style={style}
       className={cn(
-        "card-face shrink-0 relative flex flex-col items-center justify-between p-1.5 transition-all duration-200",
+        "card-face shrink-0 relative flex flex-col items-center justify-between p-1.5 transition-all duration-300 ease-out will-change-transform",
         sizes[size],
         red ? "text-[color:var(--suit-red)]" : "text-[color:var(--suit-dark)]",
-        selected && "-translate-y-4 glow-primary",
-        playable && !selected && "hover:-translate-y-2 cursor-pointer",
+        selected && "-translate-y-5 glow-primary",
+        playable && !selected && "hover:-translate-y-3 active:-translate-y-1 cursor-pointer",
         !playable && !onClick && "cursor-default",
         className,
       )}
