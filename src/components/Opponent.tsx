@@ -57,6 +57,16 @@ export function Opponent({
     : compactMobile
       ? (self ? "min-w-[150px] max-w-[170px] sm:min-w-[170px] sm:max-w-[200px]" : "min-w-[150px] max-w-[170px] sm:min-w-[180px] sm:max-w-[210px]")
       : "min-w-[180px] max-w-[210px]";
+  const portraitAnchor =
+    placement === "left"
+      ? "-translate-x-8 sm:-translate-x-12"
+      : placement === "right"
+        ? "translate-x-8 sm:translate-x-12"
+        : placement === "top"
+          ? "-translate-y-1 sm:-translate-y-3"
+          : self
+            ? "-translate-y-1 sm:-translate-y-2"
+            : "";
 
   return (
     <div
@@ -70,6 +80,7 @@ export function Opponent({
         className={cn(
           "relative shrink-0 transition-all duration-500 ease-out",
           portraitSize,
+          portraitAnchor,
           player.isTurn ? "scale-[1.04]" : "scale-100",
         )}
       >
