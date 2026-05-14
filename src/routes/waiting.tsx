@@ -27,19 +27,29 @@ export const Route = createFileRoute("/waiting")({
   component: Waiting,
 });
 
+type ConnStatus = "online" | "connecting" | "offline";
+
 interface Player {
   id: string;
   name: string;
   avatar: string;
   host: boolean;
   ready: boolean;
+  status: ConnStatus;
+  ping?: number;
 }
 
 const INITIAL_PLAYERS: Player[] = [
-  { id: "me", name: "You", avatar: "🐺", host: true, ready: true },
-  { id: "p2", name: "Pavla", avatar: "🦊", host: false, ready: true },
-  { id: "p3", name: "Tomáš", avatar: "🐻", host: false, ready: false },
+  { id: "me", name: "You", avatar: "🐺", host: true, ready: true, status: "online", ping: 24 },
+  { id: "p2", name: "Pavla", avatar: "🦊", host: false, ready: true, status: "online", ping: 58 },
+  { id: "p3", name: "Tomáš", avatar: "🐻", host: false, ready: false, status: "connecting", ping: 142 },
 ];
+
+const STATUS_META: Record<ConnStatus, { label: string; dot: string; ring: string }> = {
+  online: { label: "Online", dot: "bg-emerald-400", ring: "ring-emerald-400/40" },
+  connecting: { label: "Connecting", dot: "bg-amber-400", ring: "ring-amber-400/40" },
+  offline: { label: "Offline", dot: "bg-muted-foreground/50", ring: "ring-muted-foreground/30" },
+};
 
 function Waiting() {
   const navigate = useNavigate();
