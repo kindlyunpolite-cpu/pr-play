@@ -149,6 +149,15 @@
   .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .hand-scroll {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+    scroll-padding-inline: 1.5rem;
+  }
+  .hand-scroll > * { scroll-snap-align: center; }
+  .pb-safe { padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); }
+  .pt-safe { padding-top: max(0.5rem, env(safe-area-inset-top)); }
 
   @keyframes pulse-turn {
     0%, 100% { box-shadow: 0 0 0 1.5px var(--color-gold), 0 0 0 0 oklch(0.82 0.14 85 / 0.5); }
