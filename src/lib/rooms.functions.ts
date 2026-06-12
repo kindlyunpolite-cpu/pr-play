@@ -44,6 +44,13 @@ function toHands(value: unknown): Record<string, CardData[]> {
   return value as Record<string, CardData[]>;
 }
 
+type ProcessedTurnAction = { playerId: string; signature: string };
+
+function toProcessedActions(value: unknown): Record<string, ProcessedTurnAction> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, ProcessedTurnAction>;
+}
+
 function isPlayable(card: CardData, topCard: CardData, activeSuit: Suit | null) {
   return card.suit === (activeSuit ?? topCard.suit) || card.rank === topCard.rank;
 }
@@ -53,6 +60,30 @@ function nextPlayerId(players: { id: string }[], currentPlayerId: string, direct
   if (index === -1) throw new Error("Current player is no longer in the game");
   const step = direction === -1 ? -1 : 1;
   return players[(index + step + players.length) % players.length].id;
+}
+
+function actionError(kind: "stale" | "invalid" | "finished", detail: string) {
+  const prefix =
+    kind === "stale" ? "Stale turn" : kind === "finished" ? "Game finished" : "Invalid action";
+  return new Error(`${prefix}: ${detail}`);
+}
+
+function actionSignature(action: "draw" | "play", payload?: { cardIndex?: number }) {
+  return payload ? `${action}:${payload.cardIndex ?? ""}` : action;
+}
+
+function resolveDuplicateAction(
+  processedActions: Record<string, ProcessedTurnAction>,
+  actionId: string,
+  playerId: string,
+  signature: string,
+): { ok: true; duplicate: true } | null {
+  const processed = processedActions[actionId];
+  if (!processed) return null;
+  if (processed.playerId === playerId && processed.signature === signature) {
+    return { ok: true, duplicate: true };
+  }
+  throw actionError("invalid", "action id was already used for a different action");
 }
 
 function takeDrawableCard(deck: CardData[], discardPile: CardData[]) {
@@ -72,22 +103,48 @@ function takeDrawableCard(deck: CardData[], discardPile: CardData[]) {
   };
 }
 
-async function loadPlayingGameState(roomId: string) {
+async function loadGameState(roomId: string) {
   const { data: gameState, error } = await supabaseAdmin
     .from("game_states")
     .select("*")
     .eq("room_id", roomId)
     .maybeSingle();
   if (error || !gameState) throw new Error("Game state not found");
-  if (gameState.status !== "playing") throw new Error("Game is not active");
   return {
     ...gameState,
     deck: toCardArray(gameState.deck),
     discard_pile: toCardArray(gameState.discard_pile),
     hands: toHands(gameState.hands),
+    processed_actions: toProcessedActions(gameState.processed_actions),
     direction: gameState.direction === -1 ? -1 : 1,
     active_suit: gameState.active_suit as Suit | null,
+    turn_version: gameState.turn_version ?? 0,
   };
+}
+
+async function resolveFailedTurnMutation(
+  roomId: string,
+  playerId: string,
+  actionId: string,
+  signature: string,
+  expectedTurnVersion: number,
+): Promise<{ ok: true; duplicate: true }> {
+  const latest = await loadGameState(roomId);
+
+  const duplicate = resolveDuplicateAction(latest.processed_actions, actionId, playerId, signature);
+  if (duplicate) return duplicate;
+
+  if (latest.status !== "playing") {
+    throw actionError("finished", "no further moves are allowed");
+  }
+  if (latest.current_player_id !== playerId) {
+    throw actionError("stale", "it is no longer your turn");
+  }
+  if (latest.turn_version !== expectedTurnVersion) {
+    throw actionError("stale", "your game state is out of date; refresh before retrying");
+  }
+
+  throw actionError("stale", "the move could not be applied because the turn changed");
 }
 
 async function loadTurnPlayers(roomId: string) {
@@ -105,6 +162,8 @@ const AvatarSchema = z.string().trim().max(8).optional().nullable();
 const CodeSchema = z.string().trim().toUpperCase().length(5);
 const TokenSchema = z.string().min(8).max(128);
 const PlayerIdSchema = z.string().uuid();
+const ActionIdSchema = z.string().uuid();
+const TurnVersionSchema = z.number().int().min(0);
 
 async function authenticatePlayer(playerId: string, token: string) {
   const { data, error } = await supabaseAdmin
@@ -413,6 +472,11 @@ export const startGame = createServerFn({ method: "POST" })
       active_suit: firstDiscard.suit,
       direction: 1,
       status: "playing",
+      turn_version: 0,
+      last_action_id: null,
+      last_action_player_id: null,
+      last_action_signature: null,
+      processed_actions: {},
       updated_at: new Date().toISOString(),
     });
     if (stateError) throw new Error("Failed to initialize game state");
@@ -429,21 +493,48 @@ export const startGame = createServerFn({ method: "POST" })
 
 export const drawCard = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
-    z.object({ playerId: PlayerIdSchema, sessionToken: TokenSchema }).parse(input),
+    z
+      .object({
+        playerId: PlayerIdSchema,
+        sessionToken: TokenSchema,
+        actionId: ActionIdSchema,
+        expectedTurnVersion: TurnVersionSchema,
+      })
+      .parse(input),
   )
   .handler(async ({ data }) => {
     const player = await authenticatePlayer(data.playerId, data.sessionToken);
-    const gameState = await loadPlayingGameState(player.room_id);
-    if (gameState.current_player_id !== player.id) throw new Error("It is not your turn");
+    const signature = actionSignature("draw");
+    const gameState = await loadGameState(player.room_id);
+
+    const duplicate = resolveDuplicateAction(
+      gameState.processed_actions,
+      data.actionId,
+      player.id,
+      signature,
+    );
+    if (duplicate) return duplicate;
+    if (gameState.status !== "playing")
+      throw actionError("finished", "no further moves are allowed");
+    if (gameState.current_player_id !== player.id) {
+      throw actionError("stale", "it is not your turn anymore");
+    }
+    if (gameState.turn_version !== data.expectedTurnVersion) {
+      throw actionError("stale", "your game state is out of date; refresh before retrying");
+    }
 
     const players = await loadTurnPlayers(player.room_id);
     const hands = { ...gameState.hands };
     const hand = [...(hands[player.id] ?? [])];
     const draw = takeDrawableCard(gameState.deck, gameState.discard_pile);
-    if (!draw.card) throw new Error("No cards left to draw");
+    if (!draw.card) throw actionError("invalid", "no cards left to draw");
 
     hand.push(draw.card);
     hands[player.id] = hand;
+    const processedActions = {
+      ...gameState.processed_actions,
+      [data.actionId]: { playerId: player.id, signature },
+    };
 
     const { data: updated, error } = await supabaseAdmin
       .from("game_states")
@@ -453,14 +544,29 @@ export const drawCard = createServerFn({ method: "POST" })
         hands: hands as unknown as Json,
         current_player_id: nextPlayerId(players, player.id, gameState.direction),
         active_suit: draw.discardPile.at(-1)?.suit ?? gameState.active_suit,
+        turn_version: gameState.turn_version + 1,
+        last_action_id: data.actionId,
+        last_action_player_id: player.id,
+        last_action_signature: signature,
+        processed_actions: processedActions as unknown as Json,
         updated_at: new Date().toISOString(),
       })
       .eq("room_id", player.room_id)
       .eq("current_player_id", player.id)
       .eq("status", "playing")
+      .eq("turn_version", data.expectedTurnVersion)
       .select("room_id")
       .maybeSingle();
-    if (error || !updated) throw new Error("Failed to draw card");
+    if (error) throw new Error("Failed to draw card");
+    if (!updated) {
+      return resolveFailedTurnMutation(
+        player.room_id,
+        player.id,
+        data.actionId,
+        signature,
+        data.expectedTurnVersion,
+      );
+    }
     return { ok: true };
   });
 
@@ -472,30 +578,53 @@ export const playCard = createServerFn({ method: "POST" })
       .object({
         playerId: PlayerIdSchema,
         sessionToken: TokenSchema,
+        actionId: ActionIdSchema,
+        expectedTurnVersion: TurnVersionSchema,
         cardIndex: z.number().int().min(0),
       })
       .parse(input),
   )
   .handler(async ({ data }) => {
     const player = await authenticatePlayer(data.playerId, data.sessionToken);
-    const gameState = await loadPlayingGameState(player.room_id);
-    if (gameState.current_player_id !== player.id) throw new Error("It is not your turn");
+    const signature = actionSignature("play", { cardIndex: data.cardIndex });
+    const gameState = await loadGameState(player.room_id);
+
+    const duplicate = resolveDuplicateAction(
+      gameState.processed_actions,
+      data.actionId,
+      player.id,
+      signature,
+    );
+    if (duplicate) return duplicate;
+    if (gameState.status !== "playing")
+      throw actionError("finished", "no further moves are allowed");
+    if (gameState.current_player_id !== player.id) {
+      throw actionError("stale", "it is not your turn anymore");
+    }
+    if (gameState.turn_version !== data.expectedTurnVersion) {
+      throw actionError("stale", "your game state is out of date; refresh before retrying");
+    }
 
     const topCard = gameState.discard_pile.at(-1);
-    if (!topCard) throw new Error("Discard pile is empty");
+    if (!topCard) throw actionError("invalid", "discard pile is empty");
 
     const hands = { ...gameState.hands };
     const hand = [...(hands[player.id] ?? [])];
     const [card] = hand.splice(data.cardIndex, 1);
-    if (!card) throw new Error("Card not found");
+    if (!card) throw actionError("invalid", "card is not in your hand");
     if (!isPlayable(card, topCard, gameState.active_suit)) {
-      throw new Error("Card is not playable");
+      throw actionError("invalid", "card is not playable on the current discard");
     }
 
     hands[player.id] = hand;
     const discardPile = [...gameState.discard_pile, card];
     const finished = hand.length === 0;
     const players = finished ? [] : await loadTurnPlayers(player.room_id);
+    const processedActions = {
+      ...gameState.processed_actions,
+      [data.actionId]: { playerId: player.id, signature },
+    };
+    const finishedAt = new Date().toISOString();
 
     const { data: updated, error } = await supabaseAdmin
       .from("game_states")
@@ -508,19 +637,34 @@ export const playCard = createServerFn({ method: "POST" })
           : nextPlayerId(players, player.id, gameState.direction),
         active_suit: card.suit,
         status: finished ? "finished" : "playing",
-        updated_at: new Date().toISOString(),
+        turn_version: gameState.turn_version + 1,
+        last_action_id: data.actionId,
+        last_action_player_id: player.id,
+        last_action_signature: signature,
+        processed_actions: processedActions as unknown as Json,
+        updated_at: finishedAt,
       })
       .eq("room_id", player.room_id)
       .eq("current_player_id", player.id)
       .eq("status", "playing")
+      .eq("turn_version", data.expectedTurnVersion)
       .select("room_id")
       .maybeSingle();
-    if (error || !updated) throw new Error("Failed to play card");
+    if (error) throw new Error("Failed to play card");
+    if (!updated) {
+      return resolveFailedTurnMutation(
+        player.room_id,
+        player.id,
+        data.actionId,
+        signature,
+        data.expectedTurnVersion,
+      );
+    }
 
     if (finished) {
       await supabaseAdmin
         .from("rooms")
-        .update({ status: "finished", finished_at: new Date().toISOString() })
+        .update({ status: "finished", finished_at: finishedAt })
         .eq("id", player.room_id);
     }
 

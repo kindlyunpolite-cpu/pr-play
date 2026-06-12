@@ -9,10 +9,11 @@ import { SectionTitle } from "@/components/ui-room/SectionTitle";
 import { SeatPortrait } from "@/components/ui-room/SeatPortrait";
 import { PortraitPicker } from "@/components/ui-room/PortraitPicker";
 import { PORTRAITS, getPortrait } from "@/lib/portraits";
-import { Plus, LogIn, Sparkles, Dice5, Shuffle, ArrowRight, Users } from "lucide-react";
+import { Plus, LogIn, Sparkles, Dice5, Shuffle, ArrowRight, Users, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createRoom, joinRoom } from "@/lib/rooms.functions";
 import { saveSession } from "@/lib/room-session";
+import { useReconnect } from "@/hooks/use-reconnect";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
@@ -45,14 +46,15 @@ function Lobby() {
   const navigate = useNavigate();
   const callCreate = useServerFn(createRoom);
   const callJoin = useServerFn(joinRoom);
+  const { status: reconnectStatus } = useReconnect({
+    showMissingError: false,
+    showExpiredError: false,
+  });
 
   const portrait = getPortrait(portraitId);
 
   const canSubmit = useMemo(
-    () =>
-      !submitting &&
-      nick.trim().length >= 2 &&
-      (tab === "create" || code.length === 5),
+    () => !submitting && nick.trim().length >= 2 && (tab === "create" || code.length === 5),
     [nick, code, tab, submitting],
   );
 
@@ -83,8 +85,18 @@ function Lobby() {
     }
   };
 
-  const randomize = () =>
-    setNick(NAME_POOL[Math.floor(Math.random() * NAME_POOL.length)]);
+  const randomize = () => setNick(NAME_POOL[Math.floor(Math.random() * NAME_POOL.length)]);
+
+  if (reconnectStatus === "checking") {
+    return (
+      <RoomShell className="items-center justify-center">
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="h-4 w-4 animate-spin text-[color:var(--gold)]" />
+          Obnovuji uloženou session…
+        </div>
+      </RoomShell>
+    );
+  }
 
   return (
     <RoomShell>
@@ -101,12 +113,9 @@ function Lobby() {
           </div>
           <h1 className="font-display text-3xl sm:text-4xl font-bold leading-tight">
             Hraj <span className="gold-text">Prší</span>
-            <br />
-            s přáteli
+            <br />s přáteli
           </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            Rychlé partie, žádná registrace.
-          </p>
+          <p className="mt-2 text-sm text-muted-foreground">Rychlé partie, žádná registrace.</p>
         </section>
 
         {/* Identity preview */}
@@ -177,7 +186,12 @@ function Lobby() {
               <input
                 value={code}
                 onChange={(e) =>
-                  setCode(e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 5))
+                  setCode(
+                    e.target.value
+                      .toUpperCase()
+                      .replace(/[^A-Z0-9]/g, "")
+                      .slice(0, 5),
+                  )
                 }
                 inputMode="text"
                 autoCapitalize="characters"
@@ -194,7 +208,10 @@ function Lobby() {
             onClick={go}
             disabled={!canSubmit}
             loading={submitting}
-            icon={!submitting && (tab === "create" ? <Dice5 className="h-4 w-4" /> : <LogIn className="h-4 w-4" />)}
+            icon={
+              !submitting &&
+              (tab === "create" ? <Dice5 className="h-4 w-4" /> : <LogIn className="h-4 w-4" />)
+            }
             iconRight={<ArrowRight className="h-4 w-4 opacity-70" />}
           >
             {submitting

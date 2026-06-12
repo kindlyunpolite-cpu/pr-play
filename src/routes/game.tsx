@@ -6,8 +6,8 @@ import { Opponent, type OpponentData, type SeatPlacement } from "@/components/Op
 import { RoomShell } from "@/components/ui-room/RoomShell";
 import { RoomButton } from "@/components/ui-room/RoomButton";
 import { PlayingCard, CardStack, DiscardPile, SuitBadge, type CardData } from "@/components/cards";
-import { useEffect, useMemo, useState } from "react";
-import { Loader2, Timer, Sparkles } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { AlertCircle, Loader2, Timer, Sparkles, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getPortrait, PORTRAITS } from "@/lib/portraits";
 import { useReconnect } from "@/hooks/use-reconnect";
@@ -24,9 +24,19 @@ export const Route = createFileRoute("/game")({
 
 const FALLBACK_CARD: CardData = { suit: "hearts", rank: "10" };
 
+function createActionId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+
+  const hex = (length: number) =>
+    Array.from({ length }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+  return `${hex(8)}-${hex(4)}-4${hex(3)}-${(8 + Math.floor(Math.random() * 4)).toString(
+    16,
+  )}${hex(3)}-${hex(12)}`;
+}
+
 function Game() {
   const navigate = useNavigate();
-  const { session, status: reconnectStatus } = useReconnect();
+  const { session, status: reconnectStatus, error: reconnectError } = useReconnect();
   const code = session?.roomCode;
   const { room, players, messages, gameState, loading } = useRoomRealtime(code, session);
   const callDrawCard = useServerFn(drawCard);
@@ -38,6 +48,7 @@ function Game() {
   const [drawNonce, setDrawNonce] = useState(0);
   const [dealt, setDealt] = useState(false);
   const [busyAction, setBusyAction] = useState<"draw" | "play" | null>(null);
+  const busyActionRef = useRef(false);
 
   const me = useMemo(
     () => players.find((p) => p.id === session?.playerId) ?? null,
@@ -52,6 +63,8 @@ function Game() {
   const myTurn =
     gameState?.status === "playing" && gameState?.current_player_id === session?.playerId;
   const activePlayer = players.find((p) => p.id === gameState?.current_player_id) ?? me;
+  const gameFinished = room?.status === "finished" || gameState?.status === "finished";
+  const winner = gameFinished ? players.find((p) => p.id === gameState?.current_player_id) : null;
 
   const opponents: OpponentData[] = useMemo(
     () =>
@@ -88,10 +101,6 @@ function Game() {
   };
 
   useEffect(() => {
-    if (reconnectStatus === "no-session") navigate({ to: "/" });
-  }, [reconnectStatus, navigate]);
-
-  useEffect(() => {
     if (room?.status === "waiting") navigate({ to: "/waiting", search: { code: room.code } });
   }, [room?.status, room?.code, navigate]);
 
@@ -101,29 +110,43 @@ function Game() {
     return () => clearTimeout(t);
   }, [hand.length]);
 
-  const canAct = !!session && myTurn && !busyAction && gameState?.status === "playing";
+  const canAct =
+    !!session &&
+    !!gameState &&
+    myTurn &&
+    !busyAction &&
+    !gameFinished &&
+    gameState.status === "playing";
   const selectedCard = selected === null ? null : (hand[selected] ?? null);
   const selectedPlayable =
     !!selectedCard && (selectedCard.suit === activeSuit || selectedCard.rank === topDiscard.rank);
 
   const handleDraw = async () => {
-    if (!session || !canAct) return;
+    if (!session || !gameState || !canAct || busyActionRef.current) return;
+    busyActionRef.current = true;
     setBusyAction("draw");
     try {
       await callDrawCard({
-        data: { playerId: session.playerId, sessionToken: session.sessionToken },
+        data: {
+          playerId: session.playerId,
+          sessionToken: session.sessionToken,
+          actionId: createActionId(),
+          expectedTurnVersion: gameState.turn_version,
+        },
       });
       setSelected(null);
       setDrawNonce((n) => n + 1);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Nepodařilo se líznout kartu");
     } finally {
+      busyActionRef.current = false;
       setBusyAction(null);
     }
   };
 
   const submitPlay = async (cardIndex: number) => {
-    if (!session || !canAct) return;
+    if (!session || !gameState || !canAct || busyActionRef.current) return;
+    busyActionRef.current = true;
     setBusyAction("play");
     setPlayingIdx(cardIndex);
     try {
@@ -131,6 +154,8 @@ function Game() {
         data: {
           playerId: session.playerId,
           sessionToken: session.sessionToken,
+          actionId: createActionId(),
+          expectedTurnVersion: gameState.turn_version,
           cardIndex,
         },
       });
@@ -140,6 +165,7 @@ function Game() {
       toast.error(error instanceof Error ? error.message : "Nepodařilo se zahrát kartu");
     } finally {
       window.setTimeout(() => setPlayingIdx(null), 320);
+      busyActionRef.current = false;
       setBusyAction(null);
     }
   };
@@ -167,6 +193,33 @@ function Game() {
       : opponents.length === 2
         ? ["left", "right"]
         : ["left", "top", "right"];
+
+  if (reconnectStatus === "missing-session" || reconnectStatus === "expired-session") {
+    return (
+      <RoomShell className="items-center justify-center p-6 text-center">
+        <div className="max-w-sm rounded-3xl border border-white/10 bg-black/35 p-6 shadow-2xl shadow-black/40">
+          <AlertCircle className="mx-auto mb-3 h-7 w-7 text-[color:var(--gold)]" />
+          <h1 className="text-lg font-bold text-foreground">
+            {reconnectStatus === "missing-session" ? "Chybí uložená session" : "Session vypršela"}
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {reconnectError ?? "Vrať se do lobby a připoj se ke hře znovu."}
+          </p>
+          <RoomButton className="mt-5" variant="primary" onClick={() => navigate({ to: "/" })}>
+            Zpět do lobby
+          </RoomButton>
+        </div>
+      </RoomShell>
+    );
+  }
+
+  if (reconnectStatus === "checking" && !session) {
+    return (
+      <RoomShell className="items-center justify-center">
+        <Loader2 className="m-auto h-6 w-6 animate-spin text-[color:var(--gold)]" />
+      </RoomShell>
+    );
+  }
 
   if (loading && !room) {
     return (
@@ -244,6 +297,18 @@ function Game() {
                   </div>
 
                   <div className="table-spotlight" aria-hidden="true" />
+
+                  {gameFinished && (
+                    <div className="absolute inset-x-6 top-1/2 z-20 -translate-y-1/2 rounded-3xl border border-[color:var(--gold)]/30 bg-black/70 p-4 text-center shadow-2xl shadow-black/60 backdrop-blur-md sm:inset-x-16">
+                      <Trophy className="mx-auto mb-2 h-6 w-6 text-[color:var(--gold)]" />
+                      <div className="text-sm font-bold uppercase tracking-[0.18em] text-[color:var(--gold)]">
+                        Hra dohrána
+                      </div>
+                      <div className="mt-1 text-sm text-muted-foreground">
+                        {winner ? `${winner.nickname} vyhrál/a partii.` : "Partie byla ukončena."}
+                      </div>
+                    </div>
+                  )}
 
                   {/* Center: deck + pile */}
                   <div className="absolute inset-0 flex items-center justify-center">
@@ -329,7 +394,7 @@ function Game() {
                 )}
               >
                 <Sparkles className="h-3 w-3" />
-                {myTurn ? "Tvůj tah" : "Čekej"}
+                {gameFinished ? "Dohráno" : myTurn ? "Tvůj tah" : "Čekej"}
               </span>
 
               <div className="flex items-center gap-2">
