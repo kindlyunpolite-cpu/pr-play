@@ -1,6 +1,12 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { TopNav } from "@/components/TopNav";
 import { ChatPanel } from "@/components/ChatPanel";
+import { RoomShell } from "@/components/ui-room/RoomShell";
+import { RoomPanel } from "@/components/ui-room/RoomPanel";
+import { RoomButton } from "@/components/ui-room/RoomButton";
+import { SectionTitle } from "@/components/ui-room/SectionTitle";
+import { SeatPortrait } from "@/components/ui-room/SeatPortrait";
+import { getPortrait } from "@/lib/portraits";
 import {
   Copy,
   Play,
@@ -22,16 +28,14 @@ import { useReconnect } from "@/hooks/use-reconnect";
 import { setReady, leaveRoom, startGame } from "@/lib/rooms.functions";
 import { toast } from "sonner";
 
-const searchSchema = z.object({
-  code: z.string().optional(),
-});
+const searchSchema = z.object({ code: z.string().optional() });
 
 export const Route = createFileRoute("/waiting")({
   validateSearch: searchSchema,
   head: () => ({
     meta: [
-      { title: "Waiting room — Prší" },
-      { name: "description", content: "Waiting for players to join the table." },
+      { title: "Čekárna — Prší" },
+      { name: "description", content: "Čekáme na hráče u stolu." },
     ],
   }),
   component: Waiting,
@@ -39,7 +43,7 @@ export const Route = createFileRoute("/waiting")({
 
 const STATUS_META = {
   online: { label: "Online", dot: "bg-emerald-400" },
-  away: { label: "Away", dot: "bg-amber-400" },
+  away: { label: "Mimo", dot: "bg-amber-400" },
   offline: { label: "Offline", dot: "bg-muted-foreground/50" },
 };
 
@@ -69,18 +73,12 @@ function Waiting() {
     [players, session?.playerId],
   );
 
-  // Auto-navigate when host starts the game
   useEffect(() => {
-    if (room?.status === "playing") {
-      navigate({ to: "/game" });
-    }
+    if (room?.status === "playing") navigate({ to: "/game" });
   }, [room?.status, navigate]);
 
-  // No session or not in this room → bounce to lobby
   useEffect(() => {
-    if (!session) {
-      navigate({ to: "/" });
-    }
+    if (!session) navigate({ to: "/" });
   }, [session, navigate]);
 
   const inviteUrl =
@@ -90,14 +88,13 @@ function Waiting() {
 
   const readyCount = players.filter((p) => p.is_ready).length;
   const canStart =
-    !!me?.is_host &&
-    players.length >= 2 &&
-    readyCount === players.length;
+    !!me?.is_host && players.length >= 2 && readyCount === players.length;
 
   const copyValue = async (value: string, key: "code" | "link") => {
     try {
       await navigator.clipboard?.writeText(value);
       setCopied(key);
+      toast.success(key === "code" ? "Kód zkopírován" : "Odkaz zkopírován");
       setTimeout(() => setCopied(null), 1500);
     } catch {
       /* clipboard blocked */
@@ -109,8 +106,8 @@ function Waiting() {
     if (typeof navigator !== "undefined" && navigator.share) {
       try {
         await navigator.share({
-          title: "Join my Prší room",
-          text: `Join my Prší room with code ${code}`,
+          title: "Pojď si zahrát Prší",
+          text: `Připoj se do mojí místnosti kódem ${code}`,
           url: inviteUrl,
         });
         return;
@@ -133,7 +130,7 @@ function Waiting() {
         },
       });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Failed");
+      toast.error(e instanceof Error ? e.message : "Nepodařilo se");
     } finally {
       setBusy(null);
     }
@@ -147,7 +144,7 @@ function Waiting() {
         data: { playerId: session.playerId, sessionToken: session.sessionToken },
       });
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : "Could not start game");
+      toast.error(e instanceof Error ? e.message : "Nelze spustit hru");
     } finally {
       setBusy(null);
     }
@@ -176,62 +173,58 @@ function Waiting() {
 
   if (!session || !code) {
     return (
-      <div className="min-h-[100dvh] flex items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
+      <RoomShell className="items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-[color:var(--gold)] m-auto" />
+      </RoomShell>
     );
   }
 
   if (loading && !room) {
     return (
-      <div className="min-h-[100dvh] flex flex-col">
+      <RoomShell>
         <TopNav roomCode={code} />
         <div className="flex-1 flex items-center justify-center">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="h-4 w-4 animate-spin text-primary" />
-            Loading room…
+            <Loader2 className="h-4 w-4 animate-spin text-[color:var(--gold)]" />
+            Načítám místnost…
           </div>
         </div>
-      </div>
+      </RoomShell>
     );
   }
 
   if (!room) {
     return (
-      <div className="min-h-[100dvh] flex flex-col">
+      <RoomShell>
         <TopNav roomCode={code} />
         <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
-          <p className="text-base font-semibold">Room not found</p>
+          <p className="text-base font-semibold">Místnost nenalezena</p>
           <p className="text-sm text-muted-foreground">
-            This room no longer exists. Create or join another.
+            Tato místnost už neexistuje. Vytvoř nebo se připoj jinam.
           </p>
-          <button
-            onClick={handleLeave}
-            className="mt-2 rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground"
-          >
-            Back to lobby
-          </button>
+          <RoomButton variant="primary" onClick={handleLeave} className="mt-2">
+            Zpět do lobby
+          </RoomButton>
         </div>
-      </div>
+      </RoomShell>
     );
   }
 
   return (
-    <div className="min-h-[100dvh] flex flex-col">
+    <RoomShell>
       <TopNav roomCode={code} />
 
-      <div className="flex flex-1 lg:flex-row flex-col">
+      <div className="flex flex-1 lg:flex-row flex-col min-h-0">
         <main className="mx-auto w-full max-w-md flex-1 px-4 py-5 lg:max-w-2xl">
-          {/* Status header */}
+          {/* Status */}
           <section className="text-center mb-5">
-            <div className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-card/60 backdrop-blur px-3 py-1 text-xs">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/40 backdrop-blur px-3 py-1 text-xs">
               <span className="relative flex h-2 w-2">
                 <span
                   className={cn(
                     "absolute inline-flex h-full w-full rounded-full opacity-60",
                     connection === "connected" && "bg-emerald-400 animate-ping",
-                    connection === "reconnecting" && "bg-amber-400 animate-ping",
-                    connection === "connecting" && "bg-amber-400 animate-ping",
+                    (connection === "reconnecting" || connection === "connecting") && "bg-amber-400 animate-ping",
                     connection === "offline" && "bg-muted-foreground/40",
                   )}
                 />
@@ -239,181 +232,167 @@ function Waiting() {
                   className={cn(
                     "relative inline-flex h-2 w-2 rounded-full",
                     connection === "connected" && "bg-emerald-400",
-                    connection === "reconnecting" && "bg-amber-400",
-                    connection === "connecting" && "bg-amber-400",
+                    (connection === "reconnecting" || connection === "connecting") && "bg-amber-400",
                     connection === "offline" && "bg-muted-foreground/60",
                   )}
                 />
               </span>
               <span className="text-muted-foreground">
-                {connection === "connected" && "Connected"}
-                {connection === "connecting" && "Connecting…"}
-                {connection === "reconnecting" && "Reconnecting…"}
+                {connection === "connected" && "Připojeno"}
+                {connection === "connecting" && "Připojuji…"}
+                {connection === "reconnecting" && "Obnovuji…"}
                 {connection === "offline" && "Offline"}
               </span>
-              <span className="h-3 w-px bg-border/70" />
-              <Loader2 className="h-3 w-3 animate-spin text-primary" />
-              <span className="text-muted-foreground">Waiting for players…</span>
+              <span className="h-3 w-px bg-white/15" />
+              <Loader2 className="h-3 w-3 animate-spin text-[color:var(--gold)]" />
+              <span className="text-muted-foreground">Čekáme na hráče…</span>
             </div>
-            <h1 className="mt-3 font-display text-2xl font-bold">Lobby</h1>
+            <h1 className="mt-3 font-display text-2xl font-bold">Čekárna</h1>
             <p className="mt-1 text-sm text-muted-foreground">
-              Share the code or link to invite friends.
+              Sdílej kód nebo odkaz a pozvi přátele.
             </p>
           </section>
 
-          {/* Invite section */}
-          <section className="mb-5 rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/15 to-primary/5 backdrop-blur-md p-4">
+          {/* Invite */}
+          <RoomPanel tone="active" className="mb-5 p-4">
             <div className="flex items-center justify-between mb-3">
-              <span className="text-[10px] uppercase tracking-widest text-muted-foreground">
-                Room code
+              <span className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+                Kód místnosti
               </span>
-              <span className="text-[10px] uppercase tracking-widest text-muted-foreground tabular-nums">
-                {players.length}/{maxPlayers} joined
+              <span className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground tabular-nums">
+                {players.length}/{maxPlayers} hráčů
               </span>
             </div>
 
             <button
               onClick={() => copyValue(code, "code")}
-              className="group w-full flex items-center justify-between gap-3 rounded-xl bg-background/40 px-4 py-3 transition active:scale-[0.99] hover:bg-background/60"
-              aria-label="Copy room code"
+              className="group w-full flex items-center justify-between gap-3 rounded-xl bg-black/40 px-4 py-3 transition active:scale-[0.99] hover:bg-black/60 border border-white/8"
+              aria-label="Zkopírovat kód"
             >
-              <span className="font-mono text-3xl font-bold gold-text tracking-[0.35em]">
+              <span className="font-mono text-3xl font-bold gold-text tracking-[0.32em]">
                 {code}
               </span>
               <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 {copied === "code" ? (
                   <>
-                    <Check className="h-3.5 w-3.5 text-primary" />
-                    Copied
+                    <Check className="h-3.5 w-3.5 text-[color:var(--gold)]" />
+                    Hotovo
                   </>
                 ) : (
                   <>
                     <Copy className="h-3.5 w-3.5" />
-                    Copy
+                    Kopírovat
                   </>
                 )}
               </span>
             </button>
 
             <div className="mt-2 grid grid-cols-2 gap-2">
-              <button
+              <RoomButton
+                size="sm"
+                variant="secondary"
                 onClick={() => copyValue(inviteUrl, "link")}
                 disabled={!inviteUrl}
-                className="flex items-center justify-center gap-1.5 rounded-xl border border-border/60 bg-card/50 py-2 text-xs font-medium transition active:scale-[0.98] hover:bg-card disabled:opacity-50"
+                icon={copied === "link" ? <Check className="h-3.5 w-3.5" /> : <LinkIcon className="h-3.5 w-3.5" />}
               >
-                {copied === "link" ? (
-                  <Check className="h-3.5 w-3.5 text-primary" />
-                ) : (
-                  <LinkIcon className="h-3.5 w-3.5" />
-                )}
-                {copied === "link" ? "Link copied" : "Copy link"}
-              </button>
-              <button
+                {copied === "link" ? "Zkopírováno" : "Kopírovat odkaz"}
+              </RoomButton>
+              <RoomButton
+                size="sm"
+                variant="secondary"
                 onClick={share}
-                className="flex items-center justify-center gap-1.5 rounded-xl border border-border/60 bg-card/50 py-2 text-xs font-medium transition active:scale-[0.98] hover:bg-card"
+                icon={<Share2 className="h-3.5 w-3.5" />}
               >
-                <Share2 className="h-3.5 w-3.5" />
-                Share
-              </button>
+                Sdílet
+              </RoomButton>
             </div>
-          </section>
+          </RoomPanel>
 
           {/* Players */}
           <section>
-            <div className="mb-2.5 flex items-center justify-between px-1">
-              <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                Players
-              </h2>
-              <span className="text-[11px] tabular-nums text-muted-foreground">
-                {readyCount}/{players.length} ready
-              </span>
-            </div>
+            <SectionTitle
+              right={
+                <span className="text-[11px] tabular-nums text-muted-foreground">
+                  {readyCount}/{players.length} připraveno
+                </span>
+              }
+            >
+              Hráči
+            </SectionTitle>
 
-            <ul className="space-y-2">
+            <ul className="grid grid-cols-2 gap-2 sm:grid-cols-2">
               {players.map((p) => {
                 const status = deriveStatus(p);
                 const meta = STATUS_META[status];
                 const isMe = p.id === session.playerId;
+                const portrait = getPortrait(p.avatar);
                 return (
-                  <li
-                    key={p.id}
-                    className={cn(
-                      "flex items-center gap-3 rounded-2xl border bg-card/60 backdrop-blur p-3 transition animate-fade-in",
-                      p.is_ready ? "border-primary/40" : "border-border",
-                    )}
-                  >
-                    <div className="relative shrink-0">
-                      <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-accent to-primary text-2xl shadow-inner">
-                        {p.avatar ?? "🎴"}
-                      </div>
-                      {p.is_host && (
-                        <Crown className="absolute -top-1.5 -right-1.5 h-4 w-4 text-primary fill-primary drop-shadow" />
-                      )}
-                      <span
-                        className={cn(
-                          "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full ring-2 ring-card",
-                          meta.dot,
-                          status === "away" && "animate-pulse",
+                  <li key={p.id} className="animate-fade-in">
+                    <RoomPanel
+                      tone={p.is_ready ? "active" : "default"}
+                      className="flex flex-col items-center gap-2 p-3"
+                    >
+                      <div className="relative flex h-20 w-16 items-end justify-center">
+                        <SeatPortrait
+                          src={portrait.src}
+                          name={portrait.name}
+                          accent={portrait.accent}
+                          size="md"
+                          active={p.is_ready}
+                          offline={status === "offline"}
+                        />
+                        {p.is_host && (
+                          <Crown className="absolute -top-1 right-0 h-4 w-4 fill-[color:var(--gold)] text-[color:var(--gold)] drop-shadow" />
                         )}
-                        aria-label={meta.label}
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold truncate">
+                        <span
+                          className={cn(
+                            "absolute -bottom-0.5 right-1 h-2.5 w-2.5 rounded-full ring-2 ring-black/60",
+                            meta.dot,
+                            status === "away" && "animate-pulse",
+                          )}
+                          aria-label={meta.label}
+                        />
+                      </div>
+                      <div className="text-center min-w-0 w-full">
+                        <div className="truncate text-[13px] font-semibold">
                           {p.nickname}
                           {isMe && (
-                            <span className="ml-1.5 text-[10px] font-normal text-muted-foreground">
-                              (you)
+                            <span className="ml-1 text-[10px] font-normal text-muted-foreground">
+                              (ty)
                             </span>
                           )}
-                        </span>
-                        {p.is_host && (
-                          <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider gold-text">
-                            Host
-                          </span>
-                        )}
+                        </div>
+                        <div
+                          className={cn(
+                            "text-[10px] uppercase tracking-[0.18em] font-semibold",
+                            p.is_ready ? "text-[color:var(--gold)]" : "text-muted-foreground",
+                          )}
+                        >
+                          {p.is_ready ? "Připraven" : "Čeká"}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                        <span>{meta.label}</span>
-                        <span className="text-muted-foreground/40">·</span>
-                        <span className={p.is_ready ? "text-primary" : ""}>
-                          {p.is_ready ? "Ready" : "Not ready"}
-                        </span>
-                      </div>
-                    </div>
-                    <span
-                      className={cn(
-                        "h-2.5 w-2.5 rounded-full transition",
-                        p.is_ready
-                          ? "bg-primary shadow shadow-primary/40"
-                          : "bg-muted-foreground/30",
-                      )}
-                    />
+                    </RoomPanel>
                   </li>
                 );
               })}
 
               {Array.from({ length: slots }).map((_, i) => (
-                <li
-                  key={`empty-${i}`}
-                  className="relative flex items-center gap-3 overflow-hidden rounded-2xl border border-dashed border-border/50 p-3 text-muted-foreground"
-                >
-                  <span
-                    className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-primary/5 to-transparent animate-[seat-scan_2.4s_ease-in-out_infinite]"
-                    style={{ animationDelay: `${i * 400}ms` }}
-                  />
-                  <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl bg-muted/40">
-                    <UserPlus className="h-5 w-5" />
-                    <span className="absolute inset-0 rounded-2xl ring-1 ring-primary/20 animate-pulse" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm">Open seat</span>
-                    <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground/70">
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      Waiting for player…
+                <li key={`empty-${i}`}>
+                  <RoomPanel
+                    tone="muted"
+                    className="relative flex flex-col items-center justify-center gap-2 p-3 overflow-hidden h-full min-h-[8.5rem]"
+                  >
+                    <span
+                      className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-[color:var(--gold)]/8 to-transparent animate-[seat-scan_2.4s_ease-in-out_infinite]"
+                      style={{ animationDelay: `${i * 400}ms` }}
+                    />
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-black/40 ring-1 ring-white/10">
+                      <UserPlus className="h-5 w-5 text-muted-foreground" />
                     </div>
-                  </div>
+                    <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
+                      Volné místo
+                    </span>
+                  </RoomPanel>
                 </li>
               ))}
             </ul>
@@ -424,7 +403,7 @@ function Waiting() {
               className="mt-4 mx-auto flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition"
             >
               <LogOut className="h-3.5 w-3.5" />
-              Leave room
+              Opustit místnost
             </button>
           </section>
         </main>
@@ -433,47 +412,41 @@ function Waiting() {
       </div>
 
       {/* Sticky action bar */}
-      <div className="sticky bottom-0 z-20 border-t border-border/40 bg-gradient-to-t from-background via-background/95 to-background/70 backdrop-blur-xl pb-safe">
+      <div className="sticky bottom-0 z-20 border-t border-white/8 bg-gradient-to-t from-background via-background/95 to-background/70 backdrop-blur-xl pb-safe">
         <div className="mx-auto flex max-w-md items-center gap-2 px-4 pt-3 lg:max-w-2xl">
-          <button
+          <RoomButton
+            size="lg"
+            block
+            variant={me?.is_ready ? "secondary" : "secondary"}
             onClick={toggleReady}
-            disabled={busy === "ready" || !me}
-            className={cn(
-              "flex-1 h-12 rounded-2xl text-sm font-semibold transition active:scale-[0.99] flex items-center justify-center gap-2 disabled:opacity-60",
-              me?.is_ready
-                ? "bg-card border border-primary/40 text-foreground"
-                : "bg-card border border-border text-muted-foreground hover:text-foreground",
-            )}
+            disabled={!me}
+            loading={busy === "ready"}
+            icon={<Check className={cn("h-4 w-4", me?.is_ready ? "text-[color:var(--gold)]" : "opacity-50")} />}
+            className={me?.is_ready ? "border-[color:var(--gold)]/45 text-[color:var(--gold)]" : ""}
           >
-            {busy === "ready" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Check className={cn("h-4 w-4", me?.is_ready ? "text-primary" : "opacity-50")} />
-            )}
-            {me?.is_ready ? "Ready" : "Mark ready"}
-          </button>
+            {me?.is_ready ? "Připraven" : "Připravit se"}
+          </RoomButton>
 
           {me?.is_host && (
-            <button
+            <RoomButton
+              size="lg"
+              variant="primary"
               onClick={handleStart}
-              disabled={!canStart || busy === "start"}
-              className="flex-[1.4] h-12 rounded-2xl bg-primary text-sm font-semibold text-primary-foreground transition active:scale-[0.99] hover:brightness-110 disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-lg shadow-primary/20"
+              disabled={!canStart}
+              loading={busy === "start"}
+              icon={<Play className="h-4 w-4 fill-current" />}
+              className="flex-[1.4]"
             >
-              {busy === "start" ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Play className="h-4 w-4 fill-current" />
-              )}
-              Start game
-            </button>
+              Spustit hru
+            </RoomButton>
           )}
         </div>
         {me?.is_host && !canStart && (
-          <p className="mt-1.5 px-4 text-center text-[11px] text-muted-foreground">
-            All players must be ready (min 2)
+          <p className="mt-1.5 px-4 pb-1 text-center text-[11px] text-muted-foreground">
+            Všichni hráči musí být připraveni (min. 2)
           </p>
         )}
       </div>
-    </div>
+    </RoomShell>
   );
 }
