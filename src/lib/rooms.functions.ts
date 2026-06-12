@@ -418,7 +418,9 @@ export const drawCard = createServerFn({ method: "POST" })
     const hands = { ...gameState.hands };
     const hand = [...(hands[player.id] ?? [])];
     const draw = takeDrawableCard(gameState.deck, gameState.discard_pile);
-    if (draw.card) hand.push(draw.card);
+    if (!draw.card) throw new Error("No cards left to draw");
+
+    hand.push(draw.card);
     hands[player.id] = hand;
 
     const { error } = await supabaseAdmin
