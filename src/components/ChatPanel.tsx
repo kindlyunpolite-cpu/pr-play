@@ -70,21 +70,21 @@ export function ChatPanel() {
 
   return (
     <>
-      {/* Floating launcher (mobile) */}
+      {/* Floating launcher (mobile) — placed above action buttons */}
       <button
         onClick={() => setOpen(true)}
         className={cn(
-          "fixed bottom-[calc(env(safe-area-inset-bottom)+5.5rem)] right-3 z-30",
-          "flex h-11 w-11 items-center justify-center rounded-full",
+          "fixed top-[3.25rem] right-2 z-30",
+          "flex h-9 w-9 items-center justify-center rounded-full",
           "bg-[color:var(--gold)] text-[color:var(--primary-foreground)] shadow-xl shadow-black/50 ring-1 ring-[color:var(--gold)]/60",
           "transition active:scale-95 lg:hidden",
           open && "hidden",
         )}
         aria-label="Otevřít chat"
       >
-        <MessageCircle className="h-5 w-5" />
+        <MessageCircle className="h-4 w-4" />
         {unread > 0 && (
-          <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground ring-2 ring-background">
+          <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground ring-2 ring-background">
             {unread > 9 ? "9+" : unread}
           </span>
         )}
