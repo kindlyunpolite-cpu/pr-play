@@ -208,17 +208,14 @@ function Game() {
                   const pos = seatPos[i] ?? "top";
                   const cls =
                     pos === "top"
-                      ? "top-0 left-1/2 -translate-x-1/2 -translate-y-[55%]"
+                      ? "top-0 left-1/2 -translate-x-1/2 -translate-y-[50%]"
                       : pos === "left"
-                        ? "left-0 top-1/2 -translate-x-[55%] -translate-y-1/2"
-                        : "right-0 top-1/2 translate-x-[55%] -translate-y-1/2";
+                        ? "left-0 top-1/2 -translate-x-[18%] sm:-translate-x-[30%] -translate-y-1/2"
+                        : "right-0 top-1/2 translate-x-[18%] sm:translate-x-[30%] -translate-y-1/2";
                   return (
                     <div
                       key={p.id}
-                      className={cn(
-                        "absolute z-30 pointer-events-auto",
-                        cls,
-                      )}
+                      className={cn("absolute z-30 pointer-events-auto", cls)}
                     >
                       <Opponent player={p} placement={pos} compactMobile />
                     </div>
