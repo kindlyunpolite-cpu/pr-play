@@ -222,9 +222,19 @@ function Game() {
                   );
                 })}
 
-                {/* Self seat — sits on bottom rail */}
-                <div className="absolute z-30 left-1/2 bottom-0 -translate-x-1/2 translate-y-[55%] pointer-events-auto">
-                  <Opponent player={YOU} placement="bottom" compactMobile self />
+                {/* Self seat — just the portrait sitting on bottom rail. The
+                    user's hand + nickname is at the bottom; a duplicate info
+                    panel would steal space from the action buttons. */}
+                <div className="absolute z-30 left-1/2 bottom-0 -translate-x-1/2 translate-y-[40%] pointer-events-none">
+                  <img
+                    src={YOU.avatar}
+                    alt={YOU.name}
+                    draggable={false}
+                    className="h-20 w-16 sm:h-24 sm:w-20 object-contain object-bottom drop-shadow-[0_10px_16px_rgba(0,0,0,0.6)]"
+                    style={{
+                      filter: `drop-shadow(0 0 8px ${YOU.accent})`,
+                    }}
+                  />
                 </div>
               </div>
             </div>
