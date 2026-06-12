@@ -56,6 +56,11 @@ export interface GameState {
   active_suit: Suit | null;
   direction: 1 | -1;
   status: "playing" | "finished";
+  turn_version: number;
+  last_action_id: string | null;
+  last_action_player_id: string | null;
+  last_action_signature: string | null;
+  processed_actions: Record<string, { playerId: string; signature: string }>;
   created_at: string;
   updated_at: string;
 }

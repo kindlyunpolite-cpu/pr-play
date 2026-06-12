@@ -6,7 +6,7 @@ import { Opponent, type OpponentData, type SeatPlacement } from "@/components/Op
 import { RoomShell } from "@/components/ui-room/RoomShell";
 import { RoomButton } from "@/components/ui-room/RoomButton";
 import { PlayingCard, CardStack, DiscardPile, SuitBadge, type CardData } from "@/components/cards";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, Timer, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getPortrait, PORTRAITS } from "@/lib/portraits";
@@ -24,6 +24,16 @@ export const Route = createFileRoute("/game")({
 
 const FALLBACK_CARD: CardData = { suit: "hearts", rank: "10" };
 
+function createActionId() {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
+
+  const hex = (length: number) =>
+    Array.from({ length }, () => Math.floor(Math.random() * 16).toString(16)).join("");
+  return `${hex(8)}-${hex(4)}-4${hex(3)}-${(8 + Math.floor(Math.random() * 4)).toString(
+    16,
+  )}${hex(3)}-${hex(12)}`;
+}
+
 function Game() {
   const navigate = useNavigate();
   const { session, status: reconnectStatus } = useReconnect();
@@ -38,6 +48,7 @@ function Game() {
   const [drawNonce, setDrawNonce] = useState(0);
   const [dealt, setDealt] = useState(false);
   const [busyAction, setBusyAction] = useState<"draw" | "play" | null>(null);
+  const busyActionRef = useRef(false);
 
   const me = useMemo(
     () => players.find((p) => p.id === session?.playerId) ?? null,
@@ -101,29 +112,38 @@ function Game() {
     return () => clearTimeout(t);
   }, [hand.length]);
 
-  const canAct = !!session && myTurn && !busyAction && gameState?.status === "playing";
+  const canAct =
+    !!session && !!gameState && myTurn && !busyAction && gameState.status === "playing";
   const selectedCard = selected === null ? null : (hand[selected] ?? null);
   const selectedPlayable =
     !!selectedCard && (selectedCard.suit === activeSuit || selectedCard.rank === topDiscard.rank);
 
   const handleDraw = async () => {
-    if (!session || !canAct) return;
+    if (!session || !gameState || !canAct || busyActionRef.current) return;
+    busyActionRef.current = true;
     setBusyAction("draw");
     try {
       await callDrawCard({
-        data: { playerId: session.playerId, sessionToken: session.sessionToken },
+        data: {
+          playerId: session.playerId,
+          sessionToken: session.sessionToken,
+          actionId: createActionId(),
+          expectedTurnVersion: gameState.turn_version,
+        },
       });
       setSelected(null);
       setDrawNonce((n) => n + 1);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Nepodařilo se líznout kartu");
     } finally {
+      busyActionRef.current = false;
       setBusyAction(null);
     }
   };
 
   const submitPlay = async (cardIndex: number) => {
-    if (!session || !canAct) return;
+    if (!session || !gameState || !canAct || busyActionRef.current) return;
+    busyActionRef.current = true;
     setBusyAction("play");
     setPlayingIdx(cardIndex);
     try {
@@ -131,6 +151,8 @@ function Game() {
         data: {
           playerId: session.playerId,
           sessionToken: session.sessionToken,
+          actionId: createActionId(),
+          expectedTurnVersion: gameState.turn_version,
           cardIndex,
         },
       });
@@ -140,6 +162,7 @@ function Game() {
       toast.error(error instanceof Error ? error.message : "Nepodařilo se zahrát kartu");
     } finally {
       window.setTimeout(() => setPlayingIdx(null), 320);
+      busyActionRef.current = false;
       setBusyAction(null);
     }
   };
