@@ -423,7 +423,7 @@ export const drawCard = createServerFn({ method: "POST" })
     hand.push(draw.card);
     hands[player.id] = hand;
 
-    const { error } = await supabaseAdmin
+    const { data: updated, error } = await supabaseAdmin
       .from("game_states")
       .update({
         deck: draw.deck as unknown as Json,
@@ -433,8 +433,12 @@ export const drawCard = createServerFn({ method: "POST" })
         active_suit: draw.discardPile.at(-1)?.suit ?? gameState.active_suit,
         updated_at: new Date().toISOString(),
       })
-      .eq("room_id", player.room_id);
-    if (error) throw new Error("Failed to draw card");
+      .eq("room_id", player.room_id)
+      .eq("current_player_id", player.id)
+      .eq("status", "playing")
+      .select("room_id")
+      .maybeSingle();
+    if (error || !updated) throw new Error("Failed to draw card");
     return { ok: true };
   });
 
@@ -471,7 +475,7 @@ export const playCard = createServerFn({ method: "POST" })
     const finished = hand.length === 0;
     const players = finished ? [] : await loadTurnPlayers(player.room_id);
 
-    const { error } = await supabaseAdmin
+    const { data: updated, error } = await supabaseAdmin
       .from("game_states")
       .update({
         deck: gameState.deck as unknown as Json,
@@ -484,8 +488,12 @@ export const playCard = createServerFn({ method: "POST" })
         status: finished ? "finished" : "playing",
         updated_at: new Date().toISOString(),
       })
-      .eq("room_id", player.room_id);
-    if (error) throw new Error("Failed to play card");
+      .eq("room_id", player.room_id)
+      .eq("current_player_id", player.id)
+      .eq("status", "playing")
+      .select("room_id")
+      .maybeSingle();
+    if (error || !updated) throw new Error("Failed to play card");
 
     if (finished) {
       await supabaseAdmin
