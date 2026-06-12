@@ -17,6 +17,7 @@ import {
   Share2,
   Link as LinkIcon,
   LogOut,
+  AlertCircle,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -57,7 +58,7 @@ function deriveStatus(p: RoomPlayer): keyof typeof STATUS_META {
 function Waiting() {
   const navigate = useNavigate();
   const search = Route.useSearch();
-  const { session } = useReconnect();
+  const { session, status: reconnectStatus, error: reconnectError } = useReconnect();
   const code = search.code ?? session?.roomCode;
 
   const { room, players, messages, loading, connection } = useRoomRealtime(code, session);
@@ -74,12 +75,8 @@ function Waiting() {
   );
 
   useEffect(() => {
-    if (room?.status === "playing") navigate({ to: "/game" });
+    if (room?.status === "playing" || room?.status === "finished") navigate({ to: "/game" });
   }, [room?.status, navigate]);
-
-  useEffect(() => {
-    if (!session) navigate({ to: "/" });
-  }, [session, navigate]);
 
   const inviteUrl =
     typeof window !== "undefined" && code ? `${window.location.origin}/waiting?code=${code}` : "";
@@ -164,6 +161,33 @@ function Waiting() {
       navigate({ to: "/" });
     }
   };
+
+  if (reconnectStatus === "missing-session" || reconnectStatus === "expired-session") {
+    return (
+      <RoomShell className="items-center justify-center p-6 text-center">
+        <div className="max-w-sm rounded-3xl border border-white/10 bg-black/35 p-6 shadow-2xl shadow-black/40">
+          <AlertCircle className="mx-auto mb-3 h-7 w-7 text-[color:var(--gold)]" />
+          <h1 className="text-lg font-bold text-foreground">
+            {reconnectStatus === "missing-session" ? "Chybí uložená session" : "Session vypršela"}
+          </h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {reconnectError ?? "Vrať se do lobby a připoj se k místnosti znovu."}
+          </p>
+          <RoomButton className="mt-5" variant="primary" onClick={() => navigate({ to: "/" })}>
+            Zpět do lobby
+          </RoomButton>
+        </div>
+      </RoomShell>
+    );
+  }
+
+  if (reconnectStatus === "checking" && !session) {
+    return (
+      <RoomShell className="items-center justify-center">
+        <Loader2 className="m-auto h-6 w-6 animate-spin text-[color:var(--gold)]" />
+      </RoomShell>
+    );
+  }
 
   const maxPlayers = room?.max_players ?? 4;
   const slots = Math.max(0, maxPlayers - players.length);
