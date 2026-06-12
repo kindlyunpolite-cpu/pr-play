@@ -150,6 +150,11 @@ function Game() {
       setSelected(i);
       return;
     }
+    const card = hand[i];
+    if (!card || (card.suit !== activeSuit && card.rank !== topDiscard.rank)) {
+      toast.error("Tuto kartu nelze zahrát");
+      return;
+    }
     void submitPlay(i);
   };
 
