@@ -1,4 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
 import { TopNav } from "@/components/TopNav";
 import { ChatPanel } from "@/components/ChatPanel";
 import { Opponent, type OpponentData, type SeatPlacement } from "@/components/Opponent";
@@ -11,6 +12,8 @@ import { cn } from "@/lib/utils";
 import { getPortrait, PORTRAITS } from "@/lib/portraits";
 import { useReconnect } from "@/hooks/use-reconnect";
 import { useRoomRealtime } from "@/hooks/use-room-realtime";
+import { drawCard, playCard } from "@/lib/rooms.functions";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/game")({
   head: () => ({
@@ -26,12 +29,15 @@ function Game() {
   const { session, status: reconnectStatus } = useReconnect();
   const code = session?.roomCode;
   const { room, players, messages, gameState, loading } = useRoomRealtime(code, session);
+  const callDrawCard = useServerFn(drawCard);
+  const callPlayCard = useServerFn(playCard);
 
   const [selected, setSelected] = useState<number | null>(null);
   const [playingIdx, setPlayingIdx] = useState<number | null>(null);
   const [pileNonce, setPileNonce] = useState(0);
   const [drawNonce, setDrawNonce] = useState(0);
   const [dealt, setDealt] = useState(false);
+  const [busyAction, setBusyAction] = useState<"draw" | "play" | null>(null);
 
   const me = useMemo(
     () => players.find((p) => p.id === session?.playerId) ?? null,
@@ -43,7 +49,8 @@ function Game() {
     ? [gameState.discard_pile[0] ?? topDiscard, ...gameState.discard_pile.slice(1)]
     : [topDiscard];
   const activeSuit = gameState?.active_suit ?? topDiscard.suit;
-  const myTurn = gameState?.current_player_id === session?.playerId;
+  const myTurn =
+    gameState?.status === "playing" && gameState?.current_player_id === session?.playerId;
   const activePlayer = players.find((p) => p.id === gameState?.current_player_id) ?? me;
 
   const opponents: OpponentData[] = useMemo(
@@ -94,21 +101,57 @@ function Game() {
     return () => clearTimeout(t);
   }, [hand.length]);
 
+  const canAct = !!session && myTurn && !busyAction && gameState?.status === "playing";
+  const selectedCard = selected === null ? null : (hand[selected] ?? null);
+  const selectedPlayable =
+    !!selectedCard && (selectedCard.suit === activeSuit || selectedCard.rank === topDiscard.rank);
+
+  const handleDraw = async () => {
+    if (!session || !canAct) return;
+    setBusyAction("draw");
+    try {
+      await callDrawCard({
+        data: { playerId: session.playerId, sessionToken: session.sessionToken },
+      });
+      setSelected(null);
+      setDrawNonce((n) => n + 1);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Nepodařilo se líznout kartu");
+    } finally {
+      setBusyAction(null);
+    }
+  };
+
+  const submitPlay = async (cardIndex: number) => {
+    if (!session || !canAct) return;
+    setBusyAction("play");
+    setPlayingIdx(cardIndex);
+    try {
+      await callPlayCard({
+        data: {
+          playerId: session.playerId,
+          sessionToken: session.sessionToken,
+          cardIndex,
+        },
+      });
+      setSelected(null);
+      setPileNonce((n) => n + 1);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Nepodařilo se zahrát kartu");
+    } finally {
+      window.setTimeout(() => setPlayingIdx(null), 320);
+      setBusyAction(null);
+    }
+  };
+
   const handlePlay = (i: number) => {
-    if (!myTurn) return;
+    if (!canAct) return;
     if (selected !== i) {
       setSelected(i);
       return;
     }
-    setPlayingIdx(i);
-    setTimeout(() => {
-      setPlayingIdx(null);
-      setSelected(null);
-      setPileNonce((n) => n + 1);
-    }, 320);
+    void submitPlay(i);
   };
-
-  const handleDraw = () => setDrawNonce((n) => n + 1);
 
   // Position helpers — seats sit ON the table rim, half of the portrait
   // above/beside the rail. Using percentage translate of the portrait itself
@@ -202,8 +245,8 @@ function Game() {
                     <div className="center-stage relative z-[1] flex items-center gap-6 sm:gap-10">
                       <button
                         type="button"
-                        onClick={handleDraw}
-                        disabled={!myTurn}
+                        onClick={() => void handleDraw()}
+                        disabled={!canAct}
                         className="pointer-events-auto flex flex-col items-center gap-2 rounded-2xl p-1 -m-1 transition active:scale-95 disabled:opacity-60"
                         aria-label="Lízni"
                       >
@@ -285,10 +328,24 @@ function Game() {
               </span>
 
               <div className="flex items-center gap-2">
-                <RoomButton size="sm" variant="secondary" onClick={handleDraw} disabled={!myTurn}>
+                <RoomButton
+                  size="sm"
+                  variant="secondary"
+                  onClick={() => void handleDraw()}
+                  disabled={!canAct}
+                  loading={busyAction === "draw"}
+                >
                   Lízni
                 </RoomButton>
-                <RoomButton size="sm" variant="primary" disabled={!myTurn}>
+                <RoomButton
+                  size="sm"
+                  variant="primary"
+                  disabled={!canAct || selected === null || !selectedPlayable}
+                  loading={busyAction === "play"}
+                  onClick={() => {
+                    if (selected !== null) void submitPlay(selected);
+                  }}
+                >
                   Zahraj
                 </RoomButton>
               </div>

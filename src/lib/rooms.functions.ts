@@ -35,6 +35,71 @@ function shuffleDeck(deck: CardData[]) {
   return next;
 }
 
+function toCardArray(value: unknown): CardData[] {
+  return Array.isArray(value) ? (value as CardData[]) : [];
+}
+
+function toHands(value: unknown): Record<string, CardData[]> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as Record<string, CardData[]>;
+}
+
+function isPlayable(card: CardData, topCard: CardData, activeSuit: Suit | null) {
+  return card.suit === (activeSuit ?? topCard.suit) || card.rank === topCard.rank;
+}
+
+function nextPlayerId(players: { id: string }[], currentPlayerId: string, direction: number) {
+  const index = players.findIndex((p) => p.id === currentPlayerId);
+  if (index === -1) throw new Error("Current player is no longer in the game");
+  const step = direction === -1 ? -1 : 1;
+  return players[(index + step + players.length) % players.length].id;
+}
+
+function takeDrawableCard(deck: CardData[], discardPile: CardData[]) {
+  const nextDeck = [...deck];
+  let nextDiscardPile = [...discardPile];
+
+  if (nextDeck.length === 0 && nextDiscardPile.length > 1) {
+    const topCard = nextDiscardPile.at(-1)!;
+    nextDeck.push(...shuffleDeck(nextDiscardPile.slice(0, -1)));
+    nextDiscardPile = [topCard];
+  }
+
+  return {
+    card: nextDeck.shift() ?? null,
+    deck: nextDeck,
+    discardPile: nextDiscardPile,
+  };
+}
+
+async function loadPlayingGameState(roomId: string) {
+  const { data: gameState, error } = await supabaseAdmin
+    .from("game_states")
+    .select("*")
+    .eq("room_id", roomId)
+    .maybeSingle();
+  if (error || !gameState) throw new Error("Game state not found");
+  if (gameState.status !== "playing") throw new Error("Game is not active");
+  return {
+    ...gameState,
+    deck: toCardArray(gameState.deck),
+    discard_pile: toCardArray(gameState.discard_pile),
+    hands: toHands(gameState.hands),
+    direction: gameState.direction === -1 ? -1 : 1,
+    active_suit: gameState.active_suit as Suit | null,
+  };
+}
+
+async function loadTurnPlayers(roomId: string) {
+  const { data: players, error } = await supabaseAdmin
+    .from("players")
+    .select("id, seat")
+    .eq("room_id", roomId)
+    .order("seat", { ascending: true });
+  if (error || !players || players.length < 2) throw new Error("Could not load players");
+  return players;
+}
+
 const NicknameSchema = z.string().trim().min(1).max(24);
 const AvatarSchema = z.string().trim().max(8).optional().nullable();
 const CodeSchema = z.string().trim().toUpperCase().length(5);
@@ -335,6 +400,98 @@ export const startGame = createServerFn({ method: "POST" })
       .update({ status: "playing", started_at: new Date().toISOString() })
       .eq("id", player.room_id);
     if (error) throw new Error("Failed to start game");
+    return { ok: true };
+  });
+
+// ------------- drawCard -------------
+
+export const drawCard = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z.object({ playerId: PlayerIdSchema, sessionToken: TokenSchema }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const player = await authenticatePlayer(data.playerId, data.sessionToken);
+    const gameState = await loadPlayingGameState(player.room_id);
+    if (gameState.current_player_id !== player.id) throw new Error("It is not your turn");
+
+    const players = await loadTurnPlayers(player.room_id);
+    const hands = { ...gameState.hands };
+    const hand = [...(hands[player.id] ?? [])];
+    const draw = takeDrawableCard(gameState.deck, gameState.discard_pile);
+    if (draw.card) hand.push(draw.card);
+    hands[player.id] = hand;
+
+    const { error } = await supabaseAdmin
+      .from("game_states")
+      .update({
+        deck: draw.deck as unknown as Json,
+        discard_pile: draw.discardPile as unknown as Json,
+        hands: hands as unknown as Json,
+        current_player_id: nextPlayerId(players, player.id, gameState.direction),
+        active_suit: draw.discardPile.at(-1)?.suit ?? gameState.active_suit,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("room_id", player.room_id);
+    if (error) throw new Error("Failed to draw card");
+    return { ok: true };
+  });
+
+// ------------- playCard -------------
+
+export const playCard = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        playerId: PlayerIdSchema,
+        sessionToken: TokenSchema,
+        cardIndex: z.number().int().min(0),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    const player = await authenticatePlayer(data.playerId, data.sessionToken);
+    const gameState = await loadPlayingGameState(player.room_id);
+    if (gameState.current_player_id !== player.id) throw new Error("It is not your turn");
+
+    const topCard = gameState.discard_pile.at(-1);
+    if (!topCard) throw new Error("Discard pile is empty");
+
+    const hands = { ...gameState.hands };
+    const hand = [...(hands[player.id] ?? [])];
+    const [card] = hand.splice(data.cardIndex, 1);
+    if (!card) throw new Error("Card not found");
+    if (!isPlayable(card, topCard, gameState.active_suit)) {
+      throw new Error("Card is not playable");
+    }
+
+    hands[player.id] = hand;
+    const discardPile = [...gameState.discard_pile, card];
+    const finished = hand.length === 0;
+    const players = finished ? [] : await loadTurnPlayers(player.room_id);
+
+    const { error } = await supabaseAdmin
+      .from("game_states")
+      .update({
+        deck: gameState.deck as unknown as Json,
+        discard_pile: discardPile as unknown as Json,
+        hands: hands as unknown as Json,
+        current_player_id: finished
+          ? player.id
+          : nextPlayerId(players, player.id, gameState.direction),
+        active_suit: card.suit,
+        status: finished ? "finished" : "playing",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("room_id", player.room_id);
+    if (error) throw new Error("Failed to play card");
+
+    if (finished) {
+      await supabaseAdmin
+        .from("rooms")
+        .update({ status: "finished", finished_at: new Date().toISOString() })
+        .eq("id", player.room_id);
+    }
+
     return { ok: true };
   });
 
