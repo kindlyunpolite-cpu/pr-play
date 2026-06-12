@@ -223,19 +223,19 @@ export function Opponent({
             {online ? (
               <>
                 <Wifi className="h-3 w-3 text-emerald-400" />
-                <span>Online · Active</span>
+                <span>Online · Aktivní</span>
               </>
             ) : (
               <>
                 <WifiOff className="h-3 w-3" />
-                <span>Disconnected</span>
+                <span>Odpojen</span>
               </>
             )}
           </div>
           <div className="grid grid-cols-3 gap-1.5 text-center">
-            <Stat icon={<Star className="h-3 w-3" />} label="Rank" value={player.rank ?? "—"} />
-            <Stat icon={<Trophy className="h-3 w-3" />} label="Wins" value={player.wins ?? 0} />
-            <Stat label="Cards" value={player.cardCount} />
+            <Stat icon={<Star className="h-3 w-3" />} label="Pořadí" value={player.rank ?? "—"} />
+            <Stat icon={<Trophy className="h-3 w-3" />} label="Výhry" value={player.wins ?? 0} />
+            <Stat label="Karty" value={player.cardCount} />
           </div>
         </div>
       </div>
