@@ -14,60 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      game_states: {
-        Row: {
-          active_suit: string | null
-          created_at: string
-          current_player_id: string | null
-          deck: Json
-          direction: number
-          discard_pile: Json
-          hands: Json
-          room_id: string
-          status: string
-          updated_at: string
-        }
-        Insert: {
-          active_suit?: string | null
-          created_at?: string
-          current_player_id?: string | null
-          deck?: Json
-          direction?: number
-          discard_pile?: Json
-          hands?: Json
-          room_id: string
-          status?: string
-          updated_at?: string
-        }
-        Update: {
-          active_suit?: string | null
-          created_at?: string
-          current_player_id?: string | null
-          deck?: Json
-          direction?: number
-          discard_pile?: Json
-          hands?: Json
-          room_id?: string
-          status?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "game_states_current_player_id_fkey"
-            columns: ["current_player_id"]
-            isOneToOne: false
-            referencedRelation: "players"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "game_states_room_id_fkey"
-            columns: ["room_id"]
-            isOneToOne: true
-            referencedRelation: "rooms"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       player_secrets: {
         Row: {
           player_id: string
