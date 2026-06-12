@@ -198,18 +198,40 @@ export const joinRoom = createServerFn({ method: "POST" })
       .select("*")
       .eq("code", data.code)
       .maybeSingle();
-    if (roomErr || !room) throw new Error("Room not found");
-    if (room.status !== "waiting") throw new Error("Room is not accepting players");
+    if (roomErr || !room) throw new Error("Místnost nenalezena");
 
     const { data: existingPlayers, error: pErr } = await supabaseAdmin
       .from("players")
-      .select("seat, nickname")
+      .select("id, seat, nickname")
       .eq("room_id", room.id)
       .order("seat", { ascending: true });
-    if (pErr) throw new Error("Could not load players");
+    if (pErr) throw new Error("Nelze načíst hráče");
+
+    // Allow rejoin: if a player with the same nickname already sits in this
+    // room, issue a fresh session token for them instead of inserting again.
+    const existing = existingPlayers.find(
+      (p) => p.nickname.toLowerCase() === data.nickname.toLowerCase(),
+    );
+    if (existing) {
+      const sessionToken = genToken();
+      await supabaseAdmin.from("player_secrets").insert({
+        player_id: existing.id,
+        session_token: sessionToken,
+      });
+      return {
+        roomCode: room.code,
+        roomId: room.id,
+        playerId: existing.id,
+        sessionToken,
+        seat: existing.seat,
+      };
+    }
+
+    if (room.status !== "waiting")
+      throw new Error("Hra už začala — připoj se pod původní přezdívkou");
 
     if (existingPlayers.length >= room.max_players) {
-      throw new Error("Room is full");
+      throw new Error("Místnost je plná");
     }
 
     // Find first free seat
@@ -227,7 +249,7 @@ export const joinRoom = createServerFn({ method: "POST" })
       })
       .select("*")
       .single();
-    if (insErr || !player) throw new Error("Failed to join room");
+    if (insErr || !player) throw new Error("Nepodařilo se připojit do místnosti");
 
     const sessionToken = genToken();
     await supabaseAdmin.from("player_secrets").insert({
