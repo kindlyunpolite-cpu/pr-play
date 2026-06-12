@@ -60,7 +60,7 @@ function Waiting() {
   const { session } = useReconnect();
   const code = search.code ?? session?.roomCode;
 
-  const { room, players, loading, connection } = useRoomRealtime(code, session);
+  const { room, players, messages, loading, connection } = useRoomRealtime(code, session);
   const callSetReady = useServerFn(setReady);
   const callLeave = useServerFn(leaveRoom);
   const callStart = useServerFn(startGame);
@@ -82,13 +82,10 @@ function Waiting() {
   }, [session, navigate]);
 
   const inviteUrl =
-    typeof window !== "undefined" && code
-      ? `${window.location.origin}/waiting?code=${code}`
-      : "";
+    typeof window !== "undefined" && code ? `${window.location.origin}/waiting?code=${code}` : "";
 
   const readyCount = players.filter((p) => p.is_ready).length;
-  const canStart =
-    !!me?.is_host && players.length >= 2 && readyCount === players.length;
+  const canStart = !!me?.is_host && players.length >= 2 && readyCount === players.length;
 
   const copyValue = async (value: string, key: "code" | "link") => {
     try {
@@ -224,7 +221,8 @@ function Waiting() {
                   className={cn(
                     "absolute inline-flex h-full w-full rounded-full opacity-60",
                     connection === "connected" && "bg-emerald-400 animate-ping",
-                    (connection === "reconnecting" || connection === "connecting") && "bg-amber-400 animate-ping",
+                    (connection === "reconnecting" || connection === "connecting") &&
+                      "bg-amber-400 animate-ping",
                     connection === "offline" && "bg-muted-foreground/40",
                   )}
                 />
@@ -232,7 +230,8 @@ function Waiting() {
                   className={cn(
                     "relative inline-flex h-2 w-2 rounded-full",
                     connection === "connected" && "bg-emerald-400",
-                    (connection === "reconnecting" || connection === "connecting") && "bg-amber-400",
+                    (connection === "reconnecting" || connection === "connecting") &&
+                      "bg-amber-400",
                     connection === "offline" && "bg-muted-foreground/60",
                   )}
                 />
@@ -293,7 +292,13 @@ function Waiting() {
                 variant="secondary"
                 onClick={() => copyValue(inviteUrl, "link")}
                 disabled={!inviteUrl}
-                icon={copied === "link" ? <Check className="h-3.5 w-3.5" /> : <LinkIcon className="h-3.5 w-3.5" />}
+                icon={
+                  copied === "link" ? (
+                    <Check className="h-3.5 w-3.5" />
+                  ) : (
+                    <LinkIcon className="h-3.5 w-3.5" />
+                  )
+                }
               >
                 {copied === "link" ? "Zkopírováno" : "Kopírovat odkaz"}
               </RoomButton>
@@ -408,7 +413,7 @@ function Waiting() {
           </section>
         </main>
 
-        <ChatPanel />
+        <ChatPanel messages={messages} session={session} />
       </div>
 
       {/* Sticky action bar */}
@@ -421,7 +426,11 @@ function Waiting() {
             onClick={toggleReady}
             disabled={!me}
             loading={busy === "ready"}
-            icon={<Check className={cn("h-4 w-4", me?.is_ready ? "text-[color:var(--gold)]" : "opacity-50")} />}
+            icon={
+              <Check
+                className={cn("h-4 w-4", me?.is_ready ? "text-[color:var(--gold)]" : "opacity-50")}
+              />
+            }
             className={me?.is_ready ? "border-[color:var(--gold)]/45 text-[color:var(--gold)]" : ""}
           >
             {me?.is_ready ? "Připraven" : "Připravit se"}

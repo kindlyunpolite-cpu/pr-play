@@ -2,6 +2,8 @@
 // Co-located here so hooks, server-fn callers, and route components agree
 // on a single source of truth for room/player/message/session shapes.
 
+import type { CardData, Suit } from "@/components/cards";
+
 export interface RoomState {
   id: string;
   code: string;
@@ -32,11 +34,7 @@ export interface RoomMessage {
   created_at: string;
 }
 
-export type ConnectionStatus =
-  | "connecting"
-  | "connected"
-  | "reconnecting"
-  | "offline";
+export type ConnectionStatus = "connecting" | "connected" | "reconnecting" | "offline";
 
 /** Persisted in localStorage so the player can resume after refresh. */
 export interface RoomSession {
@@ -47,4 +45,17 @@ export interface RoomSession {
   seat: number;
   nickname: string;
   avatar?: string | null;
+}
+
+export interface GameState {
+  room_id: string;
+  deck: CardData[];
+  discard_pile: CardData[];
+  hands: Record<string, CardData[]>;
+  current_player_id: string | null;
+  active_suit: Suit | null;
+  direction: 1 | -1;
+  status: "playing" | "finished";
+  created_at: string;
+  updated_at: string;
 }

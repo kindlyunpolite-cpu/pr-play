@@ -1,75 +1,98 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { TopNav } from "@/components/TopNav";
 import { ChatPanel } from "@/components/ChatPanel";
 import { Opponent, type OpponentData, type SeatPlacement } from "@/components/Opponent";
 import { RoomShell } from "@/components/ui-room/RoomShell";
 import { RoomButton } from "@/components/ui-room/RoomButton";
-import {
-  PlayingCard,
-  CardStack,
-  DiscardPile,
-  SuitBadge,
-  type CardData,
-} from "@/components/cards";
-import { useEffect, useState } from "react";
-import { Timer, Sparkles } from "lucide-react";
+import { PlayingCard, CardStack, DiscardPile, SuitBadge, type CardData } from "@/components/cards";
+import { useEffect, useMemo, useState } from "react";
+import { Loader2, Timer, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { PORTRAITS } from "@/lib/portraits";
+import { getPortrait, PORTRAITS } from "@/lib/portraits";
+import { useReconnect } from "@/hooks/use-reconnect";
+import { useRoomRealtime } from "@/hooks/use-room-realtime";
 
 export const Route = createFileRoute("/game")({
   head: () => ({
-    meta: [
-      { title: "Stůl — Prší" },
-      { name: "description", content: "Živá hra Prší u stolu." },
-    ],
+    meta: [{ title: "Stůl — Prší" }, { name: "description", content: "Živá hra Prší u stolu." }],
   }),
   component: Game,
 });
 
-const OPPONENTS: OpponentData[] = [
-  { id: "1", name: "Pavla", avatar: PORTRAITS[1].src, cardCount: 4, isTurn: false, rank: 12, wins: 84, chips: 2150, accent: PORTRAITS[1].accent },
-  { id: "2", name: "Tomáš", avatar: PORTRAITS[2].src, cardCount: 6, isTurn: true, rank: 3, wins: 212, chips: 5400, badge: "Pro", accent: PORTRAITS[2].accent },
-  { id: "3", name: "Eva", avatar: PORTRAITS[3].src, cardCount: 3, isTurn: false, rank: 27, wins: 56, chips: 980, accent: PORTRAITS[3].accent },
-];
-
-const HAND: CardData[] = [
-  { suit: "hearts", rank: "7" },
-  { suit: "hearts", rank: "K" },
-  { suit: "clubs", rank: "9" },
-  { suit: "diamonds", rank: "10" },
-  { suit: "spades", rank: "A" },
-  { suit: "hearts", rank: "J" },
-  { suit: "diamonds", rank: "Q" },
-];
-
-const TOP_DISCARD: CardData = { suit: "hearts", rank: "10" };
-
-const YOU: OpponentData = {
-  id: "me",
-  name: "Ty",
-  avatar: PORTRAITS[0].src,
-  cardCount: HAND.length,
-  isTurn: true,
-  rank: 8,
-  wins: 142,
-  chips: 3200,
-  accent: PORTRAITS[0].accent,
-};
+const FALLBACK_CARD: CardData = { suit: "hearts", rank: "10" };
 
 function Game() {
+  const navigate = useNavigate();
+  const { session, status: reconnectStatus } = useReconnect();
+  const code = session?.roomCode;
+  const { room, players, messages, gameState, loading } = useRoomRealtime(code, session);
+
   const [selected, setSelected] = useState<number | null>(null);
   const [playingIdx, setPlayingIdx] = useState<number | null>(null);
   const [pileNonce, setPileNonce] = useState(0);
   const [drawNonce, setDrawNonce] = useState(0);
   const [dealt, setDealt] = useState(false);
-  const myTurn = true;
-  const activeSuit = TOP_DISCARD.suit;
-  const activePlayer = OPPONENTS.find((o) => o.isTurn);
+
+  const me = useMemo(
+    () => players.find((p) => p.id === session?.playerId) ?? null,
+    [players, session?.playerId],
+  );
+  const hand = session ? (gameState?.hands[session.playerId] ?? []) : [];
+  const topDiscard = gameState?.discard_pile.at(-1) ?? FALLBACK_CARD;
+  const discardPile: [CardData, ...CardData[]] = gameState?.discard_pile.length
+    ? [gameState.discard_pile[0] ?? topDiscard, ...gameState.discard_pile.slice(1)]
+    : [topDiscard];
+  const activeSuit = gameState?.active_suit ?? topDiscard.suit;
+  const myTurn = gameState?.current_player_id === session?.playerId;
+  const activePlayer = players.find((p) => p.id === gameState?.current_player_id) ?? me;
+
+  const opponents: OpponentData[] = useMemo(
+    () =>
+      players
+        .filter((p) => p.id !== session?.playerId)
+        .map((p, index) => {
+          const portrait = getPortrait(p.avatar);
+          return {
+            id: p.id,
+            name: p.nickname,
+            avatar: portrait.src,
+            cardCount: gameState?.hands[p.id]?.length ?? 0,
+            isTurn: p.id === gameState?.current_player_id,
+            rank: p.seat + 1,
+            wins: 0,
+            chips: 0,
+            accent: portrait.accent ?? PORTRAITS[index % PORTRAITS.length].accent,
+          };
+        }),
+    [gameState?.current_player_id, gameState?.hands, players, session?.playerId],
+  );
+
+  const mePortrait = getPortrait(me?.avatar ?? session?.avatar);
+  const you: OpponentData = {
+    id: session?.playerId ?? "me",
+    name: me?.nickname ?? session?.nickname ?? "Ty",
+    avatar: mePortrait.src,
+    cardCount: hand.length,
+    isTurn: myTurn,
+    rank: (me?.seat ?? session?.seat ?? 0) + 1,
+    wins: 0,
+    chips: 0,
+    accent: mePortrait.accent,
+  };
 
   useEffect(() => {
-    const t = setTimeout(() => setDealt(true), HAND.length * 70 + 600);
+    if (reconnectStatus === "no-session") navigate({ to: "/" });
+  }, [reconnectStatus, navigate]);
+
+  useEffect(() => {
+    if (room?.status === "waiting") navigate({ to: "/waiting", search: { code: room.code } });
+  }, [room?.status, room?.code, navigate]);
+
+  useEffect(() => {
+    setDealt(false);
+    const t = setTimeout(() => setDealt(true), hand.length * 70 + 600);
     return () => clearTimeout(t);
-  }, []);
+  }, [hand.length]);
 
   const handlePlay = (i: number) => {
     if (!myTurn) return;
@@ -91,15 +114,23 @@ function Game() {
   // above/beside the rail. Using percentage translate of the portrait itself
   // means they never get clipped regardless of viewport size.
   const seatPos: SeatPlacement[] =
-    OPPONENTS.length === 1
+    opponents.length === 1
       ? ["top"]
-      : OPPONENTS.length === 2
+      : opponents.length === 2
         ? ["left", "right"]
         : ["left", "top", "right"];
 
+  if (loading && !room) {
+    return (
+      <RoomShell className="items-center justify-center">
+        <Loader2 className="m-auto h-6 w-6 animate-spin text-[color:var(--gold)]" />
+      </RoomShell>
+    );
+  }
+
   return (
     <RoomShell className="overflow-hidden">
-      <TopNav roomCode="K7XQ2" />
+      <TopNav roomCode={room?.code ?? code} />
 
       <div className="flex flex-1 lg:flex-row flex-col min-h-0">
         <main className="game-stage relative flex-1 flex flex-col min-h-0">
@@ -107,7 +138,10 @@ function Game() {
           <div className="relative flex-1 min-h-0 grid place-items-center px-12 sm:px-16 pt-12 sm:pt-14 pb-2">
             <div className="relative w-full h-full max-w-[42rem] max-h-full">
               {/* Sized box: aspect ratio constrained to available space */}
-              <div className="relative mx-auto h-full" style={{ aspectRatio: "16 / 10", maxWidth: "100%" }}>
+              <div
+                className="relative mx-auto h-full"
+                style={{ aspectRatio: "16 / 10", maxWidth: "100%" }}
+              >
                 {/* Outer rail */}
                 <div
                   aria-hidden
@@ -143,11 +177,13 @@ function Game() {
                       <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[color:var(--gold)]" />
                     </span>
                     <span className="text-[10px] font-semibold truncate max-w-[5rem]">
-                      {activePlayer?.name ?? "Ty"}
+                      {activePlayer?.nickname ?? you.name}
                     </span>
                     <span className="h-3 w-px bg-white/10" />
                     <Timer className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-[10px] font-mono tabular-nums text-muted-foreground">0:18</span>
+                    <span className="text-[10px] font-mono tabular-nums text-muted-foreground">
+                      0:18
+                    </span>
                   </div>
 
                   <div className="absolute top-2 right-2 z-20 flex items-center gap-1.5 rounded-full bg-black/55 backdrop-blur-md px-2 py-0.5 ring-1 ring-white/8">
@@ -173,24 +209,20 @@ function Game() {
                       >
                         <CardStack
                           key={drawNonce}
-                          count={3}
+                          count={gameState?.deck.length ?? 0}
                           maxVisible={3}
                           size="md"
                           layout="stack"
                           className={drawNonce ? "animate-card-draw" : ""}
                         />
                         <span className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground/80 tabular-nums">
-                          Balíček · 24
+                          Balíček · {gameState?.deck.length ?? 0}
                         </span>
                       </button>
 
                       <div className="flex flex-col items-center gap-2">
                         <div key={pileNonce} className={pileNonce ? "animate-pile-bump" : ""}>
-                          <DiscardPile
-                            cards={[{ suit: "clubs", rank: "8" }, TOP_DISCARD]}
-                            size="md"
-                            recent
-                          />
+                          <DiscardPile cards={discardPile} size="md" recent />
                         </div>
                         <span className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground/80">
                           Odhoz
@@ -204,7 +236,7 @@ function Game() {
                     Each portrait translates by 50% of its own size so it sits
                     half on the rail, half outside — guaranteed visible.
                 */}
-                {OPPONENTS.map((p, i) => {
+                {opponents.map((p, i) => {
                   const pos = seatPos[i] ?? "top";
                   const cls =
                     pos === "top"
@@ -213,10 +245,7 @@ function Game() {
                         ? "left-0 top-1/2 -translate-x-[18%] sm:-translate-x-[30%] -translate-y-1/2"
                         : "right-0 top-1/2 translate-x-[18%] sm:translate-x-[30%] -translate-y-1/2";
                   return (
-                    <div
-                      key={p.id}
-                      className={cn("absolute z-30 pointer-events-auto", cls)}
-                    >
+                    <div key={p.id} className={cn("absolute z-30 pointer-events-auto", cls)}>
                       <Opponent player={p} placement={pos} compactMobile />
                     </div>
                   );
@@ -227,12 +256,12 @@ function Game() {
                     panel would steal space from the action buttons. */}
                 <div className="absolute z-30 left-1/2 bottom-0 -translate-x-1/2 translate-y-[40%] pointer-events-none">
                   <img
-                    src={YOU.avatar}
-                    alt={YOU.name}
+                    src={you.avatar}
+                    alt={you.name}
                     draggable={false}
                     className="h-20 w-16 sm:h-24 sm:w-20 object-contain object-bottom drop-shadow-[0_10px_16px_rgba(0,0,0,0.6)]"
                     style={{
-                      filter: `drop-shadow(0 0 8px ${YOU.accent})`,
+                      filter: `drop-shadow(0 0 8px ${you.accent})`,
                     }}
                   />
                 </div>
@@ -266,8 +295,8 @@ function Game() {
             </div>
 
             <div className="fan-hand hand-scroll relative flex items-end justify-center overflow-x-auto sm:overflow-visible no-scrollbar px-4 pt-1 pb-1 min-h-[4.5rem] sm:min-h-[5.2rem]">
-              {HAND.map((card, i) => {
-                const n = HAND.length;
+              {hand.map((card, i) => {
+                const n = hand.length;
                 const mid = (n - 1) / 2;
                 const offset = i - mid;
                 const spread = Math.min(7, 26 / Math.max(n, 1));
@@ -292,9 +321,7 @@ function Game() {
                         card={card}
                         size="md"
                         state={myTurn ? "idle" : "disabled"}
-                        animation={
-                          playingIdx === i ? "play" : !dealt ? "deal" : undefined
-                        }
+                        animation={playingIdx === i ? "play" : !dealt ? "deal" : undefined}
                         animationDelay={!dealt ? i * 70 : undefined}
                         onClick={() => handlePlay(i)}
                         className={cn(
@@ -310,7 +337,7 @@ function Game() {
           </div>
         </main>
 
-        <ChatPanel />
+        <ChatPanel messages={messages} session={session} />
       </div>
     </RoomShell>
   );

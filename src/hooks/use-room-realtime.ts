@@ -5,13 +5,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { getRoomState, heartbeat } from "@/lib/rooms.functions";
 import type {
   ConnectionStatus,
+  GameState,
   RoomMessage,
   RoomPlayer,
   RoomSession,
   RoomState,
 } from "@/types/room";
 
-export type { ConnectionStatus, RoomMessage, RoomPlayer, RoomState };
+export type { ConnectionStatus, GameState, RoomMessage, RoomPlayer, RoomState };
 
 /**
  * Subscribes to room + players + messages for the given room code.
@@ -26,6 +27,7 @@ export function useRoomRealtime(code: string | undefined, session: RoomSession |
   const [room, setRoom] = useState<RoomState | null>(null);
   const [players, setPlayers] = useState<RoomPlayer[]>([]);
   const [messages, setMessages] = useState<RoomMessage[]>([]);
+  const [gameState, setGameState] = useState<GameState | null>(null);
   const [loading, setLoading] = useState(true);
   const [connection, setConnection] = useState<ConnectionStatus>("connecting");
 
@@ -45,6 +47,7 @@ export function useRoomRealtime(code: string | undefined, session: RoomSession |
       }
       setRoom(data.room as RoomState);
       setPlayers(data.players as RoomPlayer[]);
+      setGameState((data.gameState as GameState | null) ?? null);
       roomIdRef.current = data.room.id;
 
       const { data: msgs } = await supabase
@@ -89,12 +92,17 @@ export function useRoomRealtime(code: string | undefined, session: RoomSession |
         (payload) => {
           setPlayers((prev) => {
             if (payload.eventType === "INSERT") {
-              const next = [...prev.filter((p) => p.id !== (payload.new as RoomPlayer).id), payload.new as RoomPlayer];
+              const next = [
+                ...prev.filter((p) => p.id !== (payload.new as RoomPlayer).id),
+                payload.new as RoomPlayer,
+              ];
               return next.sort((a, b) => a.seat - b.seat);
             }
             if (payload.eventType === "UPDATE") {
               return prev
-                .map((p) => (p.id === (payload.new as RoomPlayer).id ? (payload.new as RoomPlayer) : p))
+                .map((p) =>
+                  p.id === (payload.new as RoomPlayer).id ? (payload.new as RoomPlayer) : p,
+                )
                 .sort((a, b) => a.seat - b.seat);
             }
             if (payload.eventType === "DELETE") {
@@ -104,9 +112,23 @@ export function useRoomRealtime(code: string | undefined, session: RoomSession |
           });
         },
       )
+
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "room_messages", filter: `room_id=eq.${roomId}` },
+        { event: "*", schema: "public", table: "game_states", filter: `room_id=eq.${roomId}` },
+        (payload) => {
+          if (payload.eventType === "DELETE") setGameState(null);
+          else setGameState(payload.new as GameState);
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "room_messages",
+          filter: `room_id=eq.${roomId}`,
+        },
         (payload) => {
           const msg = payload.new as RoomMessage;
           setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
@@ -195,5 +217,5 @@ export function useRoomRealtime(code: string | undefined, session: RoomSession |
     };
   }, [session, ping]);
 
-  return { room, players, messages, loading, connection };
+  return { room, players, messages, gameState, loading, connection };
 }

@@ -1,10 +1,13 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { MessageCircle, Send, X, Sparkles, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getPortrait } from "@/lib/portraits";
+import { sendMessage } from "@/lib/rooms.functions";
+import type { RoomMessage, RoomSession } from "@/types/room";
 
 interface Msg {
-  id: number;
+  id: string;
   user: string;
   avatar: string;
   text: string;
@@ -12,14 +15,6 @@ interface Msg {
   mine?: boolean;
   system?: boolean;
 }
-
-const NOW = Date.now();
-const SEED: Msg[] = [
-  { id: 1, user: "Systém", avatar: "", text: "Pavla se připojila ke stolu", ts: NOW - 5 * 60_000, system: true },
-  { id: 2, user: "Pavla", avatar: "pavla", text: "Hodně štěstí všem!", ts: NOW - 4 * 60_000 },
-  { id: 3, user: "Tomáš", avatar: "tomas", text: "Pozor na sedmičky 😉", ts: NOW - 2 * 60_000 },
-  { id: 4, user: "Ty", avatar: "karel", text: "Jdeme na to", ts: NOW - 60_000, mine: true },
-];
 
 function formatTime(ts: number) {
   const d = new Date(ts);
@@ -34,14 +29,33 @@ function relative(ts: number) {
   return formatTime(ts);
 }
 
-export function ChatPanel() {
+export function ChatPanel({
+  messages = [],
+  session,
+}: {
+  messages?: RoomMessage[];
+  session: RoomSession | null;
+}) {
   const [open, setOpen] = useState(false);
   const [collapsedDesktop, setCollapsedDesktop] = useState(false);
-  const [msgs, setMsgs] = useState<Msg[]>(SEED);
   const [text, setText] = useState("");
+  const [sending, setSending] = useState(false);
   const [unread, setUnread] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const lastSeenRef = useRef<number>(SEED.length);
+  const lastSeenRef = useRef<number>(0);
+  const callSendMessage = useServerFn(sendMessage);
+  const msgs = useMemo<Msg[]>(
+    () =>
+      messages.map((message) => ({
+        id: message.id,
+        user: message.nickname,
+        avatar: message.avatar ?? "",
+        text: message.text,
+        ts: new Date(message.created_at).getTime(),
+        mine: message.player_id === session?.playerId,
+      })),
+    [messages, session?.playerId],
+  );
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -58,14 +72,24 @@ export function ChatPanel() {
     }
   }, [msgs, open]);
 
-  const send = () => {
+  const send = async () => {
     const t = text.trim();
-    if (!t) return;
-    setMsgs((m) => [
-      ...m,
-      { id: Date.now(), user: "Ty", avatar: "karel", text: t, ts: Date.now(), mine: true },
-    ]);
-    setText("");
+    if (!t || !session || sending) return;
+    setSending(true);
+    try {
+      await callSendMessage({
+        data: {
+          playerId: session.playerId,
+          sessionToken: session.sessionToken,
+          text: t,
+        },
+      });
+      setText("");
+    } catch {
+      /* keep production flow server-backed; caller can retry */
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -129,7 +153,9 @@ export function ChatPanel() {
         <header className="flex h-11 items-center justify-between px-3 lg:border-b lg:border-white/8">
           <div className="flex items-center gap-2 min-w-0">
             <MessageCircle className="h-3.5 w-3.5 text-[color:var(--gold)]" />
-            <h3 className="font-display text-[12px] font-semibold uppercase tracking-[0.18em]">Chat</h3>
+            <h3 className="font-display text-[12px] font-semibold uppercase tracking-[0.18em]">
+              Chat
+            </h3>
             <span className="rounded-full bg-white/5 px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-muted-foreground">
               {msgs.filter((m) => !m.system).length}
             </span>
@@ -150,10 +176,7 @@ export function ChatPanel() {
           </button>
         </header>
 
-        <div
-          ref={scrollRef}
-          className="flex-1 space-y-2 overflow-y-auto scrollbar-thin px-3 py-2"
-        >
+        <div ref={scrollRef} className="flex-1 space-y-2 overflow-y-auto scrollbar-thin px-3 py-2">
           {msgs.length === 0 ? (
             <EmptyState />
           ) : (
@@ -168,7 +191,8 @@ export function ChatPanel() {
                 );
               }
               const prev = msgs[i - 1];
-              const grouped = prev && !prev.system && prev.user === m.user && m.ts - prev.ts < 60_000;
+              const grouped =
+                prev && !prev.system && prev.user === m.user && m.ts - prev.ts < 60_000;
               const portrait = getPortrait(m.avatar);
               return (
                 <div key={m.id} className={cn("flex gap-2", m.mine && "flex-row-reverse")}>
@@ -217,7 +241,7 @@ export function ChatPanel() {
         <form
           onSubmit={(e) => {
             e.preventDefault();
-            send();
+            void send();
           }}
           className="flex items-center gap-2 border-t border-white/8 p-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))]"
         >
@@ -230,7 +254,7 @@ export function ChatPanel() {
           />
           <button
             type="submit"
-            disabled={!text.trim()}
+            disabled={!text.trim() || !session || sending}
             className="flex h-9 w-9 items-center justify-center rounded-full bg-[color:var(--gold)] text-[color:var(--primary-foreground)] transition active:scale-95 disabled:opacity-40 shadow-[0_8px_20px_-10px_oklch(0.82_0.14_85/0.6)]"
             aria-label="Odeslat"
           >
