@@ -388,7 +388,13 @@ export const reconnect = createServerFn({ method: "POST" })
     z.object({ playerId: PlayerIdSchema, sessionToken: TokenSchema }).parse(input),
   )
   .handler(async ({ data }) => {
-    const player = await authenticatePlayer(data.playerId, data.sessionToken);
+    const player = await authenticatePlayer(data.playerId, data.sessionToken).catch((error) => {
+      if (error instanceof Error && error.message === "Unauthorized: invalid player session") {
+        return null;
+      }
+      throw error;
+    });
+    if (!player) return null;
 
     const { data: room, error: rErr } = await supabaseAdmin
       .from("rooms")

@@ -51,7 +51,8 @@ function Game() {
   const navigate = useNavigate();
   const { session, status: reconnectStatus, error: reconnectError } = useReconnect();
   const code = session?.roomCode;
-  const { room, players, messages, gameState, loading } = useRoomRealtime(code, session);
+  const realtimeSession = reconnectStatus === "ready" ? session : null;
+  const { room, players, messages, gameState, loading } = useRoomRealtime(code, realtimeSession);
   const callDrawCard = useServerFn(drawCard);
   const callPlayCard = useServerFn(playCard);
   const callLeave = useServerFn(leaveRoom);
