@@ -155,9 +155,9 @@ function Lobby() {
     <RoomShell>
       <TopNav />
 
-      <main className="mx-auto w-full max-w-md flex-1 px-4 py-6">
+      <main className="mx-auto flex w-full max-w-md flex-1 flex-col px-4 py-4 sm:py-6">
         {/* Hero */}
-        <section className="text-center mb-6">
+        <section className="mb-3 text-center sm:mb-4">
           <div className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--gold)]/30 bg-[color:var(--gold)]/10 px-3 py-1 mb-3">
             <Sparkles className="h-3 w-3 text-[color:var(--gold)]" />
             <span className="text-[10px] font-semibold uppercase tracking-[0.22em] gold-text">
@@ -165,13 +165,12 @@ function Lobby() {
             </span>
           </div>
           <h1 className="font-display text-3xl sm:text-4xl font-bold leading-tight">
-            Hraj <span className="gold-text">Prší</span>
-            <br />s přáteli
+            Prší <span className="gold-text">Online</span>
           </h1>
         </section>
 
         {/* Identity card */}
-        <RoomPanel className="mb-5 p-5 space-y-4" tone="active">
+        <RoomPanel className="mb-3 space-y-3 p-4 sm:mb-5 sm:space-y-4 sm:p-5" tone="active">
           <div className="flex items-center gap-4">
             <button
               type="button"
@@ -235,13 +234,13 @@ function Lobby() {
           loading={submitting === "create"}
           icon={submitting !== "create" && <Dice5 className="h-5 w-5" />}
           iconRight={<ArrowRight className="h-4 w-4 opacity-70" />}
-          className="mb-5"
+          className="mb-3 sm:mb-5"
         >
           {submitting === "create" ? "Zakládám…" : "Nová hra"}
         </RoomButton>
 
         {/* Divider */}
-        <div className="mb-4 flex items-center gap-3">
+        <div className="mb-2 flex items-center gap-3 sm:mb-4">
           <div className="h-px flex-1 bg-white/8" />
           <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
             nebo
@@ -250,8 +249,11 @@ function Lobby() {
         </div>
 
         {/* Secondary: Join */}
-        <RoomPanel className="p-4 space-y-3">
-          <div className="flex gap-2">
+        <RoomPanel className="space-y-2 p-3 sm:space-y-3 sm:p-4">
+          <div>
+            <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+              Mám kód hry
+            </label>
             <input
               value={code}
               onChange={(e) =>
@@ -264,7 +266,7 @@ function Lobby() {
               }
               inputMode="text"
               autoCapitalize="characters"
-              placeholder="Mám kód hry"
+              placeholder="Zadej kód hry"
               className="control-pill w-full px-4 py-2.5 text-center text-lg font-mono font-bold tracking-[0.3em] outline-none transition focus:border-[color:var(--gold)]/50 placeholder:font-sans placeholder:text-sm placeholder:font-normal placeholder:tracking-normal"
             />
           </div>
@@ -283,7 +285,7 @@ function Lobby() {
 
         {/* Logout */}
         {hasSavedProfile && (
-          <div className="mt-6 flex justify-center">
+          <div className="mt-auto flex justify-center pt-4">
             <button
               type="button"
               onClick={handleLogout}
