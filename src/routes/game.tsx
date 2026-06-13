@@ -5,14 +5,27 @@ import { ChatPanel } from "@/components/ChatPanel";
 import { Opponent, type OpponentData, type SeatPlacement } from "@/components/Opponent";
 import { RoomShell } from "@/components/ui-room/RoomShell";
 import { RoomButton } from "@/components/ui-room/RoomButton";
-import { PlayingCard, CardStack, DiscardPile, SuitBadge, type CardData } from "@/components/cards";
+import {
+  PlayingCard,
+  CardStack,
+  DiscardPile,
+  SuitBadge,
+  type CardData,
+  type Suit,
+} from "@/components/cards";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, Loader2, Timer, Sparkles, Trophy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getPortrait, PORTRAITS } from "@/lib/portraits";
 import { useReconnect } from "@/hooks/use-reconnect";
 import { useRoomRealtime } from "@/hooks/use-room-realtime";
-import { drawCard, playCard, leaveRoom } from "@/lib/rooms.functions";
+import {
+  acceptRematch,
+  declineRematch,
+  drawCard,
+  playCard,
+  leaveRoom,
+} from "@/lib/rooms.functions";
 import { clearSession } from "@/lib/room-session";
 import { toast } from "sonner";
 
@@ -24,6 +37,14 @@ export const Route = createFileRoute("/game")({
 });
 
 const FALLBACK_CARD: CardData = { suit: "hearts", rank: "10" };
+const SUITS: Suit[] = ["hearts", "diamonds", "clubs", "spades"];
+const REMATCH_VOTES_KEY = "__rematch_votes";
+
+function rematchVotesFrom(processedActions: Record<string, unknown> | undefined) {
+  const votes = processedActions?.[REMATCH_VOTES_KEY];
+  if (!votes || typeof votes !== "object" || Array.isArray(votes)) return {};
+  return votes as Record<string, "accepted" | "declined" | null>;
+}
 
 function adjacentPlayerId(
   players: { id: string }[],
@@ -56,7 +77,10 @@ function Game() {
   const callDrawCard = useServerFn(drawCard);
   const callPlayCard = useServerFn(playCard);
   const callLeave = useServerFn(leaveRoom);
+  const callAcceptRematch = useServerFn(acceptRematch);
+  const callDeclineRematch = useServerFn(declineRematch);
   const [leaving, setLeaving] = useState(false);
+  const [rematchBusy, setRematchBusy] = useState<"accept" | "decline" | null>(null);
 
   const handleLeave = async () => {
     if (!session) {
@@ -77,12 +101,28 @@ function Game() {
     }
   };
 
+  const submitRematchVote = async (vote: "accept" | "decline") => {
+    if (!session || rematchBusy) return;
+    setRematchBusy(vote);
+    try {
+      const call = vote === "accept" ? callAcceptRematch : callDeclineRematch;
+      await call({
+        data: { playerId: session.playerId, sessionToken: session.sessionToken },
+      });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Nepodařilo se uložit odvetu");
+    } finally {
+      setRematchBusy(null);
+    }
+  };
+
   const [selected, setSelected] = useState<number | null>(null);
   const [playingIdx, setPlayingIdx] = useState<number | null>(null);
   const [pileNonce, setPileNonce] = useState(0);
   const [drawNonce, setDrawNonce] = useState(0);
   const [dealt, setDealt] = useState(false);
   const [busyAction, setBusyAction] = useState<"draw" | "play" | null>(null);
+  const [suitPickerIndex, setSuitPickerIndex] = useState<number | null>(null);
   const busyActionRef = useRef(false);
   const aceSkipToastRef = useRef<string | null>(null);
 
@@ -102,6 +142,7 @@ function Game() {
   const activePlayer = players.find((p) => p.id === gameState?.current_player_id) ?? me;
   const gameFinished = room?.status === "finished" || gameState?.status === "finished";
   const winner = gameFinished ? players.find((p) => p.id === gameState?.current_player_id) : null;
+  const rematchVotes = rematchVotesFrom(gameState?.processed_actions);
   const aceSkip = useMemo(() => {
     if (gameFinished || gameState?.status !== "playing" || topDiscard.rank !== "A") return null;
     if (!gameState.last_action_id || !gameState.last_action_player_id) return null;
@@ -196,7 +237,9 @@ function Game() {
     !!selectedCard &&
     (pendingDraw > 0
       ? selectedCard.rank === "7"
-      : selectedCard.suit === activeSuit || selectedCard.rank === topDiscard.rank);
+      : selectedCard.rank === "Q" ||
+        selectedCard.suit === activeSuit ||
+        selectedCard.rank === topDiscard.rank);
 
   const handleDraw = async () => {
     if (!session || !gameState || !canAct || busyActionRef.current) return;
@@ -221,7 +264,7 @@ function Game() {
     }
   };
 
-  const submitPlay = async (cardIndex: number) => {
+  const submitPlay = async (cardIndex: number, chosenSuit?: Suit) => {
     if (!session || !gameState || !canAct || busyActionRef.current) return;
     busyActionRef.current = true;
     setBusyAction("play");
@@ -234,9 +277,11 @@ function Game() {
           actionId: createActionId(),
           expectedTurnVersion: gameState.turn_version,
           cardIndex,
+          chosenSuit,
         },
       });
       setSelected(null);
+      setSuitPickerIndex(null);
       setPileNonce((n) => n + 1);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Nepodařilo se zahrát kartu");
@@ -258,11 +303,15 @@ function Game() {
       !card ||
       (pendingDraw > 0
         ? card.rank !== "7"
-        : card.suit !== activeSuit && card.rank !== topDiscard.rank)
+        : card.rank !== "Q" && card.suit !== activeSuit && card.rank !== topDiscard.rank)
     ) {
       toast.error(
         pendingDraw > 0 ? "Musíš zahrát sedmu nebo líznout trest" : "Tuto kartu nelze zahrát",
       );
+      return;
+    }
+    if (card.rank === "Q") {
+      setSuitPickerIndex(i);
       return;
     }
     void submitPlay(i);
@@ -386,6 +435,34 @@ function Game() {
                     </div>
                   )}
 
+                  {suitPickerIndex !== null && (
+                    <div className="absolute inset-x-6 top-1/2 z-30 -translate-y-1/2 rounded-3xl border border-[color:var(--gold)]/35 bg-black/75 p-4 text-center shadow-2xl shadow-black/60 backdrop-blur-md sm:inset-x-16">
+                      <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-[color:var(--gold)]">
+                        Vyber barvu
+                      </div>
+                      <div className="mt-3 flex justify-center gap-2">
+                        {SUITS.map((suit) => (
+                          <button
+                            key={suit}
+                            type="button"
+                            className="rounded-full bg-[color:var(--gold)]/10 px-3 py-2 ring-1 ring-[color:var(--gold)]/35 transition hover:bg-[color:var(--gold)]/20"
+                            onClick={() => void submitPlay(suitPickerIndex, suit)}
+                            disabled={!canAct}
+                          >
+                            <SuitBadge suit={suit} size="sm" />
+                          </button>
+                        ))}
+                      </div>
+                      <button
+                        type="button"
+                        className="mt-3 text-xs text-muted-foreground underline-offset-4 hover:underline"
+                        onClick={() => setSuitPickerIndex(null)}
+                      >
+                        Zrušit
+                      </button>
+                    </div>
+                  )}
+
                   <div className="table-spotlight" aria-hidden="true" />
 
                   {aceSkip && (
@@ -409,7 +486,50 @@ function Game() {
                         Hra dohrána
                       </div>
                       <div className="mt-1 text-sm text-muted-foreground">
-                        {winner ? `${winner.nickname} vyhrál/a partii.` : "Partie byla ukončena."}
+                        Vítěz: {winner?.nickname ?? "Partie byla ukončena."}
+                      </div>
+                      <div className="mt-4 rounded-2xl bg-white/5 p-3 text-left ring-1 ring-white/10">
+                        <div className="text-center text-[10px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                          Odveta
+                        </div>
+                        <div className="mt-2 space-y-1 text-xs">
+                          {players.map((p) => {
+                            const vote = rematchVotes[p.id];
+                            const mark =
+                              vote === "accepted" ? "✓" : vote === "declined" ? "✗" : "⏳";
+                            return (
+                              <div
+                                key={p.id}
+                                className="flex items-center justify-between gap-2 text-muted-foreground"
+                              >
+                                <span>{p.nickname}</span>
+                                <span>
+                                  {p.connected === false ? "odpojeno" : `${mark} ${vote ?? "čeká"}`}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      <div className="mt-4 flex justify-center gap-2">
+                        <RoomButton
+                          size="sm"
+                          variant="primary"
+                          loading={rematchBusy === "accept"}
+                          disabled={!session || !!rematchBusy}
+                          onClick={() => void submitRematchVote("accept")}
+                        >
+                          Accept Rematch
+                        </RoomButton>
+                        <RoomButton
+                          size="sm"
+                          variant="secondary"
+                          loading={rematchBusy === "decline"}
+                          disabled={!session || !!rematchBusy}
+                          onClick={() => void submitRematchVote("decline")}
+                        >
+                          Decline
+                        </RoomButton>
                       </div>
                     </div>
                   )}
@@ -519,7 +639,12 @@ function Game() {
                   disabled={!canAct || selected === null || !selectedPlayable}
                   loading={busyAction === "play"}
                   onClick={() => {
-                    if (selected !== null) void submitPlay(selected);
+                    if (selected === null) return;
+                    if (hand[selected]?.rank === "Q") {
+                      setSuitPickerIndex(selected);
+                      return;
+                    }
+                    void submitPlay(selected);
                   }}
                 >
                   Zahraj

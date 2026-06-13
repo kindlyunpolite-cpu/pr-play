@@ -45,10 +45,26 @@ function toHands(value: unknown): Record<string, CardData[]> {
 }
 
 type ProcessedTurnAction = { playerId: string; signature: string };
+type RematchVote = "accepted" | "declined" | null;
+type RematchVotes = Record<string, RematchVote>;
 
-function toProcessedActions(value: unknown): Record<string, ProcessedTurnAction> {
+const REMATCH_VOTES_KEY = "__rematch_votes";
+const FIRST_PLAYER_KEY = "__first_player_id";
+
+function toProcessedActions(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
-  return value as Record<string, ProcessedTurnAction>;
+  return value as Record<string, unknown>;
+}
+
+function toRematchVotes(processedActions: Record<string, unknown>): RematchVotes {
+  const votes = processedActions[REMATCH_VOTES_KEY];
+  if (!votes || typeof votes !== "object" || Array.isArray(votes)) return {};
+  return votes as RematchVotes;
+}
+
+function firstPlayerIdFrom(processedActions: Record<string, unknown>) {
+  const value = processedActions[FIRST_PLAYER_KEY];
+  return typeof value === "string" ? value : null;
 }
 
 function isPlayable(
@@ -58,6 +74,7 @@ function isPlayable(
   pendingDraw: number,
 ) {
   if (pendingDraw > 0) return card.rank === "7";
+  if (card.rank === "Q") return true;
   return card.suit === (activeSuit ?? topCard.suit) || card.rank === topCard.rank;
 }
 
@@ -79,19 +96,23 @@ function actionError(kind: "stale" | "invalid" | "finished", detail: string) {
   return new Error(`${prefix}: ${detail}`);
 }
 
-function actionSignature(action: "draw" | "play", payload?: { cardIndex?: number }) {
-  return payload ? `${action}:${payload.cardIndex ?? ""}` : action;
+function actionSignature(
+  action: "draw" | "play",
+  payload?: { cardIndex?: number; chosenSuit?: Suit },
+) {
+  return payload ? `${action}:${payload.cardIndex ?? ""}:${payload.chosenSuit ?? ""}` : action;
 }
 
 function resolveDuplicateAction(
-  processedActions: Record<string, ProcessedTurnAction>,
+  processedActions: Record<string, unknown>,
   actionId: string,
   playerId: string,
   signature: string,
 ): { ok: true; duplicate: true } | null {
   const processed = processedActions[actionId];
-  if (!processed) return null;
-  if (processed.playerId === playerId && processed.signature === signature) {
+  if (!processed || typeof processed !== "object" || Array.isArray(processed)) return null;
+  const action = processed as ProcessedTurnAction;
+  if (action.playerId === playerId && action.signature === signature) {
     return { ok: true, duplicate: true };
   }
   throw actionError("invalid", "action id was already used for a different action");
@@ -185,6 +206,46 @@ async function loadTurnPlayers(roomId: string) {
     .order("seat", { ascending: true });
   if (error || !players || players.length < 2) throw new Error("Could not load players");
   return players;
+}
+
+async function initializeGame(
+  roomId: string,
+  players: { id: string; seat: number }[],
+  firstPlayerId: string,
+) {
+  const deck = shuffleDeck(createDeck());
+  const hands: Record<string, CardData[]> = {};
+  for (const roomPlayer of players) {
+    hands[roomPlayer.id] = deck.splice(0, DEAL_COUNT);
+  }
+
+  const firstDiscard = deck.shift();
+  if (!firstDiscard) throw new Error("Could not initialize deck");
+
+  const { error: stateError } = await supabaseAdmin.from("game_states").upsert({
+    room_id: roomId,
+    deck: deck as unknown as Json,
+    discard_pile: [firstDiscard] as unknown as Json,
+    hands: hands as unknown as Json,
+    current_player_id: firstPlayerId,
+    active_suit: firstDiscard.suit,
+    direction: 1,
+    status: "playing",
+    pending_draw: 0,
+    turn_version: 0,
+    last_action_id: null,
+    last_action_player_id: null,
+    last_action_signature: null,
+    processed_actions: { [FIRST_PLAYER_KEY]: firstPlayerId } as unknown as Json,
+    updated_at: new Date().toISOString(),
+  });
+  if (stateError) throw new Error("Failed to initialize game state");
+
+  const { error } = await supabaseAdmin
+    .from("rooms")
+    .update({ status: "playing", started_at: new Date().toISOString() })
+    .eq("id", roomId);
+  if (error) throw new Error("Failed to start game");
 }
 
 const NicknameSchema = z.string().trim().min(1).max(24);
@@ -368,7 +429,7 @@ export const getRoomState = createServerFn({ method: "POST" })
     if (!room) return null;
     const { data: players } = await supabaseAdmin
       .from("players")
-      .select("id, nickname, avatar, is_host, is_ready, seat, joined_at, last_seen_at")
+      .select("id, nickname, avatar, is_host, is_ready, seat, connected, joined_at, last_seen_at")
       .eq("room_id", room.id)
       .order("seat", { ascending: true });
     const { data: gameState } = await supabaseAdmin
@@ -451,13 +512,15 @@ export const leaveRoom = createServerFn({ method: "POST" })
     z.object({ playerId: PlayerIdSchema, sessionToken: TokenSchema }).parse(input),
   )
   .handler(async ({ data }) => {
-    await authenticatePlayer(data.playerId, data.sessionToken);
+    const player = await authenticatePlayer(data.playerId, data.sessionToken);
 
     const { error } = await supabaseAdmin
       .from("players")
       .update({ connected: false, is_ready: false })
       .eq("id", data.playerId);
     if (error) throw new Error("Failed to leave room");
+
+    await updateRematchVote(player.id, player.room_id, null).catch(() => {});
 
     return { ok: true };
   });
@@ -480,40 +543,73 @@ export const startGame = createServerFn({ method: "POST" })
     if (!players || players.length < 2) throw new Error("Need at least 2 players");
     if (!players.every((p) => p.is_ready)) throw new Error("All players must be ready");
 
-    const deck = shuffleDeck(createDeck());
-    const hands: Record<string, CardData[]> = {};
-    for (const roomPlayer of players) {
-      hands[roomPlayer.id] = deck.splice(0, DEAL_COUNT);
-    }
-
-    const firstDiscard = deck.shift();
-    if (!firstDiscard) throw new Error("Could not initialize deck");
-
-    const { error: stateError } = await supabaseAdmin.from("game_states").upsert({
-      room_id: player.room_id,
-      deck: deck as unknown as Json,
-      discard_pile: [firstDiscard] as unknown as Json,
-      hands: hands as unknown as Json,
-      current_player_id: players[0].id,
-      active_suit: firstDiscard.suit,
-      direction: 1,
-      status: "playing",
-      pending_draw: 0,
-      turn_version: 0,
-      last_action_id: null,
-      last_action_player_id: null,
-      last_action_signature: null,
-      processed_actions: {},
-      updated_at: new Date().toISOString(),
-    });
-    if (stateError) throw new Error("Failed to initialize game state");
-
-    const { error } = await supabaseAdmin
-      .from("rooms")
-      .update({ status: "playing", started_at: new Date().toISOString() })
-      .eq("id", player.room_id);
-    if (error) throw new Error("Failed to start game");
+    await initializeGame(player.room_id, players, players[0].id);
     return { ok: true };
+  });
+
+async function updateRematchVote(playerId: string, roomId: string, vote: RematchVote) {
+  const gameState = await loadGameState(roomId);
+  if (gameState.status !== "finished") {
+    throw actionError("invalid", "rematch is only available after the game is finished");
+  }
+
+  const votes = { ...toRematchVotes(gameState.processed_actions), [playerId]: vote };
+  const processedActions = {
+    ...gameState.processed_actions,
+    [REMATCH_VOTES_KEY]: votes,
+  };
+
+  const { data: updated, error } = await supabaseAdmin
+    .from("game_states")
+    .update({
+      processed_actions: processedActions as unknown as Json,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("room_id", roomId)
+    .eq("status", "finished")
+    .eq("turn_version", gameState.turn_version)
+    .select("room_id")
+    .maybeSingle();
+  if (error) throw new Error("Failed to update rematch vote");
+  if (!updated) return { ok: true };
+
+  const { data: players, error: pErr } = await supabaseAdmin
+    .from("players")
+    .select("id, seat, connected")
+    .eq("room_id", roomId)
+    .order("seat", { ascending: true });
+  if (pErr || !players) throw new Error("Could not load players");
+
+  const connectedPlayers = players.filter((p) => p.connected);
+  if (connectedPlayers.length >= 2 && connectedPlayers.every((p) => votes[p.id] === "accepted")) {
+    const currentFirstPlayerId = firstPlayerIdFrom(gameState.processed_actions) ?? players[0].id;
+    const currentFirstSeat = players.find((p) => p.id === currentFirstPlayerId)?.seat ?? -1;
+    const firstPlayer =
+      connectedPlayers.find((p) => p.seat > currentFirstSeat) ?? connectedPlayers[0];
+    await initializeGame(roomId, connectedPlayers, firstPlayer.id);
+  }
+
+  return { ok: true };
+}
+
+// ------------- rematch -------------
+
+export const acceptRematch = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z.object({ playerId: PlayerIdSchema, sessionToken: TokenSchema }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const player = await authenticatePlayer(data.playerId, data.sessionToken);
+    return updateRematchVote(player.id, player.room_id, "accepted");
+  });
+
+export const declineRematch = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z.object({ playerId: PlayerIdSchema, sessionToken: TokenSchema }).parse(input),
+  )
+  .handler(async ({ data }) => {
+    const player = await authenticatePlayer(data.playerId, data.sessionToken);
+    return updateRematchVote(player.id, player.room_id, "declined");
   });
 
 // ------------- drawCard -------------
@@ -572,7 +668,7 @@ export const drawCard = createServerFn({ method: "POST" })
         discard_pile: draw.discardPile as unknown as Json,
         hands: hands as unknown as Json,
         current_player_id: nextPlayerId(players, player.id, gameState.direction),
-        active_suit: draw.discardPile.at(-1)?.suit ?? gameState.active_suit,
+        active_suit: gameState.active_suit,
         pending_draw: 0,
         turn_version: gameState.turn_version + 1,
         last_action_id: data.actionId,
@@ -611,12 +707,16 @@ export const playCard = createServerFn({ method: "POST" })
         actionId: ActionIdSchema,
         expectedTurnVersion: TurnVersionSchema,
         cardIndex: z.number().int().min(0),
+        chosenSuit: z.enum(SUITS as [Suit, ...Suit[]]).optional(),
       })
       .parse(input),
   )
   .handler(async ({ data }) => {
     const player = await authenticatePlayer(data.playerId, data.sessionToken);
-    const signature = actionSignature("play", { cardIndex: data.cardIndex });
+    const signature = actionSignature("play", {
+      cardIndex: data.cardIndex,
+      chosenSuit: data.chosenSuit,
+    });
     const gameState = await loadGameState(player.room_id);
 
     const duplicate = resolveDuplicateAction(
@@ -650,6 +750,12 @@ export const playCard = createServerFn({ method: "POST" })
           : "card is not playable on the current discard",
       );
     }
+    if (card.rank === "Q" && !data.chosenSuit) {
+      throw actionError("invalid", "queen requires choosing a suit");
+    }
+    if (card.rank !== "Q" && data.chosenSuit) {
+      throw actionError("invalid", "chosen suit is only allowed for queens");
+    }
 
     hands[player.id] = hand;
     const discardPile = [...gameState.discard_pile, card];
@@ -671,7 +777,7 @@ export const playCard = createServerFn({ method: "POST" })
         current_player_id: finished
           ? player.id
           : nextPlayerId(players, player.id, gameState.direction, card.rank === "A" ? 2 : 1),
-        active_suit: card.suit,
+        active_suit: data.chosenSuit ?? card.suit,
         pending_draw: finished ? 0 : pendingDraw,
         status: finished ? "finished" : "playing",
         turn_version: gameState.turn_version + 1,

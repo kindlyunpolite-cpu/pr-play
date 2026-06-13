@@ -19,6 +19,7 @@ export interface RoomPlayer {
   avatar: string | null;
   is_host: boolean;
   is_ready: boolean;
+  connected: boolean;
   seat: number;
   joined_at: string;
   last_seen_at: string;
@@ -61,7 +62,7 @@ export interface GameState {
   last_action_id: string | null;
   last_action_player_id: string | null;
   last_action_signature: string | null;
-  processed_actions: Record<string, { playerId: string; signature: string }>;
+  processed_actions: Record<string, unknown>;
   created_at: string;
   updated_at: string;
 }
