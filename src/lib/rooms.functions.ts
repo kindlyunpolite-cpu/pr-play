@@ -255,13 +255,21 @@ async function incrementPlayerStats(
 async function recordFinishedGame(roomId: string, winnerPlayerId: string, finishedAt: string) {
   const players = await loadTurnPlayers(roomId);
 
-  const { error: resultError } = await supabaseAdmin.from("game_results").insert({
-    room_id: roomId,
-    winner_player_id: winnerPlayerId,
-    finished_at: finishedAt,
-    player_count: players.length,
-  });
+  const { data: result, error: resultError } = await supabaseAdmin
+    .from("game_results")
+    .upsert(
+      {
+        room_id: roomId,
+        winner_player_id: winnerPlayerId,
+        finished_at: finishedAt,
+        player_count: players.length,
+      },
+      { onConflict: "room_id,finished_at", ignoreDuplicates: true },
+    )
+    .select("id")
+    .maybeSingle();
   if (resultError) throw new Error("Failed to record game result");
+  if (!result) return;
 
   await Promise.all(
     players.map((roomPlayer) =>

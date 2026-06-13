@@ -25,6 +25,9 @@ CREATE TABLE IF NOT EXISTS public.game_results (
 CREATE INDEX IF NOT EXISTS game_results_room_finished_idx
   ON public.game_results(room_id, finished_at DESC);
 
+CREATE UNIQUE INDEX IF NOT EXISTS game_results_room_finished_unique_idx
+  ON public.game_results(room_id, finished_at);
+
 CREATE INDEX IF NOT EXISTS game_results_winner_idx
   ON public.game_results(winner_player_id);
 
