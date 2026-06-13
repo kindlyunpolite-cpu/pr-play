@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { TopNav } from "@/components/TopNav";
 import { RoomShell } from "@/components/ui-room/RoomShell";
@@ -9,10 +9,16 @@ import { SectionTitle } from "@/components/ui-room/SectionTitle";
 import { SeatPortrait } from "@/components/ui-room/SeatPortrait";
 import { PortraitPicker } from "@/components/ui-room/PortraitPicker";
 import { PORTRAITS, getPortrait } from "@/lib/portraits";
-import { Plus, LogIn, Sparkles, Dice5, Shuffle, ArrowRight, Users, Loader2 } from "lucide-react";
+import { Plus, LogIn, Sparkles, Dice5, Shuffle, ArrowRight, Users, Loader2, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createRoom, joinRoom } from "@/lib/rooms.functions";
-import { saveSession } from "@/lib/room-session";
+import {
+  saveSession,
+  saveProfile,
+  loadProfile,
+  clearProfile,
+  clearSession,
+} from "@/lib/room-session";
 import { useReconnect } from "@/hooks/use-reconnect";
 import { toast } from "sonner";
 
@@ -39,8 +45,13 @@ const NAME_POOL = ["Karel", "Pavla", "Tomáš", "Eva", "Honza", "Lenka", "Mára"
 
 function Lobby() {
   const [tab, setTab] = useState<"create" | "join">("create");
-  const [nick, setNick] = useState("");
-  const [portraitId, setPortraitId] = useState(PORTRAITS[0].id);
+  const initialProfile = typeof window !== "undefined" ? loadProfile() : null;
+  const [nick, setNick] = useState(initialProfile?.nickname ?? "");
+  const [portraitId, setPortraitId] = useState(
+    initialProfile?.avatar && PORTRAITS.some((p) => p.id === initialProfile.avatar)
+      ? initialProfile.avatar
+      : PORTRAITS[0].id,
+  );
   const [code, setCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
@@ -86,6 +97,25 @@ function Lobby() {
   };
 
   const randomize = () => setNick(NAME_POOL[Math.floor(Math.random() * NAME_POOL.length)]);
+
+  // Persist profile preferences as the user edits them, so they survive a
+  // page refresh even without joining a room.
+  useEffect(() => {
+    const trimmed = nick.trim();
+    if (!trimmed) return;
+    saveProfile({ nickname: trimmed, avatar: portraitId });
+  }, [nick, portraitId]);
+
+  const hasSavedProfile =
+    typeof window !== "undefined" && (loadProfile() !== null || initialProfile !== null);
+
+  const handleLogout = () => {
+    clearSession();
+    clearProfile();
+    setNick("");
+    setPortraitId(PORTRAITS[0].id);
+    setCode("");
+  };
 
   if (reconnectStatus === "checking") {
     return (
@@ -225,12 +255,24 @@ function Lobby() {
         </RoomPanel>
 
         {/* Footer hint */}
-        <div className="mt-5 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-          <Users className="h-3.5 w-3.5" />
-          <span>Až 4 hráči ·</span>
-          <Link to="/game" className="underline gold-text">
-            náhled stolu
-          </Link>
+        <div className="mt-5 flex flex-col items-center gap-3">
+          <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+            <Users className="h-3.5 w-3.5" />
+            <span>Až 4 hráči ·</span>
+            <Link to="/game" className="underline gold-text">
+              náhled stolu
+            </Link>
+          </div>
+          {hasSavedProfile && (
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/8 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground transition hover:border-[color:var(--gold)]/40 hover:text-[color:var(--gold)]"
+            >
+              <LogOut className="h-3 w-3" />
+              Odhlásit
+            </button>
+          )}
         </div>
       </main>
     </RoomShell>
