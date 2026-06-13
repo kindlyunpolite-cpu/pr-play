@@ -596,12 +596,6 @@ function Game() {
                         filter: `drop-shadow(0 0 8px ${you.accent})`,
                       }}
                     />
-                    <div className="pointer-events-auto -mt-2 grid min-w-[11rem] grid-cols-2 gap-x-2 gap-y-0.5 rounded-lg border border-white/10 bg-black/65 px-2 py-1 text-[9px] text-muted-foreground backdrop-blur">
-                      <span>Wins: {you.wins ?? 0}</span>
-                      <span>Games: {you.gamesPlayed ?? 0}</span>
-                      <span>Cards played: {you.cardsPlayed ?? 0}</span>
-                      <span>Cards drawn: {you.cardsDrawn ?? 0}</span>
-                    </div>
                   </div>
                 </div>
               </div>
