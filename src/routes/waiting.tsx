@@ -48,17 +48,6 @@ const STATUS_META = {
   offline: { label: "Offline", dot: "bg-muted-foreground/50" },
 };
 
-function PlayerStatsSummary({ stats }: { stats: RoomPlayer["stats"] }) {
-  return (
-    <div className="mt-2 grid w-full grid-cols-2 gap-1 text-[9px] text-muted-foreground">
-      <span>Wins: {stats?.wins ?? 0}</span>
-      <span>Games: {stats?.games_played ?? 0}</span>
-      <span>Cards played: {stats?.cards_played ?? 0}</span>
-      <span>Cards drawn: {stats?.cards_drawn ?? 0}</span>
-    </div>
-  );
-}
-
 function deriveStatus(p: RoomPlayer): keyof typeof STATUS_META {
   const ageMs = Date.now() - new Date(p.last_seen_at).getTime();
   if (ageMs < 30_000) return "online";
