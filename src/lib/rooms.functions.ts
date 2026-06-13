@@ -576,7 +576,7 @@ export const drawCard = createServerFn({ method: "POST" })
         discard_pile: draw.discardPile as unknown as Json,
         hands: hands as unknown as Json,
         current_player_id: nextPlayerId(players, player.id, gameState.direction),
-        active_suit: draw.discardPile.at(-1)?.suit ?? gameState.active_suit,
+        active_suit: gameState.active_suit,
         pending_draw: 0,
         turn_version: gameState.turn_version + 1,
         last_action_id: data.actionId,
