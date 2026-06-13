@@ -112,6 +112,25 @@ export function useRoomRealtime(code: string | undefined, session: RoomSession |
           });
         },
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "player_stats", filter: `room_id=eq.${roomId}` },
+        (payload) => {
+          if (payload.eventType === "DELETE") {
+            setPlayers((prev) =>
+              prev.map((p) =>
+                p.id === (payload.old as { player_id: string }).player_id
+                  ? { ...p, stats: null }
+                  : p,
+              ),
+            );
+            return;
+          }
+
+          const stats = payload.new as NonNullable<RoomPlayer["stats"]>;
+          setPlayers((prev) => prev.map((p) => (p.id === stats.player_id ? { ...p, stats } : p)));
+        },
+      )
 
       .on(
         "postgres_changes",

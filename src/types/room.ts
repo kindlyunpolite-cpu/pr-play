@@ -23,6 +23,18 @@ export interface RoomPlayer {
   joined_at: string;
   last_seen_at: string;
   connected?: boolean;
+  stats?: PlayerStats | null;
+}
+
+export interface PlayerStats {
+  player_id: string;
+  room_id: string | null;
+  games_played: number;
+  wins: number;
+  cards_drawn: number;
+  cards_played: number;
+  turns_taken: number;
+  updated_at: string;
 }
 
 export interface RoomMessage {

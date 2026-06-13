@@ -19,7 +19,13 @@ import { cn } from "@/lib/utils";
 import { getPortrait, PORTRAITS } from "@/lib/portraits";
 import { useReconnect } from "@/hooks/use-reconnect";
 import { useRoomRealtime } from "@/hooks/use-room-realtime";
-import { acceptRematch, declineRematch, drawCard, playCard, leaveRoom } from "@/lib/rooms.functions";
+import {
+  acceptRematch,
+  declineRematch,
+  drawCard,
+  playCard,
+  leaveRoom,
+} from "@/lib/rooms.functions";
 import { clearSession } from "@/lib/room-session";
 import { toast } from "sonner";
 
@@ -162,7 +168,10 @@ function Game() {
             cardCount: gameState?.hands[p.id]?.length ?? 0,
             isTurn: p.id === gameState?.current_player_id,
             rank: p.seat + 1,
-            wins: 0,
+            wins: p.stats?.wins ?? 0,
+            gamesPlayed: p.stats?.games_played ?? 0,
+            cardsPlayed: p.stats?.cards_played ?? 0,
+            cardsDrawn: p.stats?.cards_drawn ?? 0,
             chips: 0,
             accent: portrait.accent ?? PORTRAITS[index % PORTRAITS.length].accent,
           };
@@ -178,7 +187,10 @@ function Game() {
     cardCount: hand.length,
     isTurn: myTurn,
     rank: (me?.seat ?? session?.seat ?? 0) + 1,
-    wins: 0,
+    wins: me?.stats?.wins ?? 0,
+    gamesPlayed: me?.stats?.games_played ?? 0,
+    cardsPlayed: me?.stats?.cards_played ?? 0,
+    cardsDrawn: me?.stats?.cards_drawn ?? 0,
     chips: 0,
     accent: mePortrait.accent,
   };
@@ -486,7 +498,8 @@ function Game() {
                         {winner ? `${winner.nickname} vyhrál/a partii.` : "Partie byla ukončena."}
                       </div>
                       <div className="mt-3 text-xs text-muted-foreground">
-                        Odveta: {acceptedRematchCount}/{rematchVoteTotal} připojených hráčů souhlasí.
+                        Odveta: {acceptedRematchCount}/{rematchVoteTotal} připojených hráčů
+                        souhlasí.
                       </div>
                       <div className="mt-3 flex justify-center gap-2">
                         <RoomButton
@@ -571,15 +584,23 @@ function Game() {
                     user's hand + nickname is at the bottom; a duplicate info
                     panel would steal space from the action buttons. */}
                 <div className="absolute z-30 left-1/2 bottom-0 -translate-x-1/2 translate-y-[40%] pointer-events-none">
-                  <img
-                    src={you.avatar}
-                    alt={you.name}
-                    draggable={false}
-                    className="h-20 w-16 sm:h-24 sm:w-20 object-contain object-bottom drop-shadow-[0_10px_16px_rgba(0,0,0,0.6)]"
-                    style={{
-                      filter: `drop-shadow(0 0 8px ${you.accent})`,
-                    }}
-                  />
+                  <div className="flex flex-col items-center">
+                    <img
+                      src={you.avatar}
+                      alt={you.name}
+                      draggable={false}
+                      className="h-20 w-16 object-contain object-bottom drop-shadow-[0_10px_16px_rgba(0,0,0,0.6)] sm:h-24 sm:w-20"
+                      style={{
+                        filter: `drop-shadow(0 0 8px ${you.accent})`,
+                      }}
+                    />
+                    <div className="pointer-events-auto -mt-2 grid min-w-[11rem] grid-cols-2 gap-x-2 gap-y-0.5 rounded-lg border border-white/10 bg-black/65 px-2 py-1 text-[9px] text-muted-foreground backdrop-blur">
+                      <span>Wins: {you.wins ?? 0}</span>
+                      <span>Games: {you.gamesPlayed ?? 0}</span>
+                      <span>Cards played: {you.cardsPlayed ?? 0}</span>
+                      <span>Cards drawn: {you.cardsDrawn ?? 0}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
