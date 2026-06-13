@@ -382,7 +382,7 @@ function Game() {
       <div className="flex flex-1 lg:flex-row flex-col min-h-0">
         <main className="game-stage relative flex-1 flex flex-col min-h-0">
           {/* === Center play area: reserves room for top/side seats === */}
-          <div className="relative flex-1 min-h-0 grid place-items-center px-6 sm:px-10 lg:px-14 pt-10 sm:pt-12 pb-2">
+          <div className="relative flex-1 min-h-0 grid place-items-center px-6 sm:px-10 lg:px-14 pt-10 sm:pt-12 pb-0">
             <div className="relative w-full h-full max-w-[58rem] xl:max-w-[64rem] max-h-full">
               {/* Sized box: aspect ratio constrained to available space */}
               <div
