@@ -8,7 +8,8 @@ import { RoomButton } from "@/components/ui-room/RoomButton";
 import { SeatPortrait } from "@/components/ui-room/SeatPortrait";
 import { PORTRAITS, getPortrait } from "@/lib/portraits";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Sparkles, Dice5, Shuffle, ArrowRight, Loader2, LogOut, LogIn, Check } from "lucide-react";
+import { Sparkles, Dice5, Dices, ArrowRight, Loader2, LogOut, LogIn, Check, Pencil } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { createRoom, joinRoom } from "@/lib/rooms.functions";
 import {
