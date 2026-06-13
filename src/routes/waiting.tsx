@@ -407,7 +407,6 @@ function Waiting() {
                         >
                           {p.is_ready ? "Připraven" : "Čeká"}
                         </div>
-                        </div>
                       </div>
                     </RoomPanel>
                   </li>
