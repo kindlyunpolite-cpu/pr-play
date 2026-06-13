@@ -70,18 +70,3 @@ export function TopNav({
   );
 }
 
-function NavBtn({ to, active, icon, label }: { to: string; active: boolean; icon: React.ReactNode; label: string }) {
-  return (
-    <Link
-      to={to}
-      className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition ${
-        active
-          ? "bg-[color:var(--gold)]/12 text-[color:var(--gold)] ring-1 ring-[color:var(--gold)]/30"
-          : "text-muted-foreground hover:text-foreground hover:bg-white/5"
-      }`}
-    >
-      {icon}
-      <span className="hidden sm:inline">{label}</span>
-    </Link>
-  );
-}
