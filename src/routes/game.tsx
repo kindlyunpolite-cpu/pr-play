@@ -375,13 +375,13 @@ function Game() {
 
   return (
     <RoomShell className="overflow-hidden">
-      <TopNav roomCode={room?.code ?? code} onLeave={handleLeave} leaving={leaving} />
+      <TopNav onLeave={handleLeave} leaving={leaving} />
 
       <div className="flex flex-1 lg:flex-row flex-col min-h-0">
         <main className="game-stage relative flex-1 flex flex-col min-h-0">
           {/* === Center play area: reserves room for top/side seats === */}
-          <div className="relative flex-1 min-h-0 grid place-items-center px-12 sm:px-16 pt-12 sm:pt-14 pb-2">
-            <div className="relative w-full h-full max-w-[42rem] max-h-full">
+          <div className="relative flex-1 min-h-0 grid place-items-center px-6 sm:px-10 lg:px-14 pt-10 sm:pt-12 pb-2">
+            <div className="relative w-full h-full max-w-[58rem] xl:max-w-[64rem] max-h-full">
               {/* Sized box: aspect ratio constrained to available space */}
               <div
                 className="relative mx-auto h-full"
@@ -596,12 +596,6 @@ function Game() {
                         filter: `drop-shadow(0 0 8px ${you.accent})`,
                       }}
                     />
-                    <div className="pointer-events-auto -mt-2 grid min-w-[11rem] grid-cols-2 gap-x-2 gap-y-0.5 rounded-lg border border-white/10 bg-black/65 px-2 py-1 text-[9px] text-muted-foreground backdrop-blur">
-                      <span>Wins: {you.wins ?? 0}</span>
-                      <span>Games: {you.gamesPlayed ?? 0}</span>
-                      <span>Cards played: {you.cardsPlayed ?? 0}</span>
-                      <span>Cards drawn: {you.cardsDrawn ?? 0}</span>
-                    </div>
                   </div>
                 </div>
               </div>
@@ -610,7 +604,7 @@ function Game() {
 
           {/* === Bottom hand area === */}
           <div className="relative z-20 shrink-0 bg-gradient-to-t from-background via-background/85 to-transparent pb-safe pt-2">
-            <div className="flex items-center justify-between gap-3 px-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4">
               <span
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em]",
