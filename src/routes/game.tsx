@@ -266,7 +266,8 @@ function Game() {
       setSelected(null);
       setDrawNonce((n) => n + 1);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : "Nepodařilo se líznout kartu");
+      const msg = error instanceof Error ? error.message : "Nepodařilo se líznout kartu";
+      if (!/stale|not your turn/i.test(msg)) toast.error(msg);
     } finally {
       busyActionRef.current = false;
       setBusyAction(null);
