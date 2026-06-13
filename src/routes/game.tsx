@@ -53,6 +53,13 @@ function adjacentPlayerId(
   return players[(index + step + players.length) % players.length]?.id ?? null;
 }
 
+function rotatePlayersFrom<T extends { id: string }>(players: T[], playerId: string | undefined) {
+  if (!playerId || players.length === 0) return players;
+  const index = players.findIndex((p) => p.id === playerId);
+  if (index === -1) return players;
+  return [...players.slice(index), ...players.slice(0, index)];
+}
+
 function createActionId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
 
@@ -106,9 +113,14 @@ function Game() {
   const busyActionRef = useRef(false);
   const aceSkipToastRef = useRef<string | null>(null);
 
+  const sortedPlayers = useMemo(() => [...players].sort((a, b) => a.seat - b.seat), [players]);
+  const rotatedPlayers = useMemo(
+    () => rotatePlayersFrom(sortedPlayers, session?.playerId),
+    [sortedPlayers, session?.playerId],
+  );
   const me = useMemo(
-    () => players.find((p) => p.id === session?.playerId) ?? null,
-    [players, session?.playerId],
+    () => sortedPlayers.find((p) => p.id === session?.playerId) ?? null,
+    [sortedPlayers, session?.playerId],
   );
   const hand = session ? (gameState?.hands[session.playerId] ?? []) : [];
   const topDiscard = gameState?.discard_pile.at(-1) ?? FALLBACK_CARD;
@@ -133,12 +145,12 @@ function Game() {
     if (!gameState.last_action_signature?.startsWith("play:")) return null;
 
     const skippedPlayerId = adjacentPlayerId(
-      players,
+      sortedPlayers,
       gameState.last_action_player_id,
       gameState.direction,
     );
-    const skippedPlayer = players.find((p) => p.id === skippedPlayerId);
-    const actingPlayer = players.find((p) => p.id === gameState.last_action_player_id);
+    const skippedPlayer = sortedPlayers.find((p) => p.id === skippedPlayerId);
+    const actingPlayer = sortedPlayers.find((p) => p.id === gameState.last_action_player_id);
     if (!skippedPlayer || !actingPlayer) return null;
 
     return {
@@ -153,13 +165,13 @@ function Game() {
     gameState?.last_action_player_id,
     gameState?.last_action_signature,
     gameState?.status,
-    players,
+    sortedPlayers,
     topDiscard.rank,
   ]);
 
   const opponents: OpponentData[] = useMemo(
     () =>
-      players
+      rotatedPlayers
         .filter((p) => p.id !== session?.playerId)
         .map((p, index) => {
           const portrait = getPortrait(p.avatar);
@@ -178,7 +190,7 @@ function Game() {
             accent: portrait.accent ?? PORTRAITS[index % PORTRAITS.length].accent,
           };
         }),
-    [gameState?.current_player_id, gameState?.hands, players, session?.playerId],
+    [gameState?.current_player_id, gameState?.hands, rotatedPlayers, session?.playerId],
   );
 
   const mePortrait = getPortrait(me?.avatar ?? session?.avatar);
@@ -444,7 +456,9 @@ function Game() {
                     <div
                       className={cn(
                         "flex h-7 w-7 items-center justify-center rounded-full bg-[color:var(--card-face)]",
-                        isRedSuit(activeSuit) ? "text-[color:var(--suit-red)]" : "text-[color:var(--suit-dark)]",
+                        isRedSuit(activeSuit)
+                          ? "text-[color:var(--suit-red)]"
+                          : "text-[color:var(--suit-dark)]",
                       )}
                     >
                       <SuitIcon suit={activeSuit} className="h-4 w-4" />
