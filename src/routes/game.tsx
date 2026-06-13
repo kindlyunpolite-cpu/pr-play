@@ -357,18 +357,13 @@ function Game() {
                     </div>
                   </div>
 
-                  <div className="table-spotlight" aria-hidden="true" />
-
                   {pendingDraw > 0 && (
-                    <div className="absolute inset-x-6 top-12 z-20 rounded-3xl border border-destructive/35 bg-black/70 px-4 py-3 text-center shadow-2xl shadow-black/50 backdrop-blur-md sm:inset-x-16">
-                      <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-destructive">
-                        Sedma — trest
-                      </div>
-                      <div className="mt-1 text-sm font-semibold text-foreground">
-                        Lízni {pendingDraw} nebo zahraj 7.
-                      </div>
+                    <div className="absolute left-1/2 top-2 z-20 -translate-x-1/2 rounded-full bg-red-950/80 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-red-100 ring-1 ring-red-400/40 shadow-lg shadow-red-950/50 backdrop-blur-md">
+                      Trest: lízni {pendingDraw} nebo zahraj 7
                     </div>
                   )}
+
+                  <div className="table-spotlight" aria-hidden="true" />
 
                   {aceSkip && (
                     <div className="absolute inset-x-6 top-12 z-20 rounded-3xl border border-[color:var(--gold)]/35 bg-black/70 px-4 py-3 text-center shadow-2xl shadow-black/50 backdrop-blur-md sm:inset-x-16">
@@ -415,7 +410,9 @@ function Game() {
                           className={drawNonce ? "animate-card-draw" : ""}
                         />
                         <span className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground/80 tabular-nums">
-                          Balíček · {gameState?.deck.length ?? 0}
+                          {pendingDraw > 0
+                            ? `Trest · ${pendingDraw}`
+                            : `Balíček · ${gameState?.deck.length ?? 0}`}
                         </span>
                       </button>
 
@@ -491,7 +488,7 @@ function Game() {
                   disabled={!canAct}
                   loading={busyAction === "draw"}
                 >
-                  Lízni
+                  {pendingDraw > 0 ? `Lízni ${pendingDraw}` : "Lízni"}
                 </RoomButton>
                 <RoomButton
                   size="sm"
@@ -533,7 +530,9 @@ function Game() {
                       <PlayingCard
                         card={card}
                         size="md"
-                        state={myTurn ? "idle" : "disabled"}
+                        state={
+                          myTurn && (pendingDraw === 0 || card.rank === "7") ? "idle" : "disabled"
+                        }
                         animation={playingIdx === i ? "play" : !dealt ? "deal" : undefined}
                         animationDelay={!dealt ? i * 70 : undefined}
                         onClick={() => handlePlay(i)}
