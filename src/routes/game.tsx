@@ -604,7 +604,7 @@ function Game() {
 
           {/* === Bottom hand area === */}
           <div className="relative z-20 shrink-0 bg-gradient-to-t from-background via-background/85 to-transparent pb-safe pt-2">
-            <div className="flex items-center justify-between gap-3 px-4">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4">
               <span
                 className={cn(
                   "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em]",
