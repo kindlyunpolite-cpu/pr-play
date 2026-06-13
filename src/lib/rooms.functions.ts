@@ -584,7 +584,8 @@ export const startGame = createServerFn({ method: "POST" })
       .eq("room_id", player.room_id)
       .order("seat", { ascending: true });
     if (!players || players.length < 2) throw new Error("Need at least 2 players");
-    if (!players.every((p) => p.is_ready)) throw new Error("All players must be ready");
+    if (!players.every((p) => p.is_ready || p.id === player.id))
+      throw new Error("All players must be ready");
 
     await initializeGame(player.room_id, players, players[0].id);
 
