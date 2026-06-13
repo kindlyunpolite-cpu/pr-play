@@ -555,7 +555,7 @@ export const drawCard = createServerFn({ method: "POST" })
     const pendingDraw = gameState.pending_draw ?? 0;
     const drawCount = pendingDraw > 0 ? pendingDraw : 1;
     const draw = takeDrawableCards(gameState.deck, gameState.discard_pile, drawCount);
-    if (!draw.complete) throw actionError("invalid", "not enough cards left to draw");
+    if (pendingDraw === 0 && !draw.complete) throw actionError("invalid", "no cards left to draw");
 
     hand.push(...draw.cards);
     hands[player.id] = hand;
