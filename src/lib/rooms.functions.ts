@@ -433,36 +433,26 @@ export const setReady = createServerFn({ method: "POST" })
   });
 
 // ------------- leaveRoom -------------
+//
+// Soft-leave: mark the player as disconnected and not ready, but keep the
+// row so the seat is preserved and any in-flight game state stays valid.
+// The caller is expected to clear its local session so useReconnect does
+// not auto-return on the next mount. Host is intentionally NOT reassigned
+// and the room is NOT deleted here.
 
 export const leaveRoom = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
     z.object({ playerId: PlayerIdSchema, sessionToken: TokenSchema }).parse(input),
   )
   .handler(async ({ data }) => {
-    const player = await authenticatePlayer(data.playerId, data.sessionToken);
+    await authenticatePlayer(data.playerId, data.sessionToken);
 
-    // Remove the player
-    await supabaseAdmin.from("players").delete().eq("id", data.playerId);
+    const { error } = await supabaseAdmin
+      .from("players")
+      .update({ connected: false, is_ready: false })
+      .eq("id", data.playerId);
+    if (error) throw new Error("Failed to leave room");
 
-    // If they were host, promote the next remaining player by seat
-    if (player.is_host) {
-      const { data: remaining } = await supabaseAdmin
-        .from("players")
-        .select("id")
-        .eq("room_id", player.room_id)
-        .order("seat", { ascending: true })
-        .limit(1);
-      if (remaining && remaining.length > 0) {
-        await supabaseAdmin.from("players").update({ is_host: true }).eq("id", remaining[0].id);
-        await supabaseAdmin
-          .from("rooms")
-          .update({ host_player_id: remaining[0].id })
-          .eq("id", player.room_id);
-      } else {
-        // empty room — clean up
-        await supabaseAdmin.from("rooms").delete().eq("id", player.room_id);
-      }
-    }
     return { ok: true };
   });
 
