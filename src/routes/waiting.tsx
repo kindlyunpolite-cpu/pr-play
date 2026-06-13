@@ -16,7 +16,7 @@ import {
   Check,
   Share2,
   Link as LinkIcon,
-  LogOut,
+  
   AlertCircle,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
