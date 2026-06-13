@@ -622,8 +622,7 @@ export const drawCard = createServerFn({ method: "POST" })
       signature,
     );
     if (duplicate) return duplicate;
-    if (gameState.status !== "playing")
-      throw actionError("finished", "no further moves are allowed");
+    if (gameState.status !== "playing") return { ok: true, finished: true };
     if (gameState.current_player_id !== player.id) {
       return { ok: true, stale: true };
     }
@@ -715,8 +714,7 @@ export const playCard = createServerFn({ method: "POST" })
       signature,
     );
     if (duplicate) return duplicate;
-    if (gameState.status !== "playing")
-      throw actionError("finished", "no further moves are allowed");
+    if (gameState.status !== "playing") return { ok: true, finished: true };
     if (gameState.current_player_id !== player.id) {
       return { ok: true, stale: true };
     }
