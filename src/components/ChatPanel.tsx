@@ -37,7 +37,7 @@ export function ChatPanel({
   session: RoomSession | null;
 }) {
   const [open, setOpen] = useState(false);
-  const [collapsedDesktop, setCollapsedDesktop] = useState(false);
+  const [collapsedDesktop, setCollapsedDesktop] = useState(true);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [unread, setUnread] = useState(0);
@@ -92,36 +92,45 @@ export function ChatPanel({
     }
   };
 
+  const msgCount = msgs.filter((m) => !m.system).length;
+
   return (
     <>
-      {/* Floating launcher (mobile) — placed above action buttons */}
+      {/* Floating launcher (mobile) */}
       <button
         onClick={() => setOpen(true)}
         className={cn(
-          "fixed top-[3.25rem] right-2 z-30",
-          "flex h-9 w-9 items-center justify-center rounded-full",
-          "bg-[color:var(--gold)] text-[color:var(--primary-foreground)] shadow-xl shadow-black/50 ring-1 ring-[color:var(--gold)]/60",
-          "transition active:scale-95 lg:hidden",
+          "fixed bottom-24 right-3 z-30 lg:hidden",
+          "inline-flex items-center gap-1.5 rounded-full px-3 py-2",
+          "bg-black/70 border border-white/10 text-[12px] font-semibold text-foreground/90 shadow-xl backdrop-blur",
+          "transition active:scale-95",
           open && "hidden",
         )}
         aria-label="Otevřít chat"
       >
-        <MessageCircle className="h-4 w-4" />
+        <MessageCircle className="h-3.5 w-3.5 text-[color:var(--gold)]" />
+        Chat ({msgCount})
         {unread > 0 && (
-          <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground ring-2 ring-background">
+          <span className="ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground">
             {unread > 9 ? "9+" : unread}
           </span>
         )}
       </button>
 
-      {/* Desktop collapsed rail */}
+      {/* Desktop collapsed launcher */}
       {collapsedDesktop && (
         <button
           onClick={() => setCollapsedDesktop(false)}
-          className="hidden lg:flex sticky top-12 z-10 ml-auto h-full min-h-[10rem] w-8 items-center justify-center border-l border-white/8 bg-black/30 text-muted-foreground hover:text-[color:var(--gold)] transition"
+          className="hidden lg:inline-flex fixed bottom-6 right-6 z-30 items-center gap-1.5 rounded-full px-3.5 py-2 bg-black/70 border border-white/10 text-[12px] font-semibold text-foreground/90 shadow-xl backdrop-blur hover:border-[color:var(--gold)]/40 hover:text-[color:var(--gold)] transition"
           aria-label="Otevřít chat"
         >
-          <MessageCircle className="h-4 w-4" />
+          <MessageCircle className="h-3.5 w-3.5 text-[color:var(--gold)]" />
+          Chat ({msgCount})
+          {unread > 0 && (
+            <span className="ml-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 text-[10px] font-bold text-accent-foreground">
+              {unread > 9 ? "9+" : unread}
+            </span>
+          )}
         </button>
       )}
 
