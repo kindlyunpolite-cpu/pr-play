@@ -24,6 +24,18 @@ export const Route = createFileRoute("/game")({
 
 const FALLBACK_CARD: CardData = { suit: "hearts", rank: "10" };
 
+function adjacentPlayerId(
+  players: { id: string }[],
+  currentPlayerId: string | null,
+  direction: 1 | -1,
+) {
+  if (!currentPlayerId || players.length === 0) return null;
+  const index = players.findIndex((p) => p.id === currentPlayerId);
+  if (index === -1) return null;
+  const step = direction === -1 ? -1 : 1;
+  return players[(index + step + players.length) % players.length]?.id ?? null;
+}
+
 function createActionId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
 
@@ -49,6 +61,7 @@ function Game() {
   const [dealt, setDealt] = useState(false);
   const [busyAction, setBusyAction] = useState<"draw" | "play" | null>(null);
   const busyActionRef = useRef(false);
+  const aceSkipToastRef = useRef<string | null>(null);
 
   const me = useMemo(
     () => players.find((p) => p.id === session?.playerId) ?? null,
@@ -66,6 +79,35 @@ function Game() {
   const activePlayer = players.find((p) => p.id === gameState?.current_player_id) ?? me;
   const gameFinished = room?.status === "finished" || gameState?.status === "finished";
   const winner = gameFinished ? players.find((p) => p.id === gameState?.current_player_id) : null;
+  const aceSkip = useMemo(() => {
+    if (gameFinished || gameState?.status !== "playing" || topDiscard.rank !== "A") return null;
+    if (!gameState.last_action_id || !gameState.last_action_player_id) return null;
+    if (!gameState.last_action_signature?.startsWith("play:")) return null;
+
+    const skippedPlayerId = adjacentPlayerId(
+      players,
+      gameState.last_action_player_id,
+      gameState.direction,
+    );
+    const skippedPlayer = players.find((p) => p.id === skippedPlayerId);
+    const actingPlayer = players.find((p) => p.id === gameState.last_action_player_id);
+    if (!skippedPlayer || !actingPlayer) return null;
+
+    return {
+      actionId: gameState.last_action_id,
+      skippedPlayer,
+      actingPlayer,
+    };
+  }, [
+    gameFinished,
+    gameState?.direction,
+    gameState?.last_action_id,
+    gameState?.last_action_player_id,
+    gameState?.last_action_signature,
+    gameState?.status,
+    players,
+    topDiscard.rank,
+  ]);
 
   const opponents: OpponentData[] = useMemo(
     () =>
@@ -110,6 +152,14 @@ function Game() {
     const t = setTimeout(() => setDealt(true), hand.length * 70 + 600);
     return () => clearTimeout(t);
   }, [hand.length]);
+
+  useEffect(() => {
+    if (!aceSkip || aceSkipToastRef.current === aceSkip.actionId) return;
+    aceSkipToastRef.current = aceSkip.actionId;
+    toast.info(
+      `${aceSkip.actingPlayer.nickname} zahrál/a eso. ${aceSkip.skippedPlayer.nickname} stojí.`,
+    );
+  }, [aceSkip]);
 
   const canAct =
     !!session &&
@@ -314,6 +364,20 @@ function Game() {
                   )}
 
                   <div className="table-spotlight" aria-hidden="true" />
+
+                  {aceSkip && (
+                    <div className="absolute inset-x-6 top-12 z-20 rounded-3xl border border-[color:var(--gold)]/35 bg-black/70 px-4 py-3 text-center shadow-2xl shadow-black/50 backdrop-blur-md sm:inset-x-16">
+                      <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-[color:var(--gold)]">
+                        Eso — stojí
+                      </div>
+                      <div className="mt-1 text-sm font-semibold text-foreground">
+                        {aceSkip.skippedPlayer.nickname} je přeskočen/a.
+                      </div>
+                      <div className="mt-0.5 text-xs text-muted-foreground">
+                        {aceSkip.actingPlayer.nickname} zahrál/a A, tah pokračuje dál.
+                      </div>
+                    </div>
+                  )}
 
                   {gameFinished && (
                     <div className="absolute inset-x-6 top-1/2 z-20 -translate-y-1/2 rounded-3xl border border-[color:var(--gold)]/30 bg-black/70 p-4 text-center shadow-2xl shadow-black/60 backdrop-blur-md sm:inset-x-16">
