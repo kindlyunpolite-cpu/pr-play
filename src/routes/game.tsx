@@ -375,13 +375,13 @@ function Game() {
 
   return (
     <RoomShell className="overflow-hidden">
-      <TopNav roomCode={room?.code ?? code} onLeave={handleLeave} leaving={leaving} />
+      <TopNav onLeave={handleLeave} leaving={leaving} />
 
       <div className="flex flex-1 lg:flex-row flex-col min-h-0">
         <main className="game-stage relative flex-1 flex flex-col min-h-0">
           {/* === Center play area: reserves room for top/side seats === */}
-          <div className="relative flex-1 min-h-0 grid place-items-center px-12 sm:px-16 pt-12 sm:pt-14 pb-2">
-            <div className="relative w-full h-full max-w-[42rem] max-h-full">
+          <div className="relative flex-1 min-h-0 grid place-items-center px-6 sm:px-10 lg:px-14 pt-10 sm:pt-12 pb-2">
+            <div className="relative w-full h-full max-w-[58rem] xl:max-w-[64rem] max-h-full">
               {/* Sized box: aspect ratio constrained to available space */}
               <div
                 className="relative mx-auto h-full"
