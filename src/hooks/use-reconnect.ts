@@ -51,6 +51,7 @@ export function useReconnect(options: UseReconnectOptions = {}) {
           data: { playerId: stored.playerId, sessionToken: stored.sessionToken },
         });
         if (cancelled) return;
+        if (!resumed) throw new Error("Your saved room session expired.");
 
         // Persist refreshed canonical fields while preserving the session token.
         const next: RoomSession = {
