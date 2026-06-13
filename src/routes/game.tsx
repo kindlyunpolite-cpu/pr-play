@@ -601,18 +601,17 @@ function Game() {
                   );
                 })}
 
-                {/* Self seat — just the portrait sitting on bottom rail. The
-                    user's hand + nickname is at the bottom; a duplicate info
-                    panel would steal space from the action buttons. */}
-                <div className="absolute z-30 left-1/2 bottom-0 -translate-x-1/2 translate-y-[40%] pointer-events-none">
+                {/* Self seat — compact portrait sitting on bottom rail.
+                    Kept small so the hand gets the visual priority. */}
+                <div className="absolute z-30 left-1/2 bottom-0 -translate-x-1/2 translate-y-[55%] pointer-events-none">
                   <div className="flex flex-col items-center">
                     <img
                       src={you.avatar}
                       alt={you.name}
                       draggable={false}
-                      className="h-20 w-16 object-contain object-bottom drop-shadow-[0_10px_16px_rgba(0,0,0,0.6)] sm:h-24 sm:w-20"
+                      className="h-14 w-12 object-contain object-bottom drop-shadow-[0_8px_14px_rgba(0,0,0,0.6)] sm:h-16 sm:w-14"
                       style={{
-                        filter: `drop-shadow(0 0 8px ${you.accent})`,
+                        filter: `drop-shadow(0 0 6px ${you.accent})`,
                       }}
                     />
                   </div>
