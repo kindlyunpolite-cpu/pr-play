@@ -435,34 +435,39 @@ function Waiting() {
       {/* Sticky action bar */}
       <div className="sticky bottom-0 z-20 border-t border-white/8 bg-gradient-to-t from-background via-background/95 to-background/70 backdrop-blur-xl pb-safe">
         <div className="mx-auto flex max-w-md items-center gap-2 px-4 pt-3 lg:max-w-2xl">
-          <RoomButton
-            size="lg"
-            block
-            variant={me?.is_ready ? "secondary" : "secondary"}
-            onClick={toggleReady}
-            disabled={!me}
-            loading={busy === "ready"}
-            icon={
-              <Check
-                className={cn("h-4 w-4", me?.is_ready ? "text-[color:var(--gold)]" : "opacity-50")}
-              />
-            }
-            className={me?.is_ready ? "border-[color:var(--gold)]/45 text-[color:var(--gold)]" : ""}
-          >
-            {me?.is_ready ? "Připraven" : "Připravit se"}
-          </RoomButton>
-
-          {me?.is_host && (
+          {me?.is_host ? (
             <RoomButton
               size="lg"
+              block
               variant="primary"
               onClick={handleStart}
               disabled={!canStart}
               loading={busy === "start"}
               icon={<Play className="h-4 w-4 fill-current" />}
-              className="flex-[1.4]"
             >
               Spustit hru
+            </RoomButton>
+          ) : (
+            <RoomButton
+              size="lg"
+              block
+              variant="secondary"
+              onClick={toggleReady}
+              disabled={!me}
+              loading={busy === "ready"}
+              icon={
+                <Check
+                  className={cn(
+                    "h-4 w-4",
+                    me?.is_ready ? "text-[color:var(--gold)]" : "opacity-50",
+                  )}
+                />
+              }
+              className={
+                me?.is_ready ? "border-[color:var(--gold)]/45 text-[color:var(--gold)]" : ""
+              }
+            >
+              {me?.is_ready ? "Připraven" : "Připravit se"}
             </RoomButton>
           )}
         </div>
