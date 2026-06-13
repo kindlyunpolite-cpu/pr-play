@@ -139,7 +139,7 @@ export function Opponent({
           panelWidth,
           panelAnchor,
           player.isTurn
-            ? "border-[color:var(--gold)]/70 shadow-[0_12px_32px_-8px_rgba(0,0,0,0.78),0_0_28px_-4px_var(--seat-accent)]"
+            ? "border-[color:var(--gold)] animate-turn shadow-[0_12px_32px_-8px_rgba(0,0,0,0.78),0_0_28px_-4px_var(--seat-accent)]"
             : "border-white/12 shadow-[0_10px_24px_-10px_rgba(0,0,0,0.78)] hover:border-[color:var(--gold)]/35",
         )}
         style={{

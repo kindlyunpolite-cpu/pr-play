@@ -15,6 +15,8 @@ import {
 } from "@/components/cards";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, Loader2, Timer, Sparkles, Trophy } from "lucide-react";
+import { SUIT_LABEL, isRedSuit } from "@/components/cards/types";
+import { SuitIcon } from "@/components/cards/SuitIcon";
 import { cn } from "@/lib/utils";
 import { getPortrait, PORTRAITS } from "@/lib/portraits";
 import { useReconnect } from "@/hooks/use-reconnect";
@@ -380,7 +382,7 @@ function Game() {
       <div className="flex flex-1 lg:flex-row flex-col min-h-0">
         <main className="game-stage relative flex-1 flex flex-col min-h-0">
           {/* === Center play area: reserves room for top/side seats === */}
-          <div className="relative flex-1 min-h-0 grid place-items-center px-6 sm:px-10 lg:px-14 pt-10 sm:pt-12 pb-2">
+          <div className="relative flex-1 min-h-0 grid place-items-center px-6 sm:px-10 lg:px-14 pt-10 sm:pt-12 pb-0">
             <div className="relative w-full h-full max-w-[58rem] xl:max-w-[64rem] max-h-full">
               {/* Sized box: aspect ratio constrained to available space */}
               <div
@@ -431,12 +433,29 @@ function Game() {
                     </span>
                   </div>
 
-                  <div className="absolute top-2 right-2 z-20 flex items-center gap-1.5 rounded-full bg-black/55 backdrop-blur-md px-2 py-0.5 ring-1 ring-white/8">
-                    <span className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
-                      Barva
-                    </span>
-                    <div className="rounded-full bg-[color:var(--gold)]/10 ring-1 ring-[color:var(--gold)]/35 px-1 py-0.5">
-                      <SuitBadge suit={activeSuit} size="sm" />
+                  <div
+                    className={cn(
+                      "absolute top-2 right-2 z-20 flex items-center gap-2 rounded-full bg-black/70 backdrop-blur-md pl-1.5 pr-3 py-1 ring-2 shadow-lg",
+                      isRedSuit(activeSuit)
+                        ? "ring-[color:var(--suit-red)]/70 shadow-[0_0_18px_-4px_oklch(0.62_0.22_25/0.7)]"
+                        : "ring-[color:var(--gold)]/60 shadow-[0_0_18px_-4px_oklch(0.82_0.14_85/0.6)]",
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "flex h-7 w-7 items-center justify-center rounded-full bg-[color:var(--card-face)]",
+                        isRedSuit(activeSuit) ? "text-[color:var(--suit-red)]" : "text-[color:var(--suit-dark)]",
+                      )}
+                    >
+                      <SuitIcon suit={activeSuit} className="h-4 w-4" />
+                    </div>
+                    <div className="flex flex-col leading-tight">
+                      <span className="text-[8px] uppercase tracking-[0.18em] text-muted-foreground">
+                        Barva
+                      </span>
+                      <span className="text-[12px] font-bold tracking-wide text-foreground">
+                        {SUIT_LABEL[activeSuit]}
+                      </span>
                     </div>
                   </div>
 
@@ -582,18 +601,17 @@ function Game() {
                   );
                 })}
 
-                {/* Self seat — just the portrait sitting on bottom rail. The
-                    user's hand + nickname is at the bottom; a duplicate info
-                    panel would steal space from the action buttons. */}
-                <div className="absolute z-30 left-1/2 bottom-0 -translate-x-1/2 translate-y-[40%] pointer-events-none">
+                {/* Self seat — compact portrait sitting on bottom rail.
+                    Kept small so the hand gets the visual priority. */}
+                <div className="absolute z-30 left-1/2 bottom-0 -translate-x-1/2 translate-y-[55%] pointer-events-none">
                   <div className="flex flex-col items-center">
                     <img
                       src={you.avatar}
                       alt={you.name}
                       draggable={false}
-                      className="h-20 w-16 object-contain object-bottom drop-shadow-[0_10px_16px_rgba(0,0,0,0.6)] sm:h-24 sm:w-20"
+                      className="h-14 w-12 object-contain object-bottom drop-shadow-[0_8px_14px_rgba(0,0,0,0.6)] sm:h-16 sm:w-14"
                       style={{
-                        filter: `drop-shadow(0 0 8px ${you.accent})`,
+                        filter: `drop-shadow(0 0 6px ${you.accent})`,
                       }}
                     />
                   </div>
