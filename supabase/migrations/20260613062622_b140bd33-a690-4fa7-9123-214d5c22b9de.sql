@@ -1,0 +1,1 @@
+ALTER TABLE public.game_states ADD COLUMN IF NOT EXISTS rematch_votes jsonb NOT NULL DEFAULT '{}'::jsonb;
