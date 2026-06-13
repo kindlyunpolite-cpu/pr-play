@@ -203,7 +203,7 @@ function Waiting() {
   if (loading && !room) {
     return (
       <RoomShell>
-        <TopNav roomCode={code} />
+        <TopNav roomCode={code} onLeave={handleLeave} leaving={busy === "leave"} />
         <div className="flex-1 flex items-center justify-center">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin text-[color:var(--gold)]" />
