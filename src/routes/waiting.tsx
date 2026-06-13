@@ -203,7 +203,7 @@ function Waiting() {
   if (loading && !room) {
     return (
       <RoomShell>
-        <TopNav roomCode={code} />
+        <TopNav roomCode={code} onLeave={handleLeave} leaving={busy === "leave"} />
         <div className="flex-1 flex items-center justify-center">
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin text-[color:var(--gold)]" />
@@ -217,7 +217,7 @@ function Waiting() {
   if (!room) {
     return (
       <RoomShell>
-        <TopNav roomCode={code} />
+        <TopNav roomCode={code} onLeave={handleLeave} leaving={busy === "leave"} />
         <div className="flex-1 flex flex-col items-center justify-center gap-3 px-6 text-center">
           <p className="text-base font-semibold">Místnost nenalezena</p>
           <p className="text-sm text-muted-foreground">
@@ -233,7 +233,7 @@ function Waiting() {
 
   return (
     <RoomShell>
-      <TopNav roomCode={code} />
+      <TopNav roomCode={code} onLeave={handleLeave} leaving={busy === "leave"} />
 
       <div className="flex flex-1 lg:flex-row flex-col min-h-0">
         <main className="mx-auto w-full max-w-md flex-1 px-4 py-5 lg:max-w-2xl">

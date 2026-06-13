@@ -1,7 +1,15 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, Users, Settings, LogOut } from "lucide-react";
+import { Home, Users, Settings, LogOut, Loader2 } from "lucide-react";
 
-export function TopNav({ roomCode }: { roomCode?: string }) {
+export function TopNav({
+  roomCode,
+  onLeave,
+  leaving = false,
+}: {
+  roomCode?: string;
+  onLeave?: () => void;
+  leaving?: boolean;
+}) {
   const path = useRouterState({ select: (s) => s.location.pathname });
   return (
     <header className="sticky top-0 z-30 border-b border-[color:var(--gold)]/12 bg-gradient-to-b from-black/90 via-background/74 to-background/44 backdrop-blur-xl shadow-[0_10px_24px_-18px_rgba(0,0,0,0.95)]">
@@ -46,10 +54,16 @@ export function TopNav({ roomCode }: { roomCode?: string }) {
           {roomCode ? (
             <button
               type="button"
-              className="control-pill group inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-foreground/90 hover:border-[color:var(--gold)]/50 hover:text-[color:var(--gold)] transition-all"
+              onClick={onLeave}
+              disabled={leaving || !onLeave}
+              className="control-pill group inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-foreground/90 hover:border-[color:var(--gold)]/50 hover:text-[color:var(--gold)] transition-all disabled:opacity-60"
             >
               <span className="hidden sm:inline">Opustit</span>
-              <LogOut className="h-3 w-3 opacity-80" />
+              {leaving ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <LogOut className="h-3 w-3 opacity-80" />
+              )}
             </button>
           ) : (
             <button className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-white/5 hover:text-foreground transition">

@@ -12,7 +12,8 @@ import { cn } from "@/lib/utils";
 import { getPortrait, PORTRAITS } from "@/lib/portraits";
 import { useReconnect } from "@/hooks/use-reconnect";
 import { useRoomRealtime } from "@/hooks/use-room-realtime";
-import { drawCard, playCard } from "@/lib/rooms.functions";
+import { drawCard, playCard, leaveRoom } from "@/lib/rooms.functions";
+import { clearSession } from "@/lib/room-session";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/game")({
@@ -53,6 +54,27 @@ function Game() {
   const { room, players, messages, gameState, loading } = useRoomRealtime(code, session);
   const callDrawCard = useServerFn(drawCard);
   const callPlayCard = useServerFn(playCard);
+  const callLeave = useServerFn(leaveRoom);
+  const [leaving, setLeaving] = useState(false);
+
+  const handleLeave = async () => {
+    if (!session) {
+      clearSession();
+      navigate({ to: "/" });
+      return;
+    }
+    setLeaving(true);
+    try {
+      await callLeave({
+        data: { playerId: session.playerId, sessionToken: session.sessionToken },
+      });
+    } catch {
+      /* ignore — still clear and exit */
+    } finally {
+      clearSession();
+      navigate({ to: "/" });
+    }
+  };
 
   const [selected, setSelected] = useState<number | null>(null);
   const [playingIdx, setPlayingIdx] = useState<number | null>(null);
@@ -292,7 +314,7 @@ function Game() {
 
   return (
     <RoomShell className="overflow-hidden">
-      <TopNav roomCode={room?.code ?? code} />
+      <TopNav roomCode={room?.code ?? code} onLeave={handleLeave} leaving={leaving} />
 
       <div className="flex flex-1 lg:flex-row flex-col min-h-0">
         <main className="game-stage relative flex-1 flex flex-col min-h-0">
