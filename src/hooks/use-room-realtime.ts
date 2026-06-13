@@ -202,6 +202,20 @@ export function useRoomRealtime(code: string | undefined, session: RoomSession |
     };
   }, [resync]);
 
+  // Realtime should deliver changes immediately, but keep a light visible-tab
+  // refresh as a fallback so lobby/game state never waits for focus changes.
+  useEffect(() => {
+    if (!code || typeof window === "undefined") return;
+
+    const id = window.setInterval(() => {
+      if (typeof document === "undefined" || document.visibilityState === "visible") {
+        void resync();
+      }
+    }, 2_000);
+
+    return () => window.clearInterval(id);
+  }, [code, resync]);
+
   // Heartbeat — only while tab is visible to save battery on mobile
   useEffect(() => {
     if (!session) return;
@@ -236,5 +250,5 @@ export function useRoomRealtime(code: string | undefined, session: RoomSession |
     };
   }, [session, ping]);
 
-  return { room, players, messages, gameState, loading, connection };
+  return { room, players, messages, gameState, loading, connection, resync };
 }

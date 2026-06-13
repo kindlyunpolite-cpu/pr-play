@@ -76,7 +76,10 @@ function Waiting() {
   // Otherwise a stale localStorage session triggers an unauthorized heartbeat
   // before reconnect can clear it.
   const realtimeSession = reconnectStatus === "ready" ? session : null;
-  const { room, players, messages, loading, connection } = useRoomRealtime(code, realtimeSession);
+  const { room, players, messages, loading, connection, resync } = useRoomRealtime(
+    code,
+    realtimeSession,
+  );
   const callSetReady = useServerFn(setReady);
   const callLeave = useServerFn(leaveRoom);
   const callStart = useServerFn(startGame);
@@ -138,6 +141,7 @@ function Waiting() {
           ready: !me.is_ready,
         },
       });
+      await resync();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Nepodařilo se");
     } finally {
