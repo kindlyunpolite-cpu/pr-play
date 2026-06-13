@@ -12,7 +12,13 @@ import { PORTRAITS, getPortrait } from "@/lib/portraits";
 import { Plus, LogIn, Sparkles, Dice5, Shuffle, ArrowRight, Users, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createRoom, joinRoom } from "@/lib/rooms.functions";
-import { saveSession } from "@/lib/room-session";
+import {
+  saveSession,
+  saveProfile,
+  loadProfile,
+  clearProfile,
+  clearSession,
+} from "@/lib/room-session";
 import { useReconnect } from "@/hooks/use-reconnect";
 import { toast } from "sonner";
 
