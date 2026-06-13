@@ -68,8 +68,11 @@ function actionError(kind: "stale" | "invalid" | "finished", detail: string) {
   return new Error(`${prefix}: ${detail}`);
 }
 
-function actionSignature(action: "draw" | "play", payload?: { cardIndex?: number }) {
-  return payload ? `${action}:${payload.cardIndex ?? ""}` : action;
+function actionSignature(
+  action: "draw" | "play",
+  payload?: { cardIndex?: number; chosenSuit?: Suit | null },
+) {
+  return payload ? `${action}:${payload.cardIndex ?? ""}:${payload.chosenSuit ?? ""}` : action;
 }
 
 function resolveDuplicateAction(
@@ -164,6 +167,7 @@ const TokenSchema = z.string().min(8).max(128);
 const PlayerIdSchema = z.string().uuid();
 const ActionIdSchema = z.string().uuid();
 const TurnVersionSchema = z.number().int().min(0);
+const SuitSchema = z.enum(["hearts", "diamonds", "clubs", "spades"] satisfies [Suit, ...Suit[]]);
 
 async function authenticatePlayer(playerId: string, token: string) {
   const { data, error } = await supabaseAdmin
@@ -581,12 +585,16 @@ export const playCard = createServerFn({ method: "POST" })
         actionId: ActionIdSchema,
         expectedTurnVersion: TurnVersionSchema,
         cardIndex: z.number().int().min(0),
+        chosenSuit: SuitSchema.optional(),
       })
       .parse(input),
   )
   .handler(async ({ data }) => {
     const player = await authenticatePlayer(data.playerId, data.sessionToken);
-    const signature = actionSignature("play", { cardIndex: data.cardIndex });
+    const signature = actionSignature("play", {
+      cardIndex: data.cardIndex,
+      chosenSuit: data.chosenSuit ?? null,
+    });
     const gameState = await loadGameState(player.room_id);
 
     const duplicate = resolveDuplicateAction(
@@ -615,6 +623,14 @@ export const playCard = createServerFn({ method: "POST" })
     if (!isPlayable(card, topCard, gameState.active_suit)) {
       throw actionError("invalid", "card is not playable on the current discard");
     }
+    if (card.rank === "J" && !data.chosenSuit) {
+      throw actionError("invalid", "jack requires a chosen suit");
+    }
+    if (card.rank !== "J" && data.chosenSuit) {
+      throw actionError("invalid", "chosen suit is only allowed when playing a jack");
+    }
+
+    const nextActiveSuit = card.rank === "J" ? data.chosenSuit! : card.suit;
 
     hands[player.id] = hand;
     const discardPile = [...gameState.discard_pile, card];
@@ -635,7 +651,7 @@ export const playCard = createServerFn({ method: "POST" })
         current_player_id: finished
           ? player.id
           : nextPlayerId(players, player.id, gameState.direction),
-        active_suit: card.suit,
+        active_suit: nextActiveSuit,
         status: finished ? "finished" : "playing",
         turn_version: gameState.turn_version + 1,
         last_action_id: data.actionId,

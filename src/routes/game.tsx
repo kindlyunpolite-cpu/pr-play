@@ -5,9 +5,24 @@ import { ChatPanel } from "@/components/ChatPanel";
 import { Opponent, type OpponentData, type SeatPlacement } from "@/components/Opponent";
 import { RoomShell } from "@/components/ui-room/RoomShell";
 import { RoomButton } from "@/components/ui-room/RoomButton";
-import { PlayingCard, CardStack, DiscardPile, SuitBadge, type CardData } from "@/components/cards";
+import {
+  PlayingCard,
+  CardStack,
+  DiscardPile,
+  SuitBadge,
+  SUIT_LABEL,
+  type CardData,
+  type Suit,
+} from "@/components/cards";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, Loader2, Timer, Sparkles, Trophy } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { getPortrait, PORTRAITS } from "@/lib/portraits";
 import { useReconnect } from "@/hooks/use-reconnect";
@@ -23,6 +38,7 @@ export const Route = createFileRoute("/game")({
 });
 
 const FALLBACK_CARD: CardData = { suit: "hearts", rank: "10" };
+const SUITS: Suit[] = ["hearts", "diamonds", "clubs", "spades"];
 
 function createActionId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
@@ -48,6 +64,7 @@ function Game() {
   const [drawNonce, setDrawNonce] = useState(0);
   const [dealt, setDealt] = useState(false);
   const [busyAction, setBusyAction] = useState<"draw" | "play" | null>(null);
+  const [suitPickerIndex, setSuitPickerIndex] = useState<number | null>(null);
   const busyActionRef = useRef(false);
 
   const me = useMemo(
@@ -144,7 +161,7 @@ function Game() {
     }
   };
 
-  const submitPlay = async (cardIndex: number) => {
+  const submitPlay = async (cardIndex: number, chosenSuit?: Suit) => {
     if (!session || !gameState || !canAct || busyActionRef.current) return;
     busyActionRef.current = true;
     setBusyAction("play");
@@ -157,9 +174,11 @@ function Game() {
           actionId: createActionId(),
           expectedTurnVersion: gameState.turn_version,
           cardIndex,
+          chosenSuit,
         },
       });
       setSelected(null);
+      setSuitPickerIndex(null);
       setPileNonce((n) => n + 1);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : "Nepodařilo se zahrát kartu");
@@ -170,18 +189,31 @@ function Game() {
     }
   };
 
+  const requestPlay = (cardIndex: number) => {
+    const card = hand[cardIndex];
+    if (!card || (card.suit !== activeSuit && card.rank !== topDiscard.rank)) {
+      toast.error("Tuto kartu nelze zahrát");
+      return;
+    }
+    if (card.rank === "J") {
+      setSuitPickerIndex(cardIndex);
+      return;
+    }
+    void submitPlay(cardIndex);
+  };
+
   const handlePlay = (i: number) => {
     if (!canAct) return;
     if (selected !== i) {
       setSelected(i);
       return;
     }
-    const card = hand[i];
-    if (!card || (card.suit !== activeSuit && card.rank !== topDiscard.rank)) {
-      toast.error("Tuto kartu nelze zahrát");
-      return;
-    }
-    void submitPlay(i);
+    requestPlay(i);
+  };
+
+  const handleChooseSuit = (suit: Suit) => {
+    if (suitPickerIndex === null) return;
+    void submitPlay(suitPickerIndex, suit);
   };
 
   // Position helpers — seats sit ON the table rim, half of the portrait
@@ -413,7 +445,7 @@ function Game() {
                   disabled={!canAct || selected === null || !selectedPlayable}
                   loading={busyAction === "play"}
                   onClick={() => {
-                    if (selected !== null) void submitPlay(selected);
+                    if (selected !== null) requestPlay(selected);
                   }}
                 >
                   Zahraj
@@ -466,6 +498,34 @@ function Game() {
 
         <ChatPanel messages={messages} session={session} />
       </div>
+
+      <Dialog
+        open={suitPickerIndex !== null}
+        onOpenChange={(open) => !open && setSuitPickerIndex(null)}
+      >
+        <DialogContent className="max-w-sm rounded-3xl border-white/10 bg-background/95 shadow-2xl shadow-black/60">
+          <DialogHeader>
+            <DialogTitle>Zvol barvu pro kluka</DialogTitle>
+            <DialogDescription>
+              Vybraná barva bude platit jako aktivní barva pro další tah.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3">
+            {SUITS.map((suit) => (
+              <button
+                key={suit}
+                type="button"
+                className="group rounded-2xl border border-white/10 bg-white/5 px-3 py-4 transition hover:border-[color:var(--gold)]/60 hover:bg-[color:var(--gold)]/10 focus:outline-none focus:ring-2 focus:ring-[color:var(--gold)]"
+                disabled={busyAction === "play"}
+                onClick={() => handleChooseSuit(suit)}
+              >
+                <SuitBadge suit={suit} size="lg" showLabel className="mx-auto" />
+                <span className="sr-only">{SUIT_LABEL[suit]}</span>
+              </button>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
     </RoomShell>
   );
 }
