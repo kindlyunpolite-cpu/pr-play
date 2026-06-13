@@ -5,11 +5,10 @@ import { TopNav } from "@/components/TopNav";
 import { RoomShell } from "@/components/ui-room/RoomShell";
 import { RoomPanel } from "@/components/ui-room/RoomPanel";
 import { RoomButton } from "@/components/ui-room/RoomButton";
-import { SectionTitle } from "@/components/ui-room/SectionTitle";
 import { SeatPortrait } from "@/components/ui-room/SeatPortrait";
-import { PortraitPicker } from "@/components/ui-room/PortraitPicker";
 import { PORTRAITS, getPortrait } from "@/lib/portraits";
-import { Plus, LogIn, Sparkles, Dice5, Shuffle, ArrowRight, Loader2, LogOut } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Sparkles, Dice5, Shuffle, ArrowRight, Loader2, LogOut, LogIn, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createRoom, joinRoom } from "@/lib/rooms.functions";
 import {
@@ -41,19 +40,41 @@ export const Route = createFileRoute("/")({
   component: Lobby,
 });
 
-const NAME_POOL = ["Karel", "Pavla", "Tomáš", "Eva", "Honza", "Lenka", "Mára", "Bára"];
+const NAME_POOL = [
+  "Karel",
+  "Pavla",
+  "Tomáš",
+  "Eva",
+  "Honza",
+  "Lenka",
+  "Mára",
+  "Bára",
+  "Petr",
+  "Jana",
+  "Míša",
+  "Dan",
+];
+
+function randomName(exclude?: string) {
+  const pool = exclude ? NAME_POOL.filter((n) => n !== exclude) : NAME_POOL;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function randomPortraitId() {
+  return PORTRAITS[Math.floor(Math.random() * PORTRAITS.length)].id;
+}
 
 function Lobby() {
-  const [tab, setTab] = useState<"create" | "join">("create");
   const initialProfile = typeof window !== "undefined" ? loadProfile() : null;
-  const [nick, setNick] = useState(initialProfile?.nickname ?? "");
-  const [portraitId, setPortraitId] = useState(
+  const [nick, setNick] = useState(() => initialProfile?.nickname ?? randomName());
+  const [portraitId, setPortraitId] = useState(() =>
     initialProfile?.avatar && PORTRAITS.some((p) => p.id === initialProfile.avatar)
       ? initialProfile.avatar
-      : PORTRAITS[0].id,
+      : randomPortraitId(),
   );
   const [code, setCode] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const [submitting, setSubmitting] = useState<"create" | "join" | null>(null);
+  const [pickerOpen, setPickerOpen] = useState(false);
   const navigate = useNavigate();
   const callCreate = useServerFn(createRoom);
   const callJoin = useServerFn(joinRoom);
@@ -63,19 +84,23 @@ function Lobby() {
   });
 
   const portrait = getPortrait(portraitId);
+  const canCreate = !submitting && nick.trim().length >= 2;
+  const canJoin = canCreate && code.length === 5;
 
-  const canSubmit = useMemo(
-    () => !submitting && nick.trim().length >= 2 && (tab === "create" || code.length === 5),
-    [nick, code, tab, submitting],
-  );
-
-  const go = async () => {
-    if (!canSubmit) return;
+  const submit = async (mode: "create" | "join") => {
     const nickname = nick.trim();
-    setSubmitting(true);
+    if (nickname.length < 2) {
+      toast.error("Zadej přezdívku");
+      return;
+    }
+    if (mode === "join" && code.length !== 5) {
+      toast.error("Zadej 5místný kód hry");
+      return;
+    }
+    setSubmitting(mode);
     try {
       const result =
-        tab === "create"
+        mode === "create"
           ? await callCreate({ data: { nickname, avatar: portraitId } })
           : await callJoin({ data: { code, nickname, avatar: portraitId } });
       saveSession({
@@ -92,14 +117,11 @@ function Lobby() {
       const message = err instanceof Error ? err.message : "Něco se nepovedlo";
       toast.error(message.replace(/^Error:\s*/i, ""));
     } finally {
-      setSubmitting(false);
+      setSubmitting(null);
     }
   };
 
-  const randomize = () => setNick(NAME_POOL[Math.floor(Math.random() * NAME_POOL.length)]);
-
-  // Persist profile preferences as the user edits them, so they survive a
-  // page refresh even without joining a room.
+  // Persist profile preferences as the user edits them.
   useEffect(() => {
     const trimmed = nick.trim();
     if (!trimmed) return;
@@ -112,8 +134,8 @@ function Lobby() {
   const handleLogout = () => {
     clearSession();
     clearProfile();
-    setNick("");
-    setPortraitId(PORTRAITS[0].id);
+    setNick(randomName());
+    setPortraitId(randomPortraitId());
     setCode("");
   };
 
@@ -132,9 +154,9 @@ function Lobby() {
     <RoomShell>
       <TopNav />
 
-      <main className="mx-auto w-full max-w-md flex-1 px-4 py-5">
+      <main className="mx-auto w-full max-w-md flex-1 px-4 py-6">
         {/* Hero */}
-        <section className="text-center mb-5">
+        <section className="text-center mb-6">
           <div className="inline-flex items-center gap-1.5 rounded-full border border-[color:var(--gold)]/30 bg-[color:var(--gold)]/10 px-3 py-1 mb-3">
             <Sparkles className="h-3 w-3 text-[color:var(--gold)]" />
             <span className="text-[10px] font-semibold uppercase tracking-[0.22em] gold-text">
@@ -145,118 +167,113 @@ function Lobby() {
             Hraj <span className="gold-text">Prší</span>
             <br />s přáteli
           </h1>
-          <p className="mt-2 text-sm text-muted-foreground">Rychlé partie, žádná registrace.</p>
         </section>
 
-        {/* Identity preview */}
-        <RoomPanel className="mb-4 flex items-center gap-3 p-3" tone={nick ? "active" : "default"}>
-          <div className="flex h-16 w-14 shrink-0 items-end justify-center">
-            <SeatPortrait
-              src={portrait.src}
-              name={portrait.name}
-              accent={portrait.accent}
-              size="sm"
-              active={!!nick}
-            />
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-              Hraješ jako
+        {/* Identity card */}
+        <RoomPanel className="mb-5 p-5 space-y-4" tone="active">
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() => setPickerOpen(true)}
+              className="group relative flex h-20 w-16 shrink-0 items-end justify-center rounded-xl border border-white/10 bg-black/30 transition hover:border-[color:var(--gold)]/50 active:scale-95"
+              aria-label="Vybrat postavu"
+            >
+              <SeatPortrait
+                src={portrait.src}
+                name={portrait.name}
+                accent={portrait.accent}
+                size="sm"
+                active
+              />
+              <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 rounded-full bg-[color:var(--gold)] px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest text-[color:var(--primary-foreground)] shadow">
+                Změnit
+              </span>
+            </button>
+
+            <div className="min-w-0 flex-1">
+              <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+                Tvoje přezdívka
+              </label>
+              <div className="flex gap-2">
+                <input
+                  value={nick}
+                  onChange={(e) => setNick(e.target.value)}
+                  maxLength={16}
+                  placeholder="Tvoje jméno"
+                  className="control-pill w-full px-3 py-2.5 text-base outline-none transition focus:border-[color:var(--gold)]/50"
+                />
+                <button
+                  type="button"
+                  onClick={() => setNick(randomName(nick.trim()))}
+                  className="shrink-0 flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 text-muted-foreground transition hover:text-[color:var(--gold)] hover:border-[color:var(--gold)]/50 active:scale-95"
+                  aria-label="Náhodná přezdívka"
+                >
+                  <Shuffle className="h-4 w-4" />
+                </button>
+              </div>
             </div>
-            <div className="truncate font-display text-lg font-semibold">
-              {nick.trim() || "Zadej přezdívku"}
-            </div>
           </div>
-          <button
-            type="button"
-            onClick={randomize}
-            className="shrink-0 flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 text-muted-foreground transition hover:text-foreground hover:border-[color:var(--gold)]/40 active:scale-95"
-            aria-label="Náhodné jméno"
-          >
-            <Shuffle className="h-4 w-4" />
-          </button>
         </RoomPanel>
 
-        {/* Tabs */}
-        <div className="mb-4 grid grid-cols-2 gap-1 rounded-2xl border border-white/8 bg-black/30 backdrop-blur-md p-1">
-          <TabBtn
-            active={tab === "create"}
-            onClick={() => setTab("create")}
-            icon={<Plus className="h-4 w-4" />}
-          >
-            Založit hru
-          </TabBtn>
-          <TabBtn
-            active={tab === "join"}
-            onClick={() => setTab("join")}
-            icon={<LogIn className="h-4 w-4" />}
-          >
-            Připojit se
-          </TabBtn>
+        {/* Primary: New Game */}
+        <RoomButton
+          variant="primary"
+          size="lg"
+          block
+          onClick={() => submit("create")}
+          disabled={!canCreate}
+          loading={submitting === "create"}
+          icon={submitting !== "create" && <Dice5 className="h-5 w-5" />}
+          iconRight={<ArrowRight className="h-4 w-4 opacity-70" />}
+          className="mb-5"
+        >
+          {submitting === "create" ? "Zakládám…" : "Nová hra"}
+        </RoomButton>
+
+        {/* Divider */}
+        <div className="mb-4 flex items-center gap-3">
+          <div className="h-px flex-1 bg-white/8" />
+          <span className="text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+            nebo
+          </span>
+          <div className="h-px flex-1 bg-white/8" />
         </div>
 
-        {/* Form card */}
-        <RoomPanel className="p-5 space-y-5">
-          <Field label="Tvoje přezdívka">
+        {/* Secondary: Join */}
+        <RoomPanel className="p-4 space-y-3">
+          <div className="flex gap-2">
             <input
-              value={nick}
-              onChange={(e) => setNick(e.target.value)}
-              maxLength={16}
-              placeholder="např. Karel"
-              className="control-pill w-full px-4 py-3 text-base outline-none transition focus:border-[color:var(--gold)]/50"
+              value={code}
+              onChange={(e) =>
+                setCode(
+                  e.target.value
+                    .toUpperCase()
+                    .replace(/[^A-Z0-9]/g, "")
+                    .slice(0, 5),
+                )
+              }
+              inputMode="text"
+              autoCapitalize="characters"
+              placeholder="Mám kód hry"
+              className="control-pill w-full px-4 py-2.5 text-center text-lg font-mono font-bold tracking-[0.3em] outline-none transition focus:border-[color:var(--gold)]/50 placeholder:font-sans placeholder:text-sm placeholder:font-normal placeholder:tracking-normal"
             />
-          </Field>
-
-          <Field label="Vyber postavu">
-            <PortraitPicker value={portraitId} onChange={setPortraitId} />
-          </Field>
-
-          {tab === "join" && (
-            <Field label="Kód místnosti">
-              <input
-                value={code}
-                onChange={(e) =>
-                  setCode(
-                    e.target.value
-                      .toUpperCase()
-                      .replace(/[^A-Z0-9]/g, "")
-                      .slice(0, 5),
-                  )
-                }
-                inputMode="text"
-                autoCapitalize="characters"
-                placeholder="ABCDE"
-                className="control-pill w-full px-4 py-3 text-center text-2xl font-mono font-bold tracking-[0.4em] outline-none transition focus:border-[color:var(--gold)]/50"
-              />
-            </Field>
-          )}
-
+          </div>
           <RoomButton
-            variant="primary"
-            size="lg"
+            variant="secondary"
+            size="md"
             block
-            onClick={go}
-            disabled={!canSubmit}
-            loading={submitting}
-            icon={
-              !submitting &&
-              (tab === "create" ? <Dice5 className="h-4 w-4" /> : <LogIn className="h-4 w-4" />)
-            }
-            iconRight={<ArrowRight className="h-4 w-4 opacity-70" />}
+            onClick={() => submit("join")}
+            disabled={!canJoin}
+            loading={submitting === "join"}
+            icon={submitting !== "join" && <LogIn className="h-4 w-4" />}
           >
-            {submitting
-              ? tab === "create"
-                ? "Zakládám…"
-                : "Připojuji…"
-              : tab === "create"
-                ? "Vytvořit hru"
-                : "Připojit se"}
+            {submitting === "join" ? "Připojuji…" : "Připojit se"}
           </RoomButton>
         </RoomPanel>
 
-        {/* Footer hint */}
-        <div className="mt-5 flex flex-col items-center gap-3">
-          {hasSavedProfile && (
+        {/* Logout */}
+        {hasSavedProfile && (
+          <div className="mt-6 flex justify-center">
             <button
               type="button"
               onClick={handleLogout}
@@ -265,47 +282,63 @@ function Lobby() {
               <LogOut className="h-3 w-3" />
               Odhlásit
             </button>
-          )}
-        </div>
+          </div>
+        )}
       </main>
+
+      {/* Avatar picker */}
+      <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
+        <DialogContent className="max-w-sm border-white/10 bg-[color:var(--card)]">
+          <DialogHeader>
+            <DialogTitle className="font-display text-lg">Vyber postavu</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-3 gap-3 pt-2">
+            {PORTRAITS.map((p) => {
+              const selected = p.id === portraitId;
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => {
+                    setPortraitId(p.id);
+                    setPickerOpen(false);
+                  }}
+                  aria-pressed={selected}
+                  className={cn(
+                    "group relative flex flex-col items-center gap-1.5 rounded-xl border p-2 transition active:scale-95",
+                    selected
+                      ? "border-[color:var(--gold)]/70 bg-[color:var(--gold)]/8 shadow-[0_0_18px_-6px_oklch(0.82_0.14_85/0.6)]"
+                      : "border-white/8 bg-black/30 hover:border-[color:var(--gold)]/35",
+                  )}
+                >
+                  <div className="flex h-20 w-full items-end justify-center overflow-hidden rounded-lg bg-gradient-to-b from-transparent to-black/40">
+                    <SeatPortrait
+                      src={p.src}
+                      name={p.name}
+                      accent={p.accent}
+                      size="sm"
+                      active={selected}
+                    />
+                  </div>
+                  <span
+                    className={cn(
+                      "text-[10px] font-semibold uppercase tracking-wider",
+                      selected ? "text-[color:var(--gold)]" : "text-muted-foreground",
+                    )}
+                  >
+                    {p.name}
+                  </span>
+                  {selected && (
+                    <span className="absolute -top-1.5 -right-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-[color:var(--gold)] text-[color:var(--primary-foreground)] shadow-md">
+                      <Check className="h-3 w-3" strokeWidth={3} />
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </DialogContent>
+      </Dialog>
     </RoomShell>
-  );
-}
-
-function TabBtn({
-  active,
-  onClick,
-  icon,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  icon: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "flex items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-semibold uppercase tracking-[0.16em] transition active:scale-[0.98]",
-        active
-          ? "bg-[color:var(--gold)]/15 text-[color:var(--gold)] ring-1 ring-[color:var(--gold)]/35"
-          : "text-muted-foreground hover:text-foreground",
-      )}
-    >
-      {icon} {children}
-    </button>
-  );
-}
-
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <label className="block">
-      <span className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-        {label}
-      </span>
-      {children}
-    </label>
   );
 }
