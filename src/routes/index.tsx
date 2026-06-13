@@ -45,8 +45,13 @@ const NAME_POOL = ["Karel", "Pavla", "Tomáš", "Eva", "Honza", "Lenka", "Mára"
 
 function Lobby() {
   const [tab, setTab] = useState<"create" | "join">("create");
-  const [nick, setNick] = useState("");
-  const [portraitId, setPortraitId] = useState(PORTRAITS[0].id);
+  const initialProfile = typeof window !== "undefined" ? loadProfile() : null;
+  const [nick, setNick] = useState(initialProfile?.nickname ?? "");
+  const [portraitId, setPortraitId] = useState(
+    initialProfile?.avatar && PORTRAITS.some((p) => p.id === initialProfile.avatar)
+      ? initialProfile.avatar
+      : PORTRAITS[0].id,
+  );
   const [code, setCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
