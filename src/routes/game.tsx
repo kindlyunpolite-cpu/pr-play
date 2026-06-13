@@ -73,6 +73,7 @@ function Game() {
     ? [gameState.discard_pile[0] ?? topDiscard, ...gameState.discard_pile.slice(1)]
     : [topDiscard];
   const activeSuit = gameState?.active_suit ?? topDiscard.suit;
+  const pendingDraw = gameState?.pending_draw ?? 0;
   const myTurn =
     gameState?.status === "playing" && gameState?.current_player_id === session?.playerId;
   const activePlayer = players.find((p) => p.id === gameState?.current_player_id) ?? me;
@@ -169,7 +170,10 @@ function Game() {
     gameState.status === "playing";
   const selectedCard = selected === null ? null : (hand[selected] ?? null);
   const selectedPlayable =
-    !!selectedCard && (selectedCard.suit === activeSuit || selectedCard.rank === topDiscard.rank);
+    !!selectedCard &&
+    (pendingDraw > 0
+      ? selectedCard.rank === "7"
+      : selectedCard.suit === activeSuit || selectedCard.rank === topDiscard.rank);
 
   const handleDraw = async () => {
     if (!session || !gameState || !canAct || busyActionRef.current) return;
@@ -227,8 +231,15 @@ function Game() {
       return;
     }
     const card = hand[i];
-    if (!card || (card.suit !== activeSuit && card.rank !== topDiscard.rank)) {
-      toast.error("Tuto kartu nelze zahrát");
+    if (
+      !card ||
+      (pendingDraw > 0
+        ? card.rank !== "7"
+        : card.suit !== activeSuit && card.rank !== topDiscard.rank)
+    ) {
+      toast.error(
+        pendingDraw > 0 ? "Musíš zahrát sedmu nebo líznout trest" : "Tuto kartu nelze zahrát",
+      );
       return;
     }
     void submitPlay(i);
@@ -347,6 +358,17 @@ function Game() {
                   </div>
 
                   <div className="table-spotlight" aria-hidden="true" />
+
+                  {pendingDraw > 0 && (
+                    <div className="absolute inset-x-6 top-12 z-20 rounded-3xl border border-destructive/35 bg-black/70 px-4 py-3 text-center shadow-2xl shadow-black/50 backdrop-blur-md sm:inset-x-16">
+                      <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-destructive">
+                        Sedma — trest
+                      </div>
+                      <div className="mt-1 text-sm font-semibold text-foreground">
+                        Lízni {pendingDraw} nebo zahraj 7.
+                      </div>
+                    </div>
+                  )}
 
                   {aceSkip && (
                     <div className="absolute inset-x-6 top-12 z-20 rounded-3xl border border-[color:var(--gold)]/35 bg-black/70 px-4 py-3 text-center shadow-2xl shadow-black/50 backdrop-blur-md sm:inset-x-16">
