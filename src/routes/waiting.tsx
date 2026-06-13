@@ -407,7 +407,7 @@ function Waiting() {
                         >
                           {p.is_ready ? "Připraven" : "Čeká"}
                         </div>
-                        <PlayerStatsSummary stats={p.stats} />
+                        </div>
                       </div>
                     </RoomPanel>
                   </li>
