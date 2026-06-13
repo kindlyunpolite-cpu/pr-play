@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      game_results: {
+        Row: {
+          created_at: string | null
+          finished_at: string
+          id: string
+          player_count: number
+          room_id: string | null
+          winner_player_id: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          finished_at?: string
+          id?: string
+          player_count: number
+          room_id?: string | null
+          winner_player_id?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          finished_at?: string
+          id?: string
+          player_count?: number
+          room_id?: string | null
+          winner_player_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "game_results_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "game_results_winner_player_id_fkey"
+            columns: ["winner_player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       game_states: {
         Row: {
           active_suit: string | null
@@ -98,6 +140,54 @@ export type Database = {
             columns: ["player_id"]
             isOneToOne: true
             referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      player_stats: {
+        Row: {
+          cards_drawn: number
+          cards_played: number
+          games_played: number
+          player_id: string
+          room_id: string | null
+          turns_taken: number
+          updated_at: string
+          wins: number
+        }
+        Insert: {
+          cards_drawn?: number
+          cards_played?: number
+          games_played?: number
+          player_id: string
+          room_id?: string | null
+          turns_taken?: number
+          updated_at?: string
+          wins?: number
+        }
+        Update: {
+          cards_drawn?: number
+          cards_played?: number
+          games_played?: number
+          player_id?: string
+          room_id?: string | null
+          turns_taken?: number
+          updated_at?: string
+          wins?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "player_stats_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: true
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "player_stats_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
             referencedColumns: ["id"]
           },
         ]
@@ -238,7 +328,18 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      increment_player_stats: {
+        Args: {
+          p_cards_drawn?: number
+          p_cards_played?: number
+          p_games_played?: number
+          p_player_id: string
+          p_room_id: string
+          p_turns_taken?: number
+          p_wins?: number
+        }
+        Returns: undefined
+      }
     }
     Enums: {
       room_status: "waiting" | "playing" | "finished"
