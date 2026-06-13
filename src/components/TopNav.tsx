@@ -32,11 +32,9 @@ export function TopNav({
         {/* Center: room code */}
         <div className="justify-self-center">
           {roomCode && (
-            <div className="control-pill flex items-center gap-2 pl-2.5 pr-1 py-0.5">
-              <span className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground/80 hidden sm:inline">
-                Místnost
-              </span>
-              <span className="rounded-full bg-[color:var(--gold)]/12 border border-[color:var(--gold)]/30 px-2 py-0.5 font-mono text-[12px] font-bold tracking-[0.24em] text-[color:var(--gold)]">
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <span className="uppercase tracking-[0.18em]">Kód</span>
+              <span className="font-mono text-[13px] font-bold tracking-[0.22em] text-[color:var(--gold)]">
                 {roomCode}
               </span>
             </div>
