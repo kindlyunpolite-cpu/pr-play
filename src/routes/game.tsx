@@ -40,6 +40,18 @@ export const Route = createFileRoute("/game")({
 const FALLBACK_CARD: CardData = { suit: "hearts", rank: "10" };
 const SUITS: Suit[] = ["hearts", "diamonds", "clubs", "spades"];
 
+function adjacentPlayerId(
+  players: { id: string }[],
+  currentPlayerId: string | null,
+  direction: 1 | -1,
+) {
+  if (!currentPlayerId || players.length === 0) return null;
+  const index = players.findIndex((p) => p.id === currentPlayerId);
+  if (index === -1) return null;
+  const step = direction === -1 ? -1 : 1;
+  return players[(index + step + players.length) % players.length]?.id ?? null;
+}
+
 function createActionId() {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
 
@@ -66,6 +78,7 @@ function Game() {
   const [busyAction, setBusyAction] = useState<"draw" | "play" | null>(null);
   const [suitPickerIndex, setSuitPickerIndex] = useState<number | null>(null);
   const busyActionRef = useRef(false);
+  const aceSkipToastRef = useRef<string | null>(null);
 
   const me = useMemo(
     () => players.find((p) => p.id === session?.playerId) ?? null,
@@ -77,11 +90,41 @@ function Game() {
     ? [gameState.discard_pile[0] ?? topDiscard, ...gameState.discard_pile.slice(1)]
     : [topDiscard];
   const activeSuit = gameState?.active_suit ?? topDiscard.suit;
+  const pendingDraw = gameState?.pending_draw ?? 0;
   const myTurn =
     gameState?.status === "playing" && gameState?.current_player_id === session?.playerId;
   const activePlayer = players.find((p) => p.id === gameState?.current_player_id) ?? me;
   const gameFinished = room?.status === "finished" || gameState?.status === "finished";
   const winner = gameFinished ? players.find((p) => p.id === gameState?.current_player_id) : null;
+  const aceSkip = useMemo(() => {
+    if (gameFinished || gameState?.status !== "playing" || topDiscard.rank !== "A") return null;
+    if (!gameState.last_action_id || !gameState.last_action_player_id) return null;
+    if (!gameState.last_action_signature?.startsWith("play:")) return null;
+
+    const skippedPlayerId = adjacentPlayerId(
+      players,
+      gameState.last_action_player_id,
+      gameState.direction,
+    );
+    const skippedPlayer = players.find((p) => p.id === skippedPlayerId);
+    const actingPlayer = players.find((p) => p.id === gameState.last_action_player_id);
+    if (!skippedPlayer || !actingPlayer) return null;
+
+    return {
+      actionId: gameState.last_action_id,
+      skippedPlayer,
+      actingPlayer,
+    };
+  }, [
+    gameFinished,
+    gameState?.direction,
+    gameState?.last_action_id,
+    gameState?.last_action_player_id,
+    gameState?.last_action_signature,
+    gameState?.status,
+    players,
+    topDiscard.rank,
+  ]);
 
   const opponents: OpponentData[] = useMemo(
     () =>
@@ -127,6 +170,14 @@ function Game() {
     return () => clearTimeout(t);
   }, [hand.length]);
 
+  useEffect(() => {
+    if (!aceSkip || aceSkipToastRef.current === aceSkip.actionId) return;
+    aceSkipToastRef.current = aceSkip.actionId;
+    toast.info(
+      `${aceSkip.actingPlayer.nickname} zahrál/a eso. ${aceSkip.skippedPlayer.nickname} stojí.`,
+    );
+  }, [aceSkip]);
+
   const canAct =
     !!session &&
     !!gameState &&
@@ -136,7 +187,10 @@ function Game() {
     gameState.status === "playing";
   const selectedCard = selected === null ? null : (hand[selected] ?? null);
   const selectedPlayable =
-    !!selectedCard && (selectedCard.suit === activeSuit || selectedCard.rank === topDiscard.rank);
+    !!selectedCard &&
+    (pendingDraw > 0
+      ? selectedCard.rank === "7"
+      : selectedCard.suit === activeSuit || selectedCard.rank === topDiscard.rank);
 
   const handleDraw = async () => {
     if (!session || !gameState || !canAct || busyActionRef.current) return;
@@ -191,8 +245,15 @@ function Game() {
 
   const requestPlay = (cardIndex: number) => {
     const card = hand[cardIndex];
-    if (!card || (card.suit !== activeSuit && card.rank !== topDiscard.rank)) {
-      toast.error("Tuto kartu nelze zahrát");
+    if (
+      !card ||
+      (pendingDraw > 0
+        ? card.rank !== "7"
+        : card.suit !== activeSuit && card.rank !== topDiscard.rank)
+    ) {
+      toast.error(
+        pendingDraw > 0 ? "Musíš zahrát sedmu nebo líznout trest" : "Tuto kartu nelze zahrát",
+      );
       return;
     }
     if (card.rank === "J") {
@@ -328,7 +389,27 @@ function Game() {
                     </div>
                   </div>
 
+                  {pendingDraw > 0 && (
+                    <div className="absolute left-1/2 top-2 z-20 -translate-x-1/2 rounded-full bg-red-950/80 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-red-100 ring-1 ring-red-400/40 shadow-lg shadow-red-950/50 backdrop-blur-md">
+                      Trest: lízni {pendingDraw} nebo zahraj 7
+                    </div>
+                  )}
+
                   <div className="table-spotlight" aria-hidden="true" />
+
+                  {aceSkip && (
+                    <div className="absolute inset-x-6 top-12 z-20 rounded-3xl border border-[color:var(--gold)]/35 bg-black/70 px-4 py-3 text-center shadow-2xl shadow-black/50 backdrop-blur-md sm:inset-x-16">
+                      <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-[color:var(--gold)]">
+                        Eso — stojí
+                      </div>
+                      <div className="mt-1 text-sm font-semibold text-foreground">
+                        {aceSkip.skippedPlayer.nickname} je přeskočen/a.
+                      </div>
+                      <div className="mt-0.5 text-xs text-muted-foreground">
+                        {aceSkip.actingPlayer.nickname} zahrál/a A, tah pokračuje dál.
+                      </div>
+                    </div>
+                  )}
 
                   {gameFinished && (
                     <div className="absolute inset-x-6 top-1/2 z-20 -translate-y-1/2 rounded-3xl border border-[color:var(--gold)]/30 bg-black/70 p-4 text-center shadow-2xl shadow-black/60 backdrop-blur-md sm:inset-x-16">
@@ -361,7 +442,9 @@ function Game() {
                           className={drawNonce ? "animate-card-draw" : ""}
                         />
                         <span className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground/80 tabular-nums">
-                          Balíček · {gameState?.deck.length ?? 0}
+                          {pendingDraw > 0
+                            ? `Trest · ${pendingDraw}`
+                            : `Balíček · ${gameState?.deck.length ?? 0}`}
                         </span>
                       </button>
 
@@ -437,7 +520,7 @@ function Game() {
                   disabled={!canAct}
                   loading={busyAction === "draw"}
                 >
-                  Lízni
+                  {pendingDraw > 0 ? `Lízni ${pendingDraw}` : "Lízni"}
                 </RoomButton>
                 <RoomButton
                   size="sm"
@@ -479,7 +562,9 @@ function Game() {
                       <PlayingCard
                         card={card}
                         size="md"
-                        state={myTurn ? "idle" : "disabled"}
+                        state={
+                          myTurn && (pendingDraw === 0 || card.rank === "7") ? "idle" : "disabled"
+                        }
                         animation={playingIdx === i ? "play" : !dealt ? "deal" : undefined}
                         animationDelay={!dealt ? i * 70 : undefined}
                         onClick={() => handlePlay(i)}
