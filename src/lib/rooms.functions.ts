@@ -51,7 +51,13 @@ function toProcessedActions(value: unknown): Record<string, ProcessedTurnAction>
   return value as Record<string, ProcessedTurnAction>;
 }
 
-function isPlayable(card: CardData, topCard: CardData, activeSuit: Suit | null) {
+function isPlayable(
+  card: CardData,
+  topCard: CardData,
+  activeSuit: Suit | null,
+  pendingDraw: number,
+) {
+  if (pendingDraw > 0) return card.rank === "7";
   return card.suit === (activeSuit ?? topCard.suit) || card.rank === topCard.rank;
 }
 
@@ -103,6 +109,24 @@ function takeDrawableCard(deck: CardData[], discardPile: CardData[]) {
   };
 }
 
+function takeDrawableCards(deck: CardData[], discardPile: CardData[], count: number) {
+  const cards: CardData[] = [];
+  let nextDeck = [...deck];
+  let nextDiscardPile = [...discardPile];
+
+  for (let i = 0; i < count; i++) {
+    const draw = takeDrawableCard(nextDeck, nextDiscardPile);
+    if (!draw.card) {
+      return { cards, deck: nextDeck, discardPile: nextDiscardPile, complete: false };
+    }
+    cards.push(draw.card);
+    nextDeck = draw.deck;
+    nextDiscardPile = draw.discardPile;
+  }
+
+  return { cards, deck: nextDeck, discardPile: nextDiscardPile, complete: true };
+}
+
 async function loadGameState(roomId: string) {
   const { data: gameState, error } = await supabaseAdmin
     .from("game_states")
@@ -118,6 +142,7 @@ async function loadGameState(roomId: string) {
     processed_actions: toProcessedActions(gameState.processed_actions),
     direction: gameState.direction === -1 ? -1 : 1,
     active_suit: gameState.active_suit as Suit | null,
+    pending_draw: gameState.pending_draw ?? 0,
     turn_version: gameState.turn_version ?? 0,
   };
 }
@@ -472,6 +497,7 @@ export const startGame = createServerFn({ method: "POST" })
       active_suit: firstDiscard.suit,
       direction: 1,
       status: "playing",
+      pending_draw: 0,
       turn_version: 0,
       last_action_id: null,
       last_action_player_id: null,
@@ -526,10 +552,12 @@ export const drawCard = createServerFn({ method: "POST" })
     const players = await loadTurnPlayers(player.room_id);
     const hands = { ...gameState.hands };
     const hand = [...(hands[player.id] ?? [])];
-    const draw = takeDrawableCard(gameState.deck, gameState.discard_pile);
-    if (!draw.card) throw actionError("invalid", "no cards left to draw");
+    const pendingDraw = gameState.pending_draw ?? 0;
+    const drawCount = pendingDraw > 0 ? pendingDraw : 1;
+    const draw = takeDrawableCards(gameState.deck, gameState.discard_pile, drawCount);
+    if (pendingDraw === 0 && !draw.complete) throw actionError("invalid", "no cards left to draw");
 
-    hand.push(draw.card);
+    hand.push(...draw.cards);
     hands[player.id] = hand;
     const processedActions = {
       ...gameState.processed_actions,
@@ -544,6 +572,7 @@ export const drawCard = createServerFn({ method: "POST" })
         hands: hands as unknown as Json,
         current_player_id: nextPlayerId(players, player.id, gameState.direction),
         active_suit: draw.discardPile.at(-1)?.suit ?? gameState.active_suit,
+        pending_draw: 0,
         turn_version: gameState.turn_version + 1,
         last_action_id: data.actionId,
         last_action_player_id: player.id,
@@ -612,12 +641,18 @@ export const playCard = createServerFn({ method: "POST" })
     const hand = [...(hands[player.id] ?? [])];
     const [card] = hand.splice(data.cardIndex, 1);
     if (!card) throw actionError("invalid", "card is not in your hand");
-    if (!isPlayable(card, topCard, gameState.active_suit)) {
-      throw actionError("invalid", "card is not playable on the current discard");
+    if (!isPlayable(card, topCard, gameState.active_suit, gameState.pending_draw)) {
+      throw actionError(
+        "invalid",
+        gameState.pending_draw > 0
+          ? "you must play another 7 or draw the pending penalty"
+          : "card is not playable on the current discard",
+      );
     }
 
     hands[player.id] = hand;
     const discardPile = [...gameState.discard_pile, card];
+    const pendingDraw = card.rank === "7" ? gameState.pending_draw + 2 : 0;
     const finished = hand.length === 0;
     const players = finished ? [] : await loadTurnPlayers(player.room_id);
     const processedActions = {
@@ -636,6 +671,7 @@ export const playCard = createServerFn({ method: "POST" })
           ? player.id
           : nextPlayerId(players, player.id, gameState.direction),
         active_suit: card.suit,
+        pending_draw: finished ? 0 : pendingDraw,
         status: finished ? "finished" : "playing",
         turn_version: gameState.turn_version + 1,
         last_action_id: data.actionId,

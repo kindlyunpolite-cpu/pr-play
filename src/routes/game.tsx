@@ -60,6 +60,7 @@ function Game() {
     ? [gameState.discard_pile[0] ?? topDiscard, ...gameState.discard_pile.slice(1)]
     : [topDiscard];
   const activeSuit = gameState?.active_suit ?? topDiscard.suit;
+  const pendingDraw = gameState?.pending_draw ?? 0;
   const myTurn =
     gameState?.status === "playing" && gameState?.current_player_id === session?.playerId;
   const activePlayer = players.find((p) => p.id === gameState?.current_player_id) ?? me;
@@ -119,7 +120,10 @@ function Game() {
     gameState.status === "playing";
   const selectedCard = selected === null ? null : (hand[selected] ?? null);
   const selectedPlayable =
-    !!selectedCard && (selectedCard.suit === activeSuit || selectedCard.rank === topDiscard.rank);
+    !!selectedCard &&
+    (pendingDraw > 0
+      ? selectedCard.rank === "7"
+      : selectedCard.suit === activeSuit || selectedCard.rank === topDiscard.rank);
 
   const handleDraw = async () => {
     if (!session || !gameState || !canAct || busyActionRef.current) return;
@@ -177,8 +181,15 @@ function Game() {
       return;
     }
     const card = hand[i];
-    if (!card || (card.suit !== activeSuit && card.rank !== topDiscard.rank)) {
-      toast.error("Tuto kartu nelze zahrát");
+    if (
+      !card ||
+      (pendingDraw > 0
+        ? card.rank !== "7"
+        : card.suit !== activeSuit && card.rank !== topDiscard.rank)
+    ) {
+      toast.error(
+        pendingDraw > 0 ? "Musíš zahrát sedmu nebo líznout trest" : "Tuto kartu nelze zahrát",
+      );
       return;
     }
     void submitPlay(i);
@@ -296,6 +307,12 @@ function Game() {
                     </div>
                   </div>
 
+                  {pendingDraw > 0 && (
+                    <div className="absolute left-1/2 top-2 z-20 -translate-x-1/2 rounded-full bg-red-950/80 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-red-100 ring-1 ring-red-400/40 shadow-lg shadow-red-950/50 backdrop-blur-md">
+                      Trest: lízni {pendingDraw} nebo zahraj 7
+                    </div>
+                  )}
+
                   <div className="table-spotlight" aria-hidden="true" />
 
                   {gameFinished && (
@@ -329,7 +346,9 @@ function Game() {
                           className={drawNonce ? "animate-card-draw" : ""}
                         />
                         <span className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground/80 tabular-nums">
-                          Balíček · {gameState?.deck.length ?? 0}
+                          {pendingDraw > 0
+                            ? `Trest · ${pendingDraw}`
+                            : `Balíček · ${gameState?.deck.length ?? 0}`}
                         </span>
                       </button>
 
@@ -405,7 +424,7 @@ function Game() {
                   disabled={!canAct}
                   loading={busyAction === "draw"}
                 >
-                  Lízni
+                  {pendingDraw > 0 ? `Lízni ${pendingDraw}` : "Lízni"}
                 </RoomButton>
                 <RoomButton
                   size="sm"
@@ -447,7 +466,9 @@ function Game() {
                       <PlayingCard
                         card={card}
                         size="md"
-                        state={myTurn ? "idle" : "disabled"}
+                        state={
+                          myTurn && (pendingDraw === 0 || card.rank === "7") ? "idle" : "disabled"
+                        }
                         animation={playingIdx === i ? "play" : !dealt ? "deal" : undefined}
                         animationDelay={!dealt ? i * 70 : undefined}
                         onClick={() => handlePlay(i)}
