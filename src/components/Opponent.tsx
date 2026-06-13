@@ -12,6 +12,9 @@ export interface OpponentData {
   online?: boolean;
   rank?: number;
   wins?: number;
+  gamesPlayed?: number;
+  cardsDrawn?: number;
+  cardsPlayed?: number;
   badge?: string;
   /** Stack of chips / score, shown on the panel. */
   chips?: number;
@@ -50,12 +53,16 @@ export function Opponent({
   const portraitSize = compact
     ? "h-20 w-16"
     : compactMobile
-      ? (self ? "h-22 w-18 sm:h-30 sm:w-26" : "h-24 w-20 sm:h-32 sm:w-28")
+      ? self
+        ? "h-22 w-18 sm:h-30 sm:w-26"
+        : "h-24 w-20 sm:h-32 sm:w-28"
       : "h-28 w-24 sm:h-32 sm:w-28";
   const panelWidth = compact
     ? "min-w-[140px] max-w-[160px]"
     : compactMobile
-      ? (self ? "min-w-[150px] max-w-[170px] sm:min-w-[170px] sm:max-w-[200px]" : "min-w-[150px] max-w-[170px] sm:min-w-[180px] sm:max-w-[210px]")
+      ? self
+        ? "min-w-[150px] max-w-[170px] sm:min-w-[170px] sm:max-w-[200px]"
+        : "min-w-[150px] max-w-[170px] sm:min-w-[180px] sm:max-w-[210px]"
       : "min-w-[180px] max-w-[210px]";
   // Keep side info panels directly under the portrait center; the outer
   // seat wrapper in the table route handles edge anchoring.
@@ -115,9 +122,7 @@ export function Opponent({
           }}
         />
         {player.isTurn && placement !== "top" && placement !== "bottom" && (
-          <Crown
-            className="absolute -top-1 left-1/2 -translate-x-1/2 z-[2] h-5 w-5 fill-[color:var(--gold)] text-[color:var(--gold)] drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]"
-          />
+          <Crown className="absolute -top-1 left-1/2 -translate-x-1/2 z-[2] h-5 w-5 fill-[color:var(--gold)] text-[color:var(--gold)] drop-shadow-[0_2px_6px_rgba(0,0,0,0.6)]" />
         )}
       </div>
 
@@ -234,8 +239,14 @@ export function Opponent({
           </div>
           <div className="grid grid-cols-3 gap-1.5 text-center">
             <Stat icon={<Star className="h-3 w-3" />} label="Pořadí" value={player.rank ?? "—"} />
-            <Stat icon={<Trophy className="h-3 w-3" />} label="Výhry" value={player.wins ?? 0} />
+            <Stat icon={<Trophy className="h-3 w-3" />} label="Wins" value={player.wins ?? 0} />
             <Stat label="Karty" value={player.cardCount} />
+          </div>
+          <div className="mt-1.5 grid grid-cols-2 gap-1.5 text-center">
+            <Stat label="Games" value={player.gamesPlayed ?? 0} />
+            <Stat label="Cards played" value={player.cardsPlayed ?? 0} />
+            <Stat label="Cards drawn" value={player.cardsDrawn ?? 0} />
+            <Stat label="Wins" value={player.wins ?? 0} />
           </div>
         </div>
       </div>

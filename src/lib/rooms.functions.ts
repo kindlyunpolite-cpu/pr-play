@@ -229,6 +229,58 @@ async function initializeGame(roomId: string, players: { id: string }[], firstPl
   if (stateError) throw new Error("Failed to initialize game state");
 }
 
+async function incrementPlayerStats(
+  playerId: string,
+  roomId: string,
+  increments: {
+    gamesPlayed?: number;
+    wins?: number;
+    cardsDrawn?: number;
+    cardsPlayed?: number;
+    turnsTaken?: number;
+  },
+) {
+  const { error } = await supabaseAdmin.rpc("increment_player_stats", {
+    p_player_id: playerId,
+    p_room_id: roomId,
+    p_games_played: increments.gamesPlayed ?? 0,
+    p_wins: increments.wins ?? 0,
+    p_cards_drawn: increments.cardsDrawn ?? 0,
+    p_cards_played: increments.cardsPlayed ?? 0,
+    p_turns_taken: increments.turnsTaken ?? 0,
+  });
+  if (error) throw new Error("Failed to update player statistics");
+}
+
+async function recordFinishedGame(roomId: string, winnerPlayerId: string, finishedAt: string) {
+  const players = await loadTurnPlayers(roomId);
+
+  const { data: result, error: resultError } = await supabaseAdmin
+    .from("game_results")
+    .upsert(
+      {
+        room_id: roomId,
+        winner_player_id: winnerPlayerId,
+        finished_at: finishedAt,
+        player_count: players.length,
+      },
+      { onConflict: "room_id,finished_at", ignoreDuplicates: true },
+    )
+    .select("id")
+    .maybeSingle();
+  if (resultError) throw new Error("Failed to record game result");
+  if (!result) return;
+
+  await Promise.all(
+    players.map((roomPlayer) =>
+      incrementPlayerStats(roomPlayer.id, roomId, {
+        gamesPlayed: 1,
+        wins: roomPlayer.id === winnerPlayerId ? 1 : 0,
+      }),
+    ),
+  );
+}
+
 const NicknameSchema = z.string().trim().min(1).max(24);
 const AvatarSchema = z.string().trim().max(8).optional().nullable();
 const CodeSchema = z.string().trim().toUpperCase().length(5);
@@ -413,12 +465,24 @@ export const getRoomState = createServerFn({ method: "POST" })
       .select("id, nickname, avatar, is_host, is_ready, seat, joined_at, last_seen_at, connected")
       .eq("room_id", room.id)
       .order("seat", { ascending: true });
+    const { data: playerStats } = await supabaseAdmin
+      .from("player_stats")
+      .select("*")
+      .eq("room_id", room.id);
     const { data: gameState } = await supabaseAdmin
       .from("game_states")
       .select("*")
       .eq("room_id", room.id)
       .maybeSingle();
-    return { room, players: players ?? [], gameState: gameState ?? null };
+    const statsByPlayerId = new Map((playerStats ?? []).map((stats) => [stats.player_id, stats]));
+    return {
+      room,
+      players: (players ?? []).map((roomPlayer) => ({
+        ...roomPlayer,
+        stats: statsByPlayerId.get(roomPlayer.id) ?? null,
+      })),
+      gameState: gameState ?? null,
+    };
   });
 
 // ------------- reconnect -------------
@@ -613,6 +677,10 @@ export const drawCard = createServerFn({ method: "POST" })
         data.expectedTurnVersion,
       );
     }
+    await incrementPlayerStats(player.id, player.room_id, {
+      cardsDrawn: draw.cards.length,
+      turnsTaken: 1,
+    });
     return { ok: true };
   });
 
@@ -729,7 +797,13 @@ export const playCard = createServerFn({ method: "POST" })
         .from("rooms")
         .update({ status: "finished", finished_at: finishedAt })
         .eq("id", player.room_id);
+      await recordFinishedGame(player.room_id, player.id, finishedAt);
     }
+
+    await incrementPlayerStats(player.id, player.room_id, {
+      cardsPlayed: 1,
+      turnsTaken: 1,
+    });
 
     return { ok: true };
   });
