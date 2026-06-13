@@ -9,7 +9,7 @@ import { SectionTitle } from "@/components/ui-room/SectionTitle";
 import { SeatPortrait } from "@/components/ui-room/SeatPortrait";
 import { PortraitPicker } from "@/components/ui-room/PortraitPicker";
 import { PORTRAITS, getPortrait } from "@/lib/portraits";
-import { Plus, LogIn, Sparkles, Dice5, Shuffle, ArrowRight, Users, Loader2, LogOut } from "lucide-react";
+import { Plus, LogIn, Sparkles, Dice5, Shuffle, ArrowRight, Loader2, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createRoom, joinRoom } from "@/lib/rooms.functions";
 import {
