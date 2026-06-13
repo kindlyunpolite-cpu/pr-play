@@ -21,8 +21,10 @@ import {
 } from "@/lib/room-session";
 import { useReconnect } from "@/hooks/use-reconnect";
 import { toast } from "sonner";
+import { z } from "zod";
 
 export const Route = createFileRoute("/")({
+  validateSearch: z.object({ code: z.string().optional() }),
   head: () => ({
     meta: [
       { title: "Prší — Online karetní hra s přáteli" },
@@ -66,6 +68,13 @@ function randomPortraitId() {
 }
 
 function Lobby() {
+  const search = Route.useSearch();
+  const initialCode = search.code
+    ? search.code
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, "")
+        .slice(0, 5)
+    : "";
   const initialProfile = typeof window !== "undefined" ? loadProfile() : null;
   const [nick, setNick] = useState(() => initialProfile?.nickname ?? randomName());
   const [portraitId, setPortraitId] = useState(() =>
@@ -73,7 +82,7 @@ function Lobby() {
       ? initialProfile.avatar
       : randomPortraitId(),
   );
-  const [code, setCode] = useState("");
+  const [code, setCode] = useState(initialCode);
   const [submitting, setSubmitting] = useState<"create" | "join" | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const navigate = useNavigate();
@@ -84,9 +93,14 @@ function Lobby() {
     showExpiredError: false,
   });
 
+  useEffect(() => {
+    setCode(initialCode);
+  }, [initialCode]);
+
   const portrait = getPortrait(portraitId);
   const canCreate = !submitting && nick.trim().length >= 2;
   const canJoin = canCreate && code.length === 5;
+  const joinIntent = code.length > 0;
 
   const submit = async (mode: "create" | "join") => {
     const nickname = nick.trim();
@@ -224,9 +238,9 @@ function Lobby() {
           </div>
         </RoomPanel>
 
-        {/* Primary: New Game */}
+        {/* New Game */}
         <RoomButton
-          variant="primary"
+          variant={joinIntent ? "secondary" : "primary"}
           size="lg"
           block
           onClick={() => submit("create")}
@@ -248,7 +262,7 @@ function Lobby() {
           <div className="h-px flex-1 bg-white/8" />
         </div>
 
-        {/* Secondary: Join */}
+        {/* Join */}
         <RoomPanel className="space-y-2 p-3 sm:space-y-3 sm:p-4">
           <div>
             <label className="mb-1 block text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
@@ -271,7 +285,7 @@ function Lobby() {
             />
           </div>
           <RoomButton
-            variant="secondary"
+            variant={joinIntent ? "primary" : "secondary"}
             size="md"
             block
             onClick={() => submit("join")}

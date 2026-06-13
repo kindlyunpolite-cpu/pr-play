@@ -16,7 +16,7 @@ import {
   Check,
   Share2,
   Link as LinkIcon,
-  
+  UserX,
   AlertCircle,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -26,7 +26,7 @@ import { cn } from "@/lib/utils";
 import { clearSession } from "@/lib/room-session";
 import { useRoomRealtime, type RoomPlayer } from "@/hooks/use-room-realtime";
 import { useReconnect } from "@/hooks/use-reconnect";
-import { setReady, leaveRoom, startGame } from "@/lib/rooms.functions";
+import { setReady, leaveRoom, kickPlayer, startGame } from "@/lib/rooms.functions";
 import { toast } from "sonner";
 
 const searchSchema = z.object({ code: z.string().optional() });
@@ -71,10 +71,11 @@ function Waiting() {
   );
   const callSetReady = useServerFn(setReady);
   const callLeave = useServerFn(leaveRoom);
+  const callKick = useServerFn(kickPlayer);
   const callStart = useServerFn(startGame);
 
   const [copied, setCopied] = useState<"code" | "link" | null>(null);
-  const [busy, setBusy] = useState<"ready" | "start" | "leave" | null>(null);
+  const [busy, setBusy] = useState<"ready" | "start" | "leave" | `kick:${string}` | null>(null);
 
   const me = useMemo(
     () => players.find((p) => p.id === session?.playerId) ?? null,
@@ -85,15 +86,34 @@ function Waiting() {
     if (room?.status === "playing" || room?.status === "finished") navigate({ to: "/game" });
   }, [room?.status, navigate]);
 
+  useEffect(() => {
+    if (
+      code &&
+      !session &&
+      (reconnectStatus === "missing-session" || reconnectStatus === "expired-session")
+    ) {
+      navigate({ to: "/", search: { code }, replace: true });
+    }
+  }, [code, navigate, reconnectStatus, session]);
+
+  useEffect(() => {
+    if (reconnectStatus !== "ready" || !session || loading || !room || me) return;
+    clearSession();
+    toast.info(`Správce odpojil hráče ${session.nickname} z místnosti`);
+    navigate({ to: "/", replace: true });
+  }, [loading, me, navigate, reconnectStatus, room, session]);
+
   const inviteUrl =
     typeof window !== "undefined" && code ? `${window.location.origin}/waiting?code=${code}` : "";
 
-  const nonHostPlayers = players.filter((p) => !p.is_host);
-  const readyCount = nonHostPlayers.filter((p) => p.is_ready).length;
+  const connectedPlayers = players.filter((p) => p.connected !== false);
+  const nonHostPlayers = connectedPlayers.filter((p) => !p.is_host);
+  const nonHostReadyCount = nonHostPlayers.filter((p) => p.is_ready).length;
+  const readyCount = connectedPlayers.filter((p) => p.is_ready).length;
   const canStart =
     !!me?.is_host &&
-    players.length >= 2 &&
-    (nonHostPlayers.length === 0 || readyCount === nonHostPlayers.length);
+    connectedPlayers.length >= 2 &&
+    (nonHostPlayers.length === 0 || nonHostReadyCount === nonHostPlayers.length);
 
   const copyValue = async (value: string, key: "code" | "link") => {
     try {
@@ -171,6 +191,26 @@ function Waiting() {
     } finally {
       clearSession();
       navigate({ to: "/" });
+    }
+  };
+
+  const handleKick = async (targetPlayer: RoomPlayer) => {
+    if (!session || !me?.is_host || targetPlayer.id === session.playerId) return;
+    setBusy(`kick:${targetPlayer.id}`);
+    try {
+      await callKick({
+        data: {
+          playerId: session.playerId,
+          sessionToken: session.sessionToken,
+          targetPlayerId: targetPlayer.id,
+        },
+      });
+      toast.success(`Správce odpojil hráče ${targetPlayer.nickname} z místnosti`);
+      await resync();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Nepodařilo se odebrat hráče");
+    } finally {
+      setBusy(null);
     }
   };
 
@@ -354,7 +394,7 @@ function Waiting() {
             <SectionTitle
               right={
                 <span className="text-[11px] tabular-nums text-muted-foreground">
-                  {readyCount}/{nonHostPlayers.length} připraveno
+                  {readyCount}/{connectedPlayers.length} připraveno
                 </span>
               }
             >
@@ -366,13 +406,30 @@ function Waiting() {
                 const status = deriveStatus(p);
                 const meta = STATUS_META[status];
                 const isMe = p.id === session.playerId;
+                const canKick = !!me?.is_host && !isMe;
                 const portrait = getPortrait(p.avatar);
                 return (
                   <li key={p.id} className="animate-fade-in">
                     <RoomPanel
                       tone={p.is_ready ? "active" : "default"}
-                      className="flex flex-col items-center gap-2 p-3"
+                      className="relative flex flex-col items-center gap-2 p-3"
                     >
+                      {canKick && (
+                        <button
+                          type="button"
+                          onClick={() => handleKick(p)}
+                          disabled={busy === `kick:${p.id}`}
+                          className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-black/35 text-muted-foreground transition hover:border-red-400/40 hover:bg-red-500/10 hover:text-red-200 disabled:pointer-events-none disabled:opacity-50"
+                          aria-label={`Odebrat hráče ${p.nickname}`}
+                          title={`Odebrat ${p.nickname}`}
+                        >
+                          {busy === `kick:${p.id}` ? (
+                            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          ) : (
+                            <UserX className="h-3.5 w-3.5" />
+                          )}
+                        </button>
+                      )}
                       <div className="relative flex h-20 w-16 items-end justify-center">
                         <SeatPortrait
                           src={portrait.src}

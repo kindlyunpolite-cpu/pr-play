@@ -99,11 +99,11 @@ export function useRoomRealtime(code: string | undefined, session: RoomSession |
               return next.sort((a, b) => a.seat - b.seat);
             }
             if (payload.eventType === "UPDATE") {
-              return prev
-                .map((p) =>
-                  p.id === (payload.new as RoomPlayer).id ? (payload.new as RoomPlayer) : p,
-                )
-                .sort((a, b) => a.seat - b.seat);
+              const nextPlayer = payload.new as RoomPlayer;
+              const next = prev.some((p) => p.id === nextPlayer.id)
+                ? prev.map((p) => (p.id === nextPlayer.id ? nextPlayer : p))
+                : [...prev, nextPlayer];
+              return next.sort((a, b) => a.seat - b.seat);
             }
             if (payload.eventType === "DELETE") {
               return prev.filter((p) => p.id !== (payload.old as RoomPlayer).id);

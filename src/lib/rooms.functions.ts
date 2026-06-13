@@ -198,6 +198,52 @@ async function loadTurnPlayers(roomId: string) {
   return players;
 }
 
+async function normalizeWaitingRoom(roomId: string) {
+  const { data: room, error: roomErr } = await supabaseAdmin
+    .from("rooms")
+    .select("id, status, host_player_id")
+    .eq("id", roomId)
+    .maybeSingle();
+  if (roomErr || !room) return false;
+  if (room.status !== "waiting") return true;
+
+  const { data: roomPlayers, error: playersErr } = await supabaseAdmin
+    .from("players")
+    .select("id, is_host, seat")
+    .eq("room_id", roomId)
+    .order("seat", { ascending: true });
+  if (playersErr) throw new Error("Failed to normalize waiting room");
+
+  if (!roomPlayers || roomPlayers.length === 0) {
+    await supabaseAdmin.from("rooms").delete().eq("id", roomId);
+    return false;
+  }
+
+  const currentHost = roomPlayers.find((p) => p.id === room.host_player_id && p.is_host);
+  if (!currentHost) {
+    const nextHostId = roomPlayers[0].id;
+    const { error: clearHostErr } = await supabaseAdmin
+      .from("players")
+      .update({ is_host: false })
+      .eq("room_id", roomId);
+    if (clearHostErr) throw new Error("Failed to normalize waiting room host");
+
+    const { error: setHostErr } = await supabaseAdmin
+      .from("players")
+      .update({ is_host: true, is_ready: true })
+      .eq("id", nextHostId);
+    if (setHostErr) throw new Error("Failed to normalize waiting room host");
+
+    const { error: roomHostErr } = await supabaseAdmin
+      .from("rooms")
+      .update({ host_player_id: nextHostId })
+      .eq("id", roomId);
+    if (roomHostErr) throw new Error("Failed to normalize waiting room host");
+  }
+
+  return true;
+}
+
 async function initializeGame(roomId: string, players: { id: string }[], firstPlayerId: string) {
   const deck = shuffleDeck(createDeck());
   const hands: Record<string, CardData[]> = {};
@@ -382,6 +428,8 @@ export const joinRoom = createServerFn({ method: "POST" })
       .eq("code", data.code)
       .maybeSingle();
     if (roomErr || !room) throw new Error("Místnost nenalezena");
+    if (room.status === "waiting" && !(await normalizeWaitingRoom(room.id)))
+      throw new Error("Místnost nenalezena");
 
     const { data: existingPlayers, error: pErr } = await supabaseAdmin
       .from("players")
@@ -460,6 +508,7 @@ export const getRoomState = createServerFn({ method: "POST" })
       .eq("code", data.code)
       .maybeSingle();
     if (!room) return null;
+    if (room.status === "waiting" && !(await normalizeWaitingRoom(room.id))) return null;
     const { data: players } = await supabaseAdmin
       .from("players")
       .select("id, nickname, avatar, is_host, is_ready, seat, joined_at, last_seen_at, connected")
@@ -546,18 +595,33 @@ export const setReady = createServerFn({ method: "POST" })
 
 // ------------- leaveRoom -------------
 //
-// Soft-leave: mark the player as disconnected and not ready, but keep the
-// row so the seat is preserved and any in-flight game state stays valid.
-// The caller is expected to clear its local session so useReconnect does
-// not auto-return on the next mount. Host is intentionally NOT reassigned
-// and the room is NOT deleted here.
+// Waiting-room leave removes the player from the room, freeing their seat.
+// In-flight games keep the row disconnected so game state stays valid.
 
 export const leaveRoom = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
     z.object({ playerId: PlayerIdSchema, sessionToken: TokenSchema }).parse(input),
   )
   .handler(async ({ data }) => {
-    await authenticatePlayer(data.playerId, data.sessionToken);
+    const player = await authenticatePlayer(data.playerId, data.sessionToken);
+
+    const { data: room, error: roomErr } = await supabaseAdmin
+      .from("rooms")
+      .select("id, status")
+      .eq("id", player.room_id)
+      .maybeSingle();
+    if (roomErr || !room) throw new Error("Room no longer exists");
+
+    if (room.status === "waiting") {
+      const { error: deleteErr } = await supabaseAdmin
+        .from("players")
+        .delete()
+        .eq("id", player.id);
+      if (deleteErr) throw new Error("Failed to leave room");
+
+      await normalizeWaitingRoom(player.room_id);
+      return { ok: true };
+    }
 
     const { error } = await supabaseAdmin
       .from("players")
@@ -565,6 +629,50 @@ export const leaveRoom = createServerFn({ method: "POST" })
       .eq("id", data.playerId);
     if (error) throw new Error("Failed to leave room");
 
+    return { ok: true };
+  });
+
+// ------------- kickPlayer (host only, waiting room) -------------
+
+export const kickPlayer = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        playerId: PlayerIdSchema,
+        sessionToken: TokenSchema,
+        targetPlayerId: PlayerIdSchema,
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    const host = await authenticatePlayer(data.playerId, data.sessionToken);
+    if (!host.is_host) throw new Error("Only the host can remove players");
+    if (host.id === data.targetPlayerId) throw new Error("Host cannot remove themselves");
+
+    const { data: room, error: roomErr } = await supabaseAdmin
+      .from("rooms")
+      .select("id, status")
+      .eq("id", host.room_id)
+      .maybeSingle();
+    if (roomErr || !room) throw new Error("Room no longer exists");
+    if (room.status !== "waiting") throw new Error("Players can only be removed in the lobby");
+
+    const { data: target, error: targetErr } = await supabaseAdmin
+      .from("players")
+      .select("id, room_id")
+      .eq("id", data.targetPlayerId)
+      .maybeSingle();
+    if (targetErr || !target || target.room_id !== host.room_id) {
+      throw new Error("Player is not in this room");
+    }
+
+    const { error: deleteErr } = await supabaseAdmin
+      .from("players")
+      .delete()
+      .eq("id", data.targetPlayerId);
+    if (deleteErr) throw new Error("Failed to remove player");
+
+    await normalizeWaitingRoom(host.room_id);
     return { ok: true };
   });
 
@@ -582,6 +690,7 @@ export const startGame = createServerFn({ method: "POST" })
       .from("players")
       .select("id, is_ready, seat")
       .eq("room_id", player.room_id)
+      .eq("connected", true)
       .order("seat", { ascending: true });
     if (!players || players.length < 2) throw new Error("Need at least 2 players");
     if (!players.every((p) => p.is_ready || p.id === player.id))
