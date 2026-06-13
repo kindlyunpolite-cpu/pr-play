@@ -56,6 +56,7 @@ export interface GameState {
   active_suit: Suit | null;
   direction: 1 | -1;
   status: "playing" | "finished";
+  pending_draw: number;
   turn_version: number;
   last_action_id: string | null;
   last_action_player_id: string | null;
