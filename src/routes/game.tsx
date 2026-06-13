@@ -433,12 +433,29 @@ function Game() {
                     </span>
                   </div>
 
-                  <div className="absolute top-2 right-2 z-20 flex items-center gap-1.5 rounded-full bg-black/55 backdrop-blur-md px-2 py-0.5 ring-1 ring-white/8">
-                    <span className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground">
-                      Barva
-                    </span>
-                    <div className="rounded-full bg-[color:var(--gold)]/10 ring-1 ring-[color:var(--gold)]/35 px-1 py-0.5">
-                      <SuitBadge suit={activeSuit} size="sm" />
+                  <div
+                    className={cn(
+                      "absolute top-2 right-2 z-20 flex items-center gap-2 rounded-full bg-black/70 backdrop-blur-md pl-1.5 pr-3 py-1 ring-2 shadow-lg",
+                      isRedSuit(activeSuit)
+                        ? "ring-[color:var(--suit-red)]/70 shadow-[0_0_18px_-4px_oklch(0.62_0.22_25/0.7)]"
+                        : "ring-[color:var(--gold)]/60 shadow-[0_0_18px_-4px_oklch(0.82_0.14_85/0.6)]",
+                    )}
+                  >
+                    <div
+                      className={cn(
+                        "flex h-7 w-7 items-center justify-center rounded-full bg-[color:var(--card-face)]",
+                        isRedSuit(activeSuit) ? "text-[color:var(--suit-red)]" : "text-[color:var(--suit-dark)]",
+                      )}
+                    >
+                      <SuitIcon suit={activeSuit} className="h-4 w-4" />
+                    </div>
+                    <div className="flex flex-col leading-tight">
+                      <span className="text-[8px] uppercase tracking-[0.18em] text-muted-foreground">
+                        Barva
+                      </span>
+                      <span className="text-[12px] font-bold tracking-wide text-foreground">
+                        {SUIT_LABEL[activeSuit]}
+                      </span>
                     </div>
                   </div>
 
