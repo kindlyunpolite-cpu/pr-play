@@ -45,10 +45,16 @@ function toHands(value: unknown): Record<string, CardData[]> {
 }
 
 type ProcessedTurnAction = { playerId: string; signature: string };
+type RematchVotes = Record<string, boolean>;
 
 function toProcessedActions(value: unknown): Record<string, ProcessedTurnAction> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return value as Record<string, ProcessedTurnAction>;
+}
+
+function toRematchVotes(value: unknown): RematchVotes {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return value as RematchVotes;
 }
 
 function isPlayable(
@@ -149,6 +155,7 @@ async function loadGameState(roomId: string) {
     discard_pile: toCardArray(gameState.discard_pile),
     hands: toHands(gameState.hands),
     processed_actions: toProcessedActions(gameState.processed_actions),
+    rematch_votes: toRematchVotes("rematch_votes" in gameState ? gameState.rematch_votes : null),
     direction: gameState.direction === -1 ? -1 : 1,
     active_suit: gameState.active_suit as Suit | null,
     pending_draw: gameState.pending_draw ?? 0,
@@ -189,6 +196,37 @@ async function loadTurnPlayers(roomId: string) {
     .order("seat", { ascending: true });
   if (error || !players || players.length < 2) throw new Error("Could not load players");
   return players;
+}
+
+async function initializeGame(roomId: string, players: { id: string }[], firstPlayerId: string) {
+  const deck = shuffleDeck(createDeck());
+  const hands: Record<string, CardData[]> = {};
+  for (const roomPlayer of players) {
+    hands[roomPlayer.id] = deck.splice(0, DEAL_COUNT);
+  }
+
+  const firstDiscard = deck.shift();
+  if (!firstDiscard) throw new Error("Could not initialize deck");
+
+  const { error: stateError } = await supabaseAdmin.from("game_states").upsert({
+    room_id: roomId,
+    deck: deck as unknown as Json,
+    discard_pile: [firstDiscard] as unknown as Json,
+    hands: hands as unknown as Json,
+    current_player_id: firstPlayerId,
+    active_suit: firstDiscard.suit,
+    direction: 1,
+    status: "playing",
+    pending_draw: 0,
+    turn_version: 0,
+    last_action_id: null,
+    last_action_player_id: null,
+    last_action_signature: null,
+    processed_actions: {},
+    rematch_votes: {},
+    updated_at: new Date().toISOString(),
+  });
+  if (stateError) throw new Error("Failed to initialize game state");
 }
 
 const NicknameSchema = z.string().trim().min(1).max(24);
@@ -372,7 +410,7 @@ export const getRoomState = createServerFn({ method: "POST" })
     if (!room) return null;
     const { data: players } = await supabaseAdmin
       .from("players")
-      .select("id, nickname, avatar, is_host, is_ready, seat, joined_at, last_seen_at")
+      .select("id, nickname, avatar, is_host, is_ready, seat, joined_at, last_seen_at, connected")
       .eq("room_id", room.id)
       .order("seat", { ascending: true });
     const { data: gameState } = await supabaseAdmin
@@ -484,33 +522,7 @@ export const startGame = createServerFn({ method: "POST" })
     if (!players || players.length < 2) throw new Error("Need at least 2 players");
     if (!players.every((p) => p.is_ready)) throw new Error("All players must be ready");
 
-    const deck = shuffleDeck(createDeck());
-    const hands: Record<string, CardData[]> = {};
-    for (const roomPlayer of players) {
-      hands[roomPlayer.id] = deck.splice(0, DEAL_COUNT);
-    }
-
-    const firstDiscard = deck.shift();
-    if (!firstDiscard) throw new Error("Could not initialize deck");
-
-    const { error: stateError } = await supabaseAdmin.from("game_states").upsert({
-      room_id: player.room_id,
-      deck: deck as unknown as Json,
-      discard_pile: [firstDiscard] as unknown as Json,
-      hands: hands as unknown as Json,
-      current_player_id: players[0].id,
-      active_suit: firstDiscard.suit,
-      direction: 1,
-      status: "playing",
-      pending_draw: 0,
-      turn_version: 0,
-      last_action_id: null,
-      last_action_player_id: null,
-      last_action_signature: null,
-      processed_actions: {},
-      updated_at: new Date().toISOString(),
-    });
-    if (stateError) throw new Error("Failed to initialize game state");
+    await initializeGame(player.room_id, players, players[0].id);
 
     const { error } = await supabaseAdmin
       .from("rooms")
@@ -721,6 +733,73 @@ export const playCard = createServerFn({ method: "POST" })
 
     return { ok: true };
   });
+
+// ------------- rematch -------------
+
+async function updateRematchVote(playerId: string, sessionToken: string, accepted: boolean) {
+  const player = await authenticatePlayer(playerId, sessionToken);
+  const gameState = await loadGameState(player.room_id);
+  if (gameState.status !== "finished") {
+    throw actionError("invalid", "rematch voting is only available after the game finishes");
+  }
+
+  const votes = { ...gameState.rematch_votes, [player.id]: accepted };
+  const { error } = await supabaseAdmin
+    .from("game_states")
+    .update({ rematch_votes: votes as unknown as Json, updated_at: new Date().toISOString() })
+    .eq("room_id", player.room_id)
+    .eq("status", "finished");
+  if (error) throw new Error("Failed to update rematch vote");
+
+  if (!accepted) return { ok: true, started: false };
+
+  const { data: connectedPlayers, error: playersError } = await supabaseAdmin
+    .from("players")
+    .select("id, seat")
+    .eq("room_id", player.room_id)
+    .eq("connected", true)
+    .order("seat", { ascending: true });
+  if (playersError || !connectedPlayers || connectedPlayers.length < 2) {
+    return { ok: true, started: false };
+  }
+
+  if (!connectedPlayers.every((roomPlayer) => votes[roomPlayer.id] === true)) {
+    return { ok: true, started: false };
+  }
+
+  const previousStarterId =
+    gameState.current_player_id &&
+    connectedPlayers.some((roomPlayer) => roomPlayer.id === gameState.current_player_id)
+      ? gameState.current_player_id
+      : connectedPlayers[0].id;
+  const firstPlayerId = nextPlayerId(connectedPlayers, previousStarterId, 1);
+
+  const { data: claimedRoom, error: roomError } = await supabaseAdmin
+    .from("rooms")
+    .update({ status: "playing", started_at: new Date().toISOString(), finished_at: null })
+    .eq("id", player.room_id)
+    .eq("status", "finished")
+    .select("id")
+    .maybeSingle();
+  if (roomError) throw new Error("Failed to start rematch");
+  if (!claimedRoom) return { ok: true, started: false };
+
+  await initializeGame(player.room_id, connectedPlayers, firstPlayerId);
+
+  return { ok: true, started: true };
+}
+
+export const acceptRematch = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z.object({ playerId: PlayerIdSchema, sessionToken: TokenSchema }).parse(input),
+  )
+  .handler(async ({ data }) => updateRematchVote(data.playerId, data.sessionToken, true));
+
+export const declineRematch = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z.object({ playerId: PlayerIdSchema, sessionToken: TokenSchema }).parse(input),
+  )
+  .handler(async ({ data }) => updateRematchVote(data.playerId, data.sessionToken, false));
 
 // ------------- sendMessage -------------
 

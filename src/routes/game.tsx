@@ -19,7 +19,7 @@ import { cn } from "@/lib/utils";
 import { getPortrait, PORTRAITS } from "@/lib/portraits";
 import { useReconnect } from "@/hooks/use-reconnect";
 import { useRoomRealtime } from "@/hooks/use-room-realtime";
-import { drawCard, playCard, leaveRoom } from "@/lib/rooms.functions";
+import { acceptRematch, declineRematch, drawCard, playCard, leaveRoom } from "@/lib/rooms.functions";
 import { clearSession } from "@/lib/room-session";
 import { toast } from "sonner";
 
@@ -64,7 +64,10 @@ function Game() {
   const callDrawCard = useServerFn(drawCard);
   const callPlayCard = useServerFn(playCard);
   const callLeave = useServerFn(leaveRoom);
+  const callAcceptRematch = useServerFn(acceptRematch);
+  const callDeclineRematch = useServerFn(declineRematch);
   const [leaving, setLeaving] = useState(false);
+  const [busyRematch, setBusyRematch] = useState<"accept" | "decline" | null>(null);
 
   const handleLeave = async () => {
     if (!session) {
@@ -111,6 +114,11 @@ function Game() {
   const activePlayer = players.find((p) => p.id === gameState?.current_player_id) ?? me;
   const gameFinished = room?.status === "finished" || gameState?.status === "finished";
   const winner = gameFinished ? players.find((p) => p.id === gameState?.current_player_id) : null;
+  const connectedPlayers = players.filter((p) => p.connected !== false);
+  const rematchVotes = gameState?.rematch_votes ?? {};
+  const acceptedRematchCount = connectedPlayers.filter((p) => rematchVotes[p.id] === true).length;
+  const rematchVoteTotal = connectedPlayers.length;
+  const myRematchVote = session ? rematchVotes[session.playerId] : undefined;
   const aceSkip = useMemo(() => {
     if (gameFinished || gameState?.status !== "playing" || topDiscard.rank !== "A") return null;
     if (!gameState.last_action_id || !gameState.last_action_player_id) return null;
@@ -208,6 +216,27 @@ function Game() {
       : selectedCard.rank === "Q" ||
         selectedCard.suit === activeSuit ||
         selectedCard.rank === topDiscard.rank);
+
+  const submitRematchVote = async (accepted: boolean) => {
+    if (!session || !gameFinished || busyRematch) return;
+    setBusyRematch(accepted ? "accept" : "decline");
+    try {
+      const result = accepted
+        ? await callAcceptRematch({
+            data: { playerId: session.playerId, sessionToken: session.sessionToken },
+          })
+        : await callDeclineRematch({
+            data: { playerId: session.playerId, sessionToken: session.sessionToken },
+          });
+      if (result.started) {
+        toast.success("Odveta začíná.");
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : "Nepodařilo se uložit volbu odvety");
+    } finally {
+      setBusyRematch(null);
+    }
+  };
 
   const handleDraw = async () => {
     if (!session || !gameState || !canAct || busyActionRef.current) return;
@@ -455,6 +484,29 @@ function Game() {
                       </div>
                       <div className="mt-1 text-sm text-muted-foreground">
                         {winner ? `${winner.nickname} vyhrál/a partii.` : "Partie byla ukončena."}
+                      </div>
+                      <div className="mt-3 text-xs text-muted-foreground">
+                        Odveta: {acceptedRematchCount}/{rematchVoteTotal} připojených hráčů souhlasí.
+                      </div>
+                      <div className="mt-3 flex justify-center gap-2">
+                        <RoomButton
+                          size="sm"
+                          variant="primary"
+                          onClick={() => void submitRematchVote(true)}
+                          disabled={busyRematch !== null || myRematchVote === true}
+                          loading={busyRematch === "accept"}
+                        >
+                          {myRematchVote === true ? "Souhlas odeslán" : "Chci odvetu"}
+                        </RoomButton>
+                        <RoomButton
+                          size="sm"
+                          variant="secondary"
+                          onClick={() => void submitRematchVote(false)}
+                          disabled={busyRematch !== null || myRematchVote === false}
+                          loading={busyRematch === "decline"}
+                        >
+                          Ne teď
+                        </RoomButton>
                       </div>
                     </div>
                   )}

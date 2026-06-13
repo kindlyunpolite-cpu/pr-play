@@ -22,6 +22,7 @@ export interface RoomPlayer {
   seat: number;
   joined_at: string;
   last_seen_at: string;
+  connected?: boolean;
 }
 
 export interface RoomMessage {
@@ -62,6 +63,7 @@ export interface GameState {
   last_action_player_id: string | null;
   last_action_signature: string | null;
   processed_actions: Record<string, { playerId: string; signature: string }>;
+  rematch_votes?: Record<string, boolean>;
   created_at: string;
   updated_at: string;
 }
