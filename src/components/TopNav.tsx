@@ -30,9 +30,9 @@ export function TopNav({
           </span>
         </Link>
 
-        {/* Center: room code or nav */}
+        {/* Center: room code */}
         <div className="justify-self-center">
-          {roomCode ? (
+          {roomCode && (
             <div className="control-pill flex items-center gap-2 pl-2.5 pr-1 py-0.5">
               <span className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground/80 hidden sm:inline">
                 Místnost
@@ -41,11 +41,6 @@ export function TopNav({
                 {roomCode}
               </span>
             </div>
-          ) : (
-            <nav className="flex items-center gap-1">
-              <NavBtn to="/" active={path === "/"} icon={<Home className="h-3.5 w-3.5" />} label="Lobby" />
-              <NavBtn to="/waiting" active={path === "/waiting"} icon={<Users className="h-3.5 w-3.5" />} label="Místnost" />
-            </nav>
           )}
         </div>
 
