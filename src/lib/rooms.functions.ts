@@ -169,23 +169,23 @@ async function resolveFailedTurnMutation(
   actionId: string,
   signature: string,
   expectedTurnVersion: number,
-): Promise<{ ok: true; duplicate: true }> {
+): Promise<{ ok: true; duplicate?: true; stale?: true; finished?: true }> {
   const latest = await loadGameState(roomId);
 
   const duplicate = resolveDuplicateAction(latest.processed_actions, actionId, playerId, signature);
   if (duplicate) return duplicate;
 
   if (latest.status !== "playing") {
-    throw actionError("finished", "no further moves are allowed");
+    return { ok: true, finished: true };
   }
   if (latest.current_player_id !== playerId) {
-    throw actionError("stale", "it is no longer your turn");
+    return { ok: true, stale: true };
   }
   if (latest.turn_version !== expectedTurnVersion) {
-    throw actionError("stale", "your game state is out of date; refresh before retrying");
+    return { ok: true, stale: true };
   }
 
-  throw actionError("stale", "the move could not be applied because the turn changed");
+  return { ok: true, stale: true };
 }
 
 async function loadTurnPlayers(roomId: string) {
@@ -622,13 +622,12 @@ export const drawCard = createServerFn({ method: "POST" })
       signature,
     );
     if (duplicate) return duplicate;
-    if (gameState.status !== "playing")
-      throw actionError("finished", "no further moves are allowed");
+    if (gameState.status !== "playing") return { ok: true, finished: true };
     if (gameState.current_player_id !== player.id) {
-      throw actionError("stale", "it is not your turn anymore");
+      return { ok: true, stale: true };
     }
     if (gameState.turn_version !== data.expectedTurnVersion) {
-      throw actionError("stale", "your game state is out of date; refresh before retrying");
+      return { ok: true, stale: true };
     }
 
     const players = await loadTurnPlayers(player.room_id);
@@ -715,13 +714,12 @@ export const playCard = createServerFn({ method: "POST" })
       signature,
     );
     if (duplicate) return duplicate;
-    if (gameState.status !== "playing")
-      throw actionError("finished", "no further moves are allowed");
+    if (gameState.status !== "playing") return { ok: true, finished: true };
     if (gameState.current_player_id !== player.id) {
-      throw actionError("stale", "it is not your turn anymore");
+      return { ok: true, stale: true };
     }
     if (gameState.turn_version !== data.expectedTurnVersion) {
-      throw actionError("stale", "your game state is out of date; refresh before retrying");
+      return { ok: true, stale: true };
     }
 
     const topCard = gameState.discard_pile.at(-1);
