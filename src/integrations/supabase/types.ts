@@ -27,7 +27,6 @@ export type Database = {
           last_action_signature: string | null
           pending_draw: number
           processed_actions: Json
-          rematch_votes: Json
           room_id: string
           status: string
           turn_version: number
@@ -45,7 +44,6 @@ export type Database = {
           last_action_signature?: string | null
           pending_draw?: number
           processed_actions?: Json
-          rematch_votes?: Json
           room_id: string
           status?: string
           turn_version?: number
@@ -63,7 +61,6 @@ export type Database = {
           last_action_signature?: string | null
           pending_draw?: number
           processed_actions?: Json
-          rematch_votes?: Json
           room_id?: string
           status?: string
           turn_version?: number
