@@ -354,7 +354,7 @@ function Waiting() {
             <SectionTitle
               right={
                 <span className="text-[11px] tabular-nums text-muted-foreground">
-                  {readyCount}/{players.length} připraveno
+                  {readyCount}/{nonHostPlayers.length} připraveno
                 </span>
               }
             >
