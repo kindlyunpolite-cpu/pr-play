@@ -255,12 +255,24 @@ function Lobby() {
         </RoomPanel>
 
         {/* Footer hint */}
-        <div className="mt-5 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-          <Users className="h-3.5 w-3.5" />
-          <span>Až 4 hráči ·</span>
-          <Link to="/game" className="underline gold-text">
-            náhled stolu
-          </Link>
+        <div className="mt-5 flex flex-col items-center gap-3">
+          <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
+            <Users className="h-3.5 w-3.5" />
+            <span>Až 4 hráči ·</span>
+            <Link to="/game" className="underline gold-text">
+              náhled stolu
+            </Link>
+          </div>
+          {hasSavedProfile && (
+            <button
+              type="button"
+              onClick={handleLogout}
+              className="inline-flex items-center gap-1.5 rounded-full border border-white/8 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground transition hover:border-[color:var(--gold)]/40 hover:text-[color:var(--gold)]"
+            >
+              <LogOut className="h-3 w-3" />
+              Odhlásit
+            </button>
+          )}
         </div>
       </main>
     </RoomShell>
