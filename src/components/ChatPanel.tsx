@@ -37,7 +37,7 @@ export function ChatPanel({
   session: RoomSession | null;
 }) {
   const [open, setOpen] = useState(false);
-  const [collapsedDesktop, setCollapsedDesktop] = useState(false);
+  const [collapsedDesktop, setCollapsedDesktop] = useState(true);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [unread, setUnread] = useState(0);
