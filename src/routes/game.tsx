@@ -15,6 +15,8 @@ import {
 } from "@/components/cards";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { AlertCircle, Loader2, Timer, Sparkles, Trophy } from "lucide-react";
+import { SUIT_LABEL, isRedSuit } from "@/components/cards/types";
+import { SuitIcon } from "@/components/cards/SuitIcon";
 import { cn } from "@/lib/utils";
 import { getPortrait, PORTRAITS } from "@/lib/portraits";
 import { useReconnect } from "@/hooks/use-reconnect";
