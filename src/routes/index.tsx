@@ -8,7 +8,8 @@ import { RoomButton } from "@/components/ui-room/RoomButton";
 import { SeatPortrait } from "@/components/ui-room/SeatPortrait";
 import { PORTRAITS, getPortrait } from "@/lib/portraits";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Sparkles, Dice5, Shuffle, ArrowRight, Loader2, LogOut, LogIn, Check } from "lucide-react";
+import { Sparkles, Dice5, Dices, ArrowRight, Loader2, LogOut, LogIn, Check, Pencil } from "lucide-react";
+import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { createRoom, joinRoom } from "@/lib/rooms.functions";
 import {
@@ -175,7 +176,7 @@ function Lobby() {
             <button
               type="button"
               onClick={() => setPickerOpen(true)}
-              className="group relative flex h-20 w-16 shrink-0 items-end justify-center rounded-xl border border-white/10 bg-black/30 transition hover:border-[color:var(--gold)]/50 active:scale-95"
+              className="group relative flex h-20 w-16 shrink-0 cursor-pointer items-end justify-center rounded-xl border-2 border-white/10 bg-black/30 transition hover:border-[color:var(--gold)]/60 hover:shadow-[0_0_18px_-6px_oklch(0.82_0.14_85/0.35)] active:scale-95"
               aria-label="Vybrat postavu"
             >
               <SeatPortrait
@@ -185,8 +186,8 @@ function Lobby() {
                 size="sm"
                 active
               />
-              <span className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 rounded-full bg-[color:var(--gold)] px-2 py-0.5 text-[8px] font-bold uppercase tracking-widest text-[color:var(--primary-foreground)] shadow">
-                Změnit
+              <span className="absolute -right-1 -bottom-1 flex h-5 w-5 items-center justify-center rounded-full border border-white/20 bg-[color:var(--gold)] text-[color:var(--primary-foreground)] shadow transition group-hover:scale-110">
+                <Pencil className="h-2.5 w-2.5" strokeWidth={2.5} />
               </span>
             </button>
 
@@ -202,14 +203,23 @@ function Lobby() {
                   placeholder="Tvoje jméno"
                   className="control-pill w-full px-3 py-2.5 text-base outline-none transition focus:border-[color:var(--gold)]/50"
                 />
-                <button
-                  type="button"
-                  onClick={() => setNick(randomName(nick.trim()))}
-                  className="shrink-0 flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 text-muted-foreground transition hover:text-[color:var(--gold)] hover:border-[color:var(--gold)]/50 active:scale-95"
-                  aria-label="Náhodná přezdívka"
-                >
-                  <Shuffle className="h-4 w-4" />
-                </button>
+                <TooltipProvider delayDuration={200}>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <button
+                        type="button"
+                        onClick={() => setNick(randomName(nick.trim()))}
+                        className="shrink-0 flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 text-muted-foreground transition hover:text-[color:var(--gold)] hover:border-[color:var(--gold)]/50 active:scale-95"
+                        aria-label="Náhodná přezdívka"
+                      >
+                        <Dices className="h-5 w-5" />
+                      </button>
+                    </TooltipTrigger>
+                    <TooltipContent side="top">
+                      <p>Náhodná přezdívka</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </div>
           </div>
