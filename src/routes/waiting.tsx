@@ -88,8 +88,12 @@ function Waiting() {
   const inviteUrl =
     typeof window !== "undefined" && code ? `${window.location.origin}/waiting?code=${code}` : "";
 
-  const readyCount = players.filter((p) => p.is_ready).length;
-  const canStart = !!me?.is_host && players.length >= 2 && readyCount === players.length;
+  const nonHostPlayers = players.filter((p) => !p.is_host);
+  const readyCount = nonHostPlayers.filter((p) => p.is_ready).length;
+  const canStart =
+    !!me?.is_host &&
+    players.length >= 2 &&
+    (nonHostPlayers.length === 0 || readyCount === nonHostPlayers.length);
 
   const copyValue = async (value: string, key: "code" | "link") => {
     try {
