@@ -10,7 +10,6 @@ export function TopNav({
   onLeave?: () => void;
   leaving?: boolean;
 }) {
-  const path = useRouterState({ select: (s) => s.location.pathname });
   return (
     <header className="sticky top-0 z-30 border-b border-[color:var(--gold)]/12 bg-gradient-to-b from-black/90 via-background/74 to-background/44 backdrop-blur-xl shadow-[0_10px_24px_-18px_rgba(0,0,0,0.95)]">
       <div className="mx-auto grid h-12 max-w-6xl grid-cols-[1fr_auto_1fr] items-center px-3 sm:px-5">
