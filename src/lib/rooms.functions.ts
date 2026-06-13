@@ -55,11 +55,16 @@ function isPlayable(card: CardData, topCard: CardData, activeSuit: Suit | null) 
   return card.suit === (activeSuit ?? topCard.suit) || card.rank === topCard.rank;
 }
 
-function nextPlayerId(players: { id: string }[], currentPlayerId: string, direction: number) {
+function nextPlayerId(
+  players: { id: string }[],
+  currentPlayerId: string,
+  direction: number,
+  steps = 1,
+) {
   const index = players.findIndex((p) => p.id === currentPlayerId);
   if (index === -1) throw new Error("Current player is no longer in the game");
   const step = direction === -1 ? -1 : 1;
-  return players[(index + step + players.length) % players.length].id;
+  return players[(index + step * steps + players.length * steps) % players.length].id;
 }
 
 function actionError(kind: "stale" | "invalid" | "finished", detail: string) {
@@ -634,7 +639,7 @@ export const playCard = createServerFn({ method: "POST" })
         hands: hands as unknown as Json,
         current_player_id: finished
           ? player.id
-          : nextPlayerId(players, player.id, gameState.direction),
+          : nextPlayerId(players, player.id, gameState.direction, card.rank === "A" ? 2 : 1),
         active_suit: card.suit,
         status: finished ? "finished" : "playing",
         turn_version: gameState.turn_version + 1,
