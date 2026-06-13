@@ -256,13 +256,6 @@ function Lobby() {
 
         {/* Footer hint */}
         <div className="mt-5 flex flex-col items-center gap-3">
-          <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-            <Users className="h-3.5 w-3.5" />
-            <span>Až 4 hráči ·</span>
-            <Link to="/game" className="underline gold-text">
-              náhled stolu
-            </Link>
-          </div>
           {hasSavedProfile && (
             <button
               type="button"
