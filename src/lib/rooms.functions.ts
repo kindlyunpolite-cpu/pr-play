@@ -58,6 +58,7 @@ function isPlayable(
   pendingDraw: number,
 ) {
   if (pendingDraw > 0) return card.rank === "7";
+  if (card.rank === "Q") return true;
   return card.suit === (activeSuit ?? topCard.suit) || card.rank === topCard.rank;
 }
 
@@ -79,8 +80,11 @@ function actionError(kind: "stale" | "invalid" | "finished", detail: string) {
   return new Error(`${prefix}: ${detail}`);
 }
 
-function actionSignature(action: "draw" | "play", payload?: { cardIndex?: number }) {
-  return payload ? `${action}:${payload.cardIndex ?? ""}` : action;
+function actionSignature(
+  action: "draw" | "play",
+  payload?: { cardIndex?: number; chosenSuit?: Suit },
+) {
+  return payload ? `${action}:${payload.cardIndex ?? ""}:${payload.chosenSuit ?? ""}` : action;
 }
 
 function resolveDuplicateAction(
@@ -572,7 +576,7 @@ export const drawCard = createServerFn({ method: "POST" })
         discard_pile: draw.discardPile as unknown as Json,
         hands: hands as unknown as Json,
         current_player_id: nextPlayerId(players, player.id, gameState.direction),
-        active_suit: draw.discardPile.at(-1)?.suit ?? gameState.active_suit,
+        active_suit: gameState.active_suit,
         pending_draw: 0,
         turn_version: gameState.turn_version + 1,
         last_action_id: data.actionId,
@@ -611,12 +615,16 @@ export const playCard = createServerFn({ method: "POST" })
         actionId: ActionIdSchema,
         expectedTurnVersion: TurnVersionSchema,
         cardIndex: z.number().int().min(0),
+        chosenSuit: z.enum(SUITS as [Suit, ...Suit[]]).optional(),
       })
       .parse(input),
   )
   .handler(async ({ data }) => {
     const player = await authenticatePlayer(data.playerId, data.sessionToken);
-    const signature = actionSignature("play", { cardIndex: data.cardIndex });
+    const signature = actionSignature("play", {
+      cardIndex: data.cardIndex,
+      chosenSuit: data.chosenSuit,
+    });
     const gameState = await loadGameState(player.room_id);
 
     const duplicate = resolveDuplicateAction(
@@ -650,6 +658,12 @@ export const playCard = createServerFn({ method: "POST" })
           : "card is not playable on the current discard",
       );
     }
+    if (card.rank === "Q" && !data.chosenSuit) {
+      throw actionError("invalid", "queen requires choosing a suit");
+    }
+    if (card.rank !== "Q" && data.chosenSuit) {
+      throw actionError("invalid", "chosen suit is only allowed for queens");
+    }
 
     hands[player.id] = hand;
     const discardPile = [...gameState.discard_pile, card];
@@ -671,7 +685,7 @@ export const playCard = createServerFn({ method: "POST" })
         current_player_id: finished
           ? player.id
           : nextPlayerId(players, player.id, gameState.direction, card.rank === "A" ? 2 : 1),
-        active_suit: card.suit,
+        active_suit: data.chosenSuit ?? card.suit,
         pending_draw: finished ? 0 : pendingDraw,
         status: finished ? "finished" : "playing",
         turn_version: gameState.turn_version + 1,
