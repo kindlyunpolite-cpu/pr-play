@@ -20,7 +20,7 @@ function genToken() {
 
 const SUITS: Suit[] = ["hearts", "diamonds", "clubs", "spades"];
 const RANKS: Rank[] = ["7", "8", "9", "10", "J", "Q", "K", "A"];
-const DEAL_COUNT = 5;
+const DEAL_COUNT = 4;
 
 function createDeck(): CardData[] {
   return SUITS.flatMap((suit) => RANKS.map((rank) => ({ suit, rank })));
