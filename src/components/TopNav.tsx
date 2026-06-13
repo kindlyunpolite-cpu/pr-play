@@ -1,5 +1,5 @@
-import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, Users, Settings, LogOut, Loader2 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { Settings, LogOut, Loader2 } from "lucide-react";
 
 export function TopNav({
   roomCode,
