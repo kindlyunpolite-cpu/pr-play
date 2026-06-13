@@ -22,8 +22,11 @@ export type Database = {
           direction: number
           discard_pile: Json
           hands: Json
+          pending_draw: number
+          processed_actions: Json
           room_id: string
           status: string
+          turn_version: number
           updated_at: string
         }
         Insert: {
@@ -33,8 +36,11 @@ export type Database = {
           direction?: number
           discard_pile?: Json
           hands?: Json
+          pending_draw?: number
+          processed_actions?: Json
           room_id: string
           status?: string
+          turn_version?: number
           updated_at?: string
         }
         Update: {
@@ -44,8 +50,11 @@ export type Database = {
           direction?: number
           discard_pile?: Json
           hands?: Json
+          pending_draw?: number
+          processed_actions?: Json
           room_id?: string
           status?: string
+          turn_version?: number
           updated_at?: string
         }
         Relationships: [
