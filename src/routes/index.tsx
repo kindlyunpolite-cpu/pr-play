@@ -98,6 +98,25 @@ function Lobby() {
 
   const randomize = () => setNick(NAME_POOL[Math.floor(Math.random() * NAME_POOL.length)]);
 
+  // Persist profile preferences as the user edits them, so they survive a
+  // page refresh even without joining a room.
+  useEffect(() => {
+    const trimmed = nick.trim();
+    if (!trimmed) return;
+    saveProfile({ nickname: trimmed, avatar: portraitId });
+  }, [nick, portraitId]);
+
+  const hasSavedProfile =
+    typeof window !== "undefined" && (loadProfile() !== null || initialProfile !== null);
+
+  const handleLogout = () => {
+    clearSession();
+    clearProfile();
+    setNick("");
+    setPortraitId(PORTRAITS[0].id);
+    setCode("");
+  };
+
   if (reconnectStatus === "checking") {
     return (
       <RoomShell className="items-center justify-center">
