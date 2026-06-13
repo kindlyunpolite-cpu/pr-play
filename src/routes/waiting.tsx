@@ -415,33 +415,13 @@ function Waiting() {
 
               {Array.from({ length: slots }).map((_, i) => (
                 <li key={`empty-${i}`}>
-                  <RoomPanel
-                    tone="muted"
-                    className="relative flex flex-col items-center justify-center gap-2 p-3 overflow-hidden h-full min-h-[8.5rem]"
-                  >
-                    <span
-                      className="pointer-events-none absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-[color:var(--gold)]/8 to-transparent animate-[seat-scan_2.4s_ease-in-out_infinite]"
-                      style={{ animationDelay: `${i * 400}ms` }}
-                    />
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-black/40 ring-1 ring-white/10">
-                      <UserPlus className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <span className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">
-                      Volné místo
-                    </span>
-                  </RoomPanel>
+                  <div className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-white/8 bg-black/15 px-2 py-2 text-[10px] uppercase tracking-[0.16em] text-muted-foreground/60">
+                    <UserPlus className="h-3 w-3" />
+                    Volné
+                  </div>
                 </li>
               ))}
             </ul>
-
-            <button
-              onClick={handleLeave}
-              disabled={busy === "leave"}
-              className="mt-4 mx-auto flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              Opustit místnost
-            </button>
           </section>
         </main>
 
