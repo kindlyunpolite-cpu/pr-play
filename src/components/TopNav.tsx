@@ -43,11 +43,11 @@ export function TopNav({
 
         {/* Right action */}
         <div className="justify-self-end">
-          {roomCode ? (
+          {onLeave ? (
             <button
               type="button"
               onClick={onLeave}
-              disabled={leaving || !onLeave}
+              disabled={leaving}
               className="control-pill group inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-foreground/90 hover:border-[color:var(--gold)]/50 hover:text-[color:var(--gold)] transition-all disabled:opacity-60"
             >
               <span className="hidden sm:inline">Opustit</span>
