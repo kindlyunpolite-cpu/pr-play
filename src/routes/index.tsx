@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { TopNav } from "@/components/TopNav";
@@ -9,7 +9,7 @@ import { SectionTitle } from "@/components/ui-room/SectionTitle";
 import { SeatPortrait } from "@/components/ui-room/SeatPortrait";
 import { PortraitPicker } from "@/components/ui-room/PortraitPicker";
 import { PORTRAITS, getPortrait } from "@/lib/portraits";
-import { Plus, LogIn, Sparkles, Dice5, Shuffle, ArrowRight, Users, Loader2, LogOut } from "lucide-react";
+import { Plus, LogIn, Sparkles, Dice5, Shuffle, ArrowRight, Loader2, LogOut } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { createRoom, joinRoom } from "@/lib/rooms.functions";
 import {
@@ -256,13 +256,6 @@ function Lobby() {
 
         {/* Footer hint */}
         <div className="mt-5 flex flex-col items-center gap-3">
-          <div className="flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-            <Users className="h-3.5 w-3.5" />
-            <span>Až 4 hráči ·</span>
-            <Link to="/game" className="underline gold-text">
-              náhled stolu
-            </Link>
-          </div>
           {hasSavedProfile && (
             <button
               type="button"
