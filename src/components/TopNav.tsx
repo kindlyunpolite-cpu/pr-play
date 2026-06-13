@@ -1,5 +1,5 @@
-import { Link, useRouterState } from "@tanstack/react-router";
-import { Home, Users, Settings, LogOut, Loader2 } from "lucide-react";
+import { Link } from "@tanstack/react-router";
+import { Settings, LogOut, Loader2 } from "lucide-react";
 
 export function TopNav({
   roomCode,
@@ -10,7 +10,6 @@ export function TopNav({
   onLeave?: () => void;
   leaving?: boolean;
 }) {
-  const path = useRouterState({ select: (s) => s.location.pathname });
   return (
     <header className="sticky top-0 z-30 border-b border-[color:var(--gold)]/12 bg-gradient-to-b from-black/90 via-background/74 to-background/44 backdrop-blur-xl shadow-[0_10px_24px_-18px_rgba(0,0,0,0.95)]">
       <div className="mx-auto grid h-12 max-w-6xl grid-cols-[1fr_auto_1fr] items-center px-3 sm:px-5">
@@ -30,9 +29,9 @@ export function TopNav({
           </span>
         </Link>
 
-        {/* Center: room code or nav */}
+        {/* Center: room code */}
         <div className="justify-self-center">
-          {roomCode ? (
+          {roomCode && (
             <div className="control-pill flex items-center gap-2 pl-2.5 pr-1 py-0.5">
               <span className="text-[9px] uppercase tracking-[0.2em] text-muted-foreground/80 hidden sm:inline">
                 Místnost
@@ -41,11 +40,6 @@ export function TopNav({
                 {roomCode}
               </span>
             </div>
-          ) : (
-            <nav className="flex items-center gap-1">
-              <NavBtn to="/" active={path === "/"} icon={<Home className="h-3.5 w-3.5" />} label="Lobby" />
-              <NavBtn to="/waiting" active={path === "/waiting"} icon={<Users className="h-3.5 w-3.5" />} label="Místnost" />
-            </nav>
           )}
         </div>
 
@@ -76,18 +70,3 @@ export function TopNav({
   );
 }
 
-function NavBtn({ to, active, icon, label }: { to: string; active: boolean; icon: React.ReactNode; label: string }) {
-  return (
-    <Link
-      to={to}
-      className={`flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition ${
-        active
-          ? "bg-[color:var(--gold)]/12 text-[color:var(--gold)] ring-1 ring-[color:var(--gold)]/30"
-          : "text-muted-foreground hover:text-foreground hover:bg-white/5"
-      }`}
-    >
-      {icon}
-      <span className="hidden sm:inline">{label}</span>
-    </Link>
-  );
-}
