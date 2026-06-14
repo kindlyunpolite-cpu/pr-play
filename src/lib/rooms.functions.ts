@@ -830,6 +830,7 @@ export const drawCard = createServerFn({ method: "POST" })
       cardsDrawn: draw.cards.length,
       turnsTaken: 1,
     });
+    await runAiTurn(player.room_id);
     return { ok: true };
   });
 
