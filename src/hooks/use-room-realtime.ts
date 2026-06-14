@@ -66,7 +66,7 @@ export function useRoomRealtime(code: string | undefined, session: RoomSession |
     } finally {
       setLoading(false);
     }
-  }, [code, fetchRoom]);
+  }, [code, fetchRoom, session]);
 
   // Initial load + when code changes
   useEffect(() => {
