@@ -305,6 +305,19 @@
   }
   .animate-pile-bump { animation: pile-bump 260ms ease-out; }
 
+  @keyframes seat-action-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 oklch(0.82 0.14 85 / 0); }
+    35% { box-shadow: 0 0 0 5px oklch(0.82 0.14 85 / 0.28), 0 0 24px 2px oklch(0.82 0.14 85 / 0.35); }
+  }
+  .animate-seat-action-pulse { animation: seat-action-pulse 820ms ease-out both; }
+
+  @keyframes last-action-pop {
+    0% { transform: translateY(8px) scale(0.96); opacity: 0; }
+    16%, 86% { transform: translateY(0) scale(1); opacity: 1; }
+    100% { transform: translateY(-4px) scale(0.98); opacity: 0; }
+  }
+  .animate-last-action { animation: last-action-pop 4.5s ease-out both; }
+
   /* Tap feedback — quick press */
   @keyframes card-tap {
     0% { transform: scale(1); }
@@ -367,6 +380,8 @@
     .animate-card-played,
     .animate-card-tap,
     .animate-pile-bump,
+    .animate-seat-action-pulse,
+    .animate-last-action,
     .animate-winner,
     .animate-winner::after,
     .animate-card-active,

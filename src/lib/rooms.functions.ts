@@ -4,7 +4,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Json } from "@/integrations/supabase/types";
 import { randomBytes } from "crypto";
 import type { CardData, Rank, Suit } from "@/components/cards";
-import { runAiTurn } from "@/lib/ai-player";
+import { createVisibleActionSignature } from "@/lib/game-actions";
 
 // ------------- helpers (server-only) -------------
 
@@ -742,7 +742,6 @@ export const startGame = createServerFn({ method: "POST" })
       .update({ status: "playing", started_at: new Date().toISOString() })
       .eq("id", player.room_id);
     if (error) throw new Error("Failed to start game");
-    await runAiTurn(player.room_id);
     return { ok: true };
   });
 
@@ -793,6 +792,10 @@ export const drawCard = createServerFn({ method: "POST" })
       ...gameState.processed_actions,
       [data.actionId]: { playerId: player.id, signature },
     };
+    const visibleSignature = createVisibleActionSignature({
+      type: "draw",
+      drawCount: draw.cards.length,
+    });
 
     const { data: updated, error } = await supabaseAdmin
       .from("game_states")
@@ -806,7 +809,7 @@ export const drawCard = createServerFn({ method: "POST" })
         turn_version: gameState.turn_version + 1,
         last_action_id: data.actionId,
         last_action_player_id: player.id,
-        last_action_signature: signature,
+        last_action_signature: visibleSignature,
         processed_actions: processedActions as unknown as Json,
         updated_at: new Date().toISOString(),
       })
@@ -830,7 +833,13 @@ export const drawCard = createServerFn({ method: "POST" })
       cardsDrawn: draw.cards.length,
       turnsTaken: 1,
     });
-    await runAiTurn(player.room_id);
+    console.debug("[game] last action updated", {
+      roomId: player.room_id,
+      playerId: player.id,
+      type: "draw",
+      drawCount: draw.cards.length,
+      actionId: data.actionId,
+    });
     return { ok: true };
   });
 
@@ -904,6 +913,12 @@ export const playCard = createServerFn({ method: "POST" })
       [data.actionId]: { playerId: player.id, signature },
     };
     const finishedAt = new Date().toISOString();
+    const visibleSignature = createVisibleActionSignature({
+      type: data.chosenSuit ? "suit-change" : "play",
+      card,
+      cardIndex: data.cardIndex,
+      chosenSuit: data.chosenSuit ?? null,
+    });
 
     const { data: updated, error } = await supabaseAdmin
       .from("game_states")
@@ -920,7 +935,7 @@ export const playCard = createServerFn({ method: "POST" })
         turn_version: gameState.turn_version + 1,
         last_action_id: data.actionId,
         last_action_player_id: player.id,
-        last_action_signature: signature,
+        last_action_signature: visibleSignature,
         processed_actions: processedActions as unknown as Json,
         updated_at: finishedAt,
       })
@@ -953,8 +968,15 @@ export const playCard = createServerFn({ method: "POST" })
       cardsPlayed: 1,
       turnsTaken: 1,
     });
+    console.debug("[game] last action updated", {
+      roomId: player.room_id,
+      playerId: player.id,
+      type: data.chosenSuit ? "suit-change" : "play",
+      playedCard: card,
+      chosenSuit: data.chosenSuit,
+      actionId: data.actionId,
+    });
 
-    if (!finished) await runAiTurn(player.room_id);
     return { ok: true };
   });
 
