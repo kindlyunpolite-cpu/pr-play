@@ -221,6 +221,37 @@ function Waiting() {
     }
   };
 
+  const handleAddAi = async () => {
+    if (!session || !me?.is_host) return;
+    setBusy("add-ai");
+    try {
+      await callAddAi({
+        data: { playerId: session.playerId, sessionToken: session.sessionToken },
+      });
+      await resync();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Nepodařilo se přidat AI hráče");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleFillAi = async () => {
+    if (!session || !me?.is_host) return;
+    setBusy("fill-ai");
+    try {
+      const res = await callFillAi({
+        data: { playerId: session.playerId, sessionToken: session.sessionToken },
+      });
+      if (res.added === 0) toast.info("Stůl je už plný");
+      await resync();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Nepodařilo se doplnit AI");
+    } finally {
+      setBusy(null);
+    }
+  };
+
   if (reconnectStatus === "missing-session" || reconnectStatus === "expired-session") {
     return (
       <RoomShell className="items-center justify-center p-6 text-center">
