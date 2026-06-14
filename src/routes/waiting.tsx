@@ -18,6 +18,8 @@ import {
   Link as LinkIcon,
   UserX,
   AlertCircle,
+  Bot,
+  Users,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -27,6 +29,7 @@ import { clearSession } from "@/lib/room-session";
 import { useRoomRealtime, type RoomPlayer } from "@/hooks/use-room-realtime";
 import { useReconnect } from "@/hooks/use-reconnect";
 import { setReady, leaveRoom, kickPlayer, startGame } from "@/lib/rooms.functions";
+import { addAiPlayer, fillWithAiPlayers } from "@/lib/ai-player";
 import { toast } from "sonner";
 
 const searchSchema = z.object({ code: z.string().optional() });
