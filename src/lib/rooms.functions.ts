@@ -742,6 +742,7 @@ export const startGame = createServerFn({ method: "POST" })
       .update({ status: "playing", started_at: new Date().toISOString() })
       .eq("id", player.room_id);
     if (error) throw new Error("Failed to start game");
+    await runAiTurn(player.room_id);
     return { ok: true };
   });
 
