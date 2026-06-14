@@ -500,7 +500,15 @@ export const joinRoom = createServerFn({ method: "POST" })
 // ------------- getRoomState (public read helper) -------------
 
 export const getRoomState = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => z.object({ code: CodeSchema }).parse(input))
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        code: CodeSchema,
+        playerId: PlayerIdSchema.optional(),
+        sessionToken: TokenSchema.optional(),
+      })
+      .parse(input),
+  )
   .handler(async ({ data }) => {
     const { data: room } = await supabaseAdmin
       .from("rooms")
@@ -524,13 +532,41 @@ export const getRoomState = createServerFn({ method: "POST" })
       .eq("room_id", room.id)
       .maybeSingle();
     const statsByPlayerId = new Map((playerStats ?? []).map((stats) => [stats.player_id, stats]));
+
+    // Authorize viewer (if creds provided) so we can return their own hand.
+    let viewerId: string | null = null;
+    if (data.playerId && data.sessionToken) {
+      const viewer = await authenticatePlayer(data.playerId, data.sessionToken).catch(() => null);
+      if (viewer && viewer.room_id === room.id) viewerId = viewer.id;
+    }
+
+    // Redact deck + other players' hands so the client cannot see future draws
+    // or opponents' cards. Client UI only needs the length of each opponent's
+    // hand and of the deck, so placeholder cards preserve shape.
+    let safeGameState: typeof gameState = gameState;
+    if (gameState) {
+      const PLACEHOLDER = { suit: "spades", rank: "7" } as const;
+      const rawHands = toHands(gameState.hands);
+      const redactedHands: Record<string, CardData[]> = {};
+      for (const [pid, cards] of Object.entries(rawHands)) {
+        redactedHands[pid] =
+          pid === viewerId ? cards : (cards.map(() => PLACEHOLDER) as CardData[]);
+      }
+      const deckLen = toCardArray(gameState.deck).length;
+      safeGameState = {
+        ...gameState,
+        deck: Array.from({ length: deckLen }, () => PLACEHOLDER) as unknown as Json,
+        hands: redactedHands as unknown as Json,
+      };
+    }
+
     return {
       room,
       players: (players ?? []).map((roomPlayer) => ({
         ...roomPlayer,
         stats: statsByPlayerId.get(roomPlayer.id) ?? null,
       })),
-      gameState: gameState ?? null,
+      gameState: safeGameState ?? null,
     };
   });
 
