@@ -620,6 +620,48 @@ function Game() {
                   </div>
                 </div>
 
+                <div className="absolute bottom-3 left-3 z-40 sm:bottom-4 sm:left-4">
+                  <span
+                    className={cn(
+                      "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em]",
+                      myTurn
+                        ? "bg-gradient-to-r from-[color:var(--gold)]/25 to-transparent text-[color:var(--gold)] ring-1 ring-[color:var(--gold)]/40"
+                        : "bg-white/5 text-muted-foreground ring-1 ring-white/8",
+                    )}
+                  >
+                    <Sparkles className="h-3 w-3" />
+                    {gameFinished ? "Dohráno" : myTurn ? "Tvůj tah" : "Čekej"}
+                  </span>
+                </div>
+
+                <div className="absolute bottom-3 right-3 z-40 flex items-center gap-2 sm:bottom-4 sm:right-4">
+                  <RoomButton
+                    size="sm"
+                    variant="secondary"
+                    onClick={() => void handleDraw()}
+                    disabled={!canAct}
+                    loading={busyAction === "draw"}
+                  >
+                    {pendingDraw > 0 ? `Lízni ${pendingDraw}` : "Lízni"}
+                  </RoomButton>
+                  <RoomButton
+                    size="sm"
+                    variant="primary"
+                    disabled={!canAct || selected === null || !selectedPlayable}
+                    loading={busyAction === "play"}
+                    onClick={() => {
+                      if (selected === null) return;
+                      if (hand[selected]?.rank === "Q") {
+                        setSuitPickerIndex(selected);
+                        return;
+                      }
+                      void submitPlay(selected);
+                    }}
+                  >
+                    Zahraj
+                  </RoomButton>
+                </div>
+
                 {/* === Seats anchored to the table rim ===
                     Each portrait translates by 50% of its own size so it sits
                     half on the rail, half outside — guaranteed visible.
@@ -660,48 +702,6 @@ function Game() {
 
           {/* === Bottom hand area === */}
           <div className="relative z-20 shrink-0 bg-gradient-to-t from-background via-background/85 to-transparent pb-safe pt-2">
-            <div className="flex flex-wrap items-center justify-between gap-2 px-3 sm:px-4">
-              <span
-                className={cn(
-                  "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em]",
-                  myTurn
-                    ? "bg-gradient-to-r from-[color:var(--gold)]/25 to-transparent text-[color:var(--gold)] ring-1 ring-[color:var(--gold)]/40"
-                    : "bg-white/5 text-muted-foreground ring-1 ring-white/8",
-                )}
-              >
-                <Sparkles className="h-3 w-3" />
-                {gameFinished ? "Dohráno" : myTurn ? "Tvůj tah" : "Čekej"}
-              </span>
-
-              <div className="flex items-center gap-2">
-                <RoomButton
-                  size="sm"
-                  variant="secondary"
-                  onClick={() => void handleDraw()}
-                  disabled={!canAct}
-                  loading={busyAction === "draw"}
-                >
-                  {pendingDraw > 0 ? `Lízni ${pendingDraw}` : "Lízni"}
-                </RoomButton>
-                <RoomButton
-                  size="sm"
-                  variant="primary"
-                  disabled={!canAct || selected === null || !selectedPlayable}
-                  loading={busyAction === "play"}
-                  onClick={() => {
-                    if (selected === null) return;
-                    if (hand[selected]?.rank === "Q") {
-                      setSuitPickerIndex(selected);
-                      return;
-                    }
-                    void submitPlay(selected);
-                  }}
-                >
-                  Zahraj
-                </RoomButton>
-              </div>
-            </div>
-
             <div className="fan-hand hand-scroll relative flex items-end justify-center overflow-x-auto sm:overflow-visible no-scrollbar px-4 pt-1 pb-1 min-h-[4.5rem] sm:min-h-[5.2rem]">
               {hand.map((card, i) => {
                 const n = hand.length;
