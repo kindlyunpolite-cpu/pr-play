@@ -477,7 +477,11 @@ function Waiting() {
                           active={p.is_ready}
                           offline={status === "offline"}
                         />
-                        {p.is_host && (
+                        {p.is_ai && (
+                          <span className="absolute -top-1 left-0 rounded-md border border-[color:var(--gold)]/50 bg-black/70 px-1 text-[8px] font-bold uppercase tracking-[0.18em] text-[color:var(--gold)]">
+                            AI
+                          </span>
+                        )}
                           <Crown className="absolute -top-1 right-0 h-4 w-4 fill-[color:var(--gold)] text-[color:var(--gold)] drop-shadow" />
                         )}
                         <span
