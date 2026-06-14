@@ -40,7 +40,11 @@ export function useRoomRealtime(code: string | undefined, session: RoomSession |
   const resync = useCallback(async () => {
     if (!code) return;
     try {
-      const data = await fetchRoom({ data: { code } });
+      const data = await fetchRoom({
+        data: session
+          ? { code, playerId: session.playerId, sessionToken: session.sessionToken }
+          : { code },
+      });
       if (!data) {
         setLoading(false);
         return;
