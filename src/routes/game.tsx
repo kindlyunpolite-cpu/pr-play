@@ -75,7 +75,10 @@ function Game() {
   const { session, status: reconnectStatus, error: reconnectError } = useReconnect();
   const code = session?.roomCode;
   const realtimeSession = reconnectStatus === "ready" ? session : null;
-  const { room, players, messages, gameState, loading } = useRoomRealtime(code, realtimeSession);
+  const { room, players, messages, gameState, loading, resync } = useRoomRealtime(
+    code,
+    realtimeSession,
+  );
   const callDrawCard = useServerFn(drawCard);
   const callPlayCard = useServerFn(playCard);
   const callLeave = useServerFn(leaveRoom);
@@ -83,6 +86,20 @@ function Game() {
   const callDeclineRematch = useServerFn(declineRematch);
   const [leaving, setLeaving] = useState(false);
   const [busyRematch, setBusyRematch] = useState<"accept" | "decline" | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      const refreshed = await resync();
+      if (refreshed) toast.success("Hra obnovena");
+      else toast.error("Nepodařilo se obnovit hru");
+    } catch {
+      toast.error("Nepodařilo se obnovit hru");
+    } finally {
+      setRefreshing(false);
+    }
+  };
 
   const handleLeave = async () => {
     if (!session) {
@@ -390,7 +407,13 @@ function Game() {
 
   return (
     <RoomShell className="overflow-hidden">
-      <TopNav onLeave={handleLeave} leaving={leaving} />
+      <TopNav
+        roomCode={code}
+        onLeave={handleLeave}
+        leaving={leaving}
+        onRefresh={() => void handleRefresh()}
+        refreshing={refreshing}
+      />
 
       <div className="flex flex-1 lg:flex-row flex-col min-h-0">
         <main className="game-stage relative flex-1 flex flex-col min-h-0">

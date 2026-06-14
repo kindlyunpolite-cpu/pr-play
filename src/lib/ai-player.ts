@@ -8,7 +8,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Json } from "@/integrations/supabase/types";
-import { randomBytes, randomUUID } from "crypto";
 import type { CardData, Suit } from "@/components/cards";
 import { PORTRAITS } from "./portraits";
 import type { GameState } from "@/types/room";
@@ -80,10 +79,20 @@ function toHands(value: unknown): Record<string, CardData[]> {
   if (!value || typeof value !== "object" || Array.isArray(value)) return {};
   return value as Record<string, CardData[]>;
 }
+function secureRandomIndex(maxInclusive: number) {
+  const values = new Uint32Array(1);
+  globalThis.crypto.getRandomValues(values);
+  return values[0] % (maxInclusive + 1);
+}
+
+function createServerActionId() {
+  return globalThis.crypto.randomUUID();
+}
+
 function shuffleDeck(deck: CardData[]) {
   const next = [...deck];
   for (let i = next.length - 1; i > 0; i--) {
-    const j = randomBytes(1)[0] % (i + 1);
+    const j = secureRandomIndex(i);
     [next[i], next[j]] = [next[j], next[i]];
   }
   return next;
@@ -277,7 +286,7 @@ export async function runAiTurn(roomId: string): Promise<void> {
 
     const hand = [...(gameState.hands[current.id] ?? [])];
     const decision = pickAiAction(hand, topCard, gameState.active_suit, gameState.pending_draw);
-    const actionId = randomUUID();
+    const actionId = createServerActionId();
     const expectedTurnVersion = gameState.turn_version;
     const processedActions = {
       ...(gameState.processed_actions as Record<string, unknown>),
@@ -354,9 +363,7 @@ export async function runAiTurn(roomId: string): Promise<void> {
 
 /** Client-callable trigger; safely no-ops when it isn't an AI's turn. */
 export const triggerAiTurn = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) =>
-    z.object({ roomId: z.string().uuid() }).parse(input),
-  )
+  .inputValidator((input: unknown) => z.object({ roomId: z.string().uuid() }).parse(input))
   .handler(async ({ data }) => {
     await runAiTurn(data.roomId);
     return { ok: true };

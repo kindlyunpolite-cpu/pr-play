@@ -1,14 +1,19 @@
 import { Link } from "@tanstack/react-router";
-import { Settings, LogOut, Loader2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Settings, LogOut, Loader2, RefreshCw } from "lucide-react";
 
 export function TopNav({
   roomCode,
   onLeave,
   leaving = false,
+  onRefresh,
+  refreshing = false,
 }: {
   roomCode?: string;
   onLeave?: () => void;
   leaving?: boolean;
+  onRefresh?: () => void;
+  refreshing?: boolean;
 }) {
   return (
     <header className="sticky top-0 z-30 border-b border-[color:var(--gold)]/12 bg-gradient-to-b from-black/90 via-background/74 to-background/44 backdrop-blur-xl shadow-[0_10px_24px_-18px_rgba(0,0,0,0.95)]">
@@ -42,7 +47,20 @@ export function TopNav({
         </div>
 
         {/* Right action */}
-        <div className="justify-self-end">
+        <div className="flex items-center gap-2 justify-self-end">
+          {onRefresh && (
+            <button
+              type="button"
+              onClick={onRefresh}
+              disabled={refreshing || leaving}
+              className="control-pill group inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-foreground/90 transition-all hover:border-[color:var(--gold)]/50 hover:text-[color:var(--gold)] disabled:opacity-60"
+              aria-label="Obnovit stav místnosti"
+              title="Obnovit stav místnosti"
+            >
+              <span className="hidden sm:inline">Obnovit</span>
+              <RefreshCw className={cn("h-3 w-3 opacity-80", refreshing && "animate-spin")} />
+            </button>
+          )}
           {onLeave ? (
             <button
               type="button"
@@ -67,4 +85,3 @@ export function TopNav({
     </header>
   );
 }
-
