@@ -519,7 +519,9 @@ export const getRoomState = createServerFn({ method: "POST" })
     if (room.status === "waiting" && !(await normalizeWaitingRoom(room.id))) return null;
     const { data: players } = await supabaseAdmin
       .from("players")
-      .select("id, nickname, avatar, is_host, is_ready, seat, joined_at, last_seen_at, connected")
+      .select(
+        "id, nickname, avatar, is_host, is_ready, seat, joined_at, last_seen_at, connected, is_ai",
+      )
       .eq("room_id", room.id)
       .order("seat", { ascending: true });
     const { data: playerStats } = await supabaseAdmin
