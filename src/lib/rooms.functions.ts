@@ -954,6 +954,7 @@ export const playCard = createServerFn({ method: "POST" })
       turnsTaken: 1,
     });
 
+    if (!finished) await runAiTurn(player.room_id);
     return { ok: true };
   });
 
