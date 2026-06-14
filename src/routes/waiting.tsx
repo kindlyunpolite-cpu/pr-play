@@ -526,6 +526,31 @@ function Waiting() {
                 </li>
               ))}
             </ul>
+
+            {me?.is_host && players.length < maxPlayers && (
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <RoomButton
+                  size="sm"
+                  variant="secondary"
+                  onClick={handleAddAi}
+                  loading={busy === "add-ai"}
+                  disabled={busy === "fill-ai"}
+                  icon={<Bot className="h-3.5 w-3.5" />}
+                >
+                  Přidat AI hráče
+                </RoomButton>
+                <RoomButton
+                  size="sm"
+                  variant="secondary"
+                  onClick={handleFillAi}
+                  loading={busy === "fill-ai"}
+                  disabled={busy === "add-ai" || players.length >= Math.min(4, maxPlayers)}
+                  icon={<Users className="h-3.5 w-3.5" />}
+                >
+                  Doplnit AI do 4 hráčů
+                </RoomButton>
+              </div>
+            )}
           </section>
         </main>
 
