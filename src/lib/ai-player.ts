@@ -11,6 +11,7 @@ import type { Json } from "@/integrations/supabase/types";
 import type { CardData, Suit } from "@/components/cards";
 import { PORTRAITS } from "./portraits";
 import type { GameState } from "@/types/room";
+import { createVisibleActionSignature } from "@/lib/game-actions";
 
 // ---------- Pure helpers (safe to import anywhere) ----------
 
@@ -87,6 +88,14 @@ function secureRandomIndex(maxInclusive: number) {
 
 function createServerActionId() {
   return globalThis.crypto.randomUUID();
+}
+
+function wait(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function aiThinkDelayMs() {
+  return 1500 + secureRandomIndex(1000);
 }
 
 function shuffleDeck(deck: CardData[]) {
@@ -284,31 +293,62 @@ export async function runAiTurn(roomId: string): Promise<void> {
     const topCard = gameState.discard_pile.at(-1);
     if (!topCard) return;
 
-    const hand = [...(gameState.hands[current.id] ?? [])];
-    const decision = pickAiAction(hand, topCard, gameState.active_suit, gameState.pending_draw);
+    console.debug("[AI] active player changed", {
+      roomId,
+      playerId: current.id,
+      turnVersion: gameState.turn_version,
+    });
+    const delayMs = aiThinkDelayMs();
+    console.debug("[AI] turn delay started", {
+      roomId,
+      playerId: current.id,
+      delayMs,
+      turnVersion: gameState.turn_version,
+    });
+    await wait(delayMs);
+
+    const freshCtx = await loadAiContext(roomId);
+    if (!freshCtx || freshCtx.current.id !== current.id) return;
+    const freshTopCard = freshCtx.gameState.discard_pile.at(-1);
+    if (!freshTopCard) return;
+
+    const freshGameState = freshCtx.gameState;
+    const freshPlayers = freshCtx.players;
+    const freshCurrent = freshCtx.current;
+    const hand = [...(freshGameState.hands[freshCurrent.id] ?? [])];
+    const decision = pickAiAction(
+      hand,
+      freshTopCard,
+      freshGameState.active_suit,
+      freshGameState.pending_draw,
+    );
     const actionId = createServerActionId();
-    const expectedTurnVersion = gameState.turn_version;
+    const expectedTurnVersion = freshGameState.turn_version;
     const processedActions = {
-      ...(gameState.processed_actions as Record<string, unknown>),
-      [actionId]: { playerId: current.id, signature: decision.kind },
+      ...(freshGameState.processed_actions as Record<string, unknown>),
+      [actionId]: { playerId: freshCurrent.id, signature: decision.kind },
     };
 
     if (decision.kind === "draw") {
-      const drawCount = gameState.pending_draw > 0 ? gameState.pending_draw : 1;
-      const draw = takeDrawableCards(gameState.deck, gameState.discard_pile, drawCount);
-      const nextHands = { ...gameState.hands, [current.id]: [...hand, ...draw.cards] };
+      const drawCount = freshGameState.pending_draw > 0 ? freshGameState.pending_draw : 1;
+      const draw = takeDrawableCards(freshGameState.deck, freshGameState.discard_pile, drawCount);
+      const nextHands = { ...freshGameState.hands, [freshCurrent.id]: [...hand, ...draw.cards] };
+      const visibleSignature = createVisibleActionSignature({
+        type: "draw",
+        drawCount: draw.cards.length,
+      });
       const { data: updated } = await supabaseAdmin
         .from("game_states")
         .update({
           deck: draw.deck as unknown as Json,
           discard_pile: draw.discardPile as unknown as Json,
           hands: nextHands as unknown as Json,
-          current_player_id: nextPlayerId(players, current.id, gameState.direction),
+          current_player_id: nextPlayerId(freshPlayers, freshCurrent.id, freshGameState.direction),
           pending_draw: 0,
           turn_version: expectedTurnVersion + 1,
           last_action_id: actionId,
-          last_action_player_id: current.id,
-          last_action_signature: "draw",
+          last_action_player_id: freshCurrent.id,
+          last_action_signature: visibleSignature,
           processed_actions: processedActions as unknown as Json,
           updated_at: new Date().toISOString(),
         })
@@ -317,31 +357,56 @@ export async function runAiTurn(roomId: string): Promise<void> {
         .select("room_id")
         .maybeSingle();
       if (!updated) return;
+      console.debug("[AI] action executed", {
+        roomId,
+        playerId: freshCurrent.id,
+        action: "draw",
+        drawCount: draw.cards.length,
+        actionId,
+      });
+      console.debug("[game] last action updated", {
+        roomId,
+        playerId: freshCurrent.id,
+        type: "draw",
+        actionId,
+      });
+      await wait(1000);
       continue;
     }
 
     const [card] = hand.splice(decision.cardIndex, 1);
     if (!card) return;
-    const discardPile = [...gameState.discard_pile, card];
-    const pendingDraw = card.rank === "7" ? gameState.pending_draw + 2 : 0;
-    const nextHands = { ...gameState.hands, [current.id]: hand };
+    const discardPile = [...freshGameState.discard_pile, card];
+    const pendingDraw = card.rank === "7" ? freshGameState.pending_draw + 2 : 0;
+    const nextHands = { ...freshGameState.hands, [freshCurrent.id]: hand };
     const finished = hand.length === 0;
     const finishedAt = new Date().toISOString();
+    const visibleSignature = createVisibleActionSignature({
+      type: decision.chosenSuit ? "suit-change" : "play",
+      card,
+      cardIndex: decision.cardIndex,
+      chosenSuit: decision.chosenSuit ?? card.suit,
+    });
     const { data: updated } = await supabaseAdmin
       .from("game_states")
       .update({
         discard_pile: discardPile as unknown as Json,
         hands: nextHands as unknown as Json,
         current_player_id: finished
-          ? current.id
-          : nextPlayerId(players, current.id, gameState.direction, card.rank === "A" ? 2 : 1),
+          ? freshCurrent.id
+          : nextPlayerId(
+              freshPlayers,
+              freshCurrent.id,
+              freshGameState.direction,
+              card.rank === "A" ? 2 : 1,
+            ),
         active_suit: decision.chosenSuit ?? card.suit,
         pending_draw: finished ? 0 : pendingDraw,
         status: finished ? "finished" : "playing",
         turn_version: expectedTurnVersion + 1,
         last_action_id: actionId,
-        last_action_player_id: current.id,
-        last_action_signature: `play:${decision.cardIndex}:${decision.chosenSuit ?? ""}`,
+        last_action_player_id: freshCurrent.id,
+        last_action_signature: visibleSignature,
         processed_actions: processedActions as unknown as Json,
         updated_at: finishedAt,
       })
@@ -351,6 +416,21 @@ export async function runAiTurn(roomId: string): Promise<void> {
       .maybeSingle();
     if (!updated) return;
 
+    console.debug("[AI] action executed", {
+      roomId,
+      playerId: freshCurrent.id,
+      action: "play",
+      card,
+      chosenSuit: decision.chosenSuit,
+      actionId,
+    });
+    console.debug("[game] last action updated", {
+      roomId,
+      playerId: freshCurrent.id,
+      type: decision.chosenSuit ? "suit-change" : "play",
+      actionId,
+    });
+
     if (finished) {
       await supabaseAdmin
         .from("rooms")
@@ -358,6 +438,7 @@ export async function runAiTurn(roomId: string): Promise<void> {
         .eq("id", roomId);
       return;
     }
+    await wait(1000);
   }
 }
 

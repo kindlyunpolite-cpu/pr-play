@@ -16,6 +16,7 @@ export interface OpponentData {
   cardsDrawn?: number;
   cardsPlayed?: number;
   badge?: string;
+  actionPulse?: "draw" | "play";
   /** Stack of chips / score, shown on the panel. */
   chips?: number;
   /** Rim-light accent color for this seat (hex / css color). */
@@ -138,10 +139,11 @@ export function Opponent({
           "border backdrop-blur-xl transition-all duration-300",
           panelWidth,
           panelAnchor,
-          player.isTurn
-            ? "border-[color:var(--gold)] animate-turn shadow-[0_12px_32px_-8px_rgba(0,0,0,0.78),0_0_28px_-4px_var(--seat-accent)]"
-            : "border-white/12 shadow-[0_10px_24px_-10px_rgba(0,0,0,0.78)] hover:border-[color:var(--gold)]/35",
-        )}
+            player.isTurn
+              ? "border-[color:var(--gold)] animate-turn ring-2 ring-[color:var(--gold)]/70 shadow-[0_12px_32px_-8px_rgba(0,0,0,0.78),0_0_28px_-4px_var(--seat-accent)]"
+              : "border-white/12 shadow-[0_10px_24px_-10px_rgba(0,0,0,0.78)] hover:border-[color:var(--gold)]/35",
+            player.actionPulse === "draw" && "animate-seat-action-pulse",
+          )}
         style={{
           background:
             "linear-gradient(180deg, oklch(0.18 0.025 160 / 0.92) 0%, oklch(0.105 0.02 160 / 0.96) 100%)",
@@ -172,18 +174,25 @@ export function Opponent({
               {player.name}
             </span>
           </div>
-          {player.badge && (
-            <span
-              className="text-[8px] font-bold uppercase tracking-[0.12em] px-1.5 py-px rounded-sm border"
-              style={{
-                color: accent,
-                borderColor: `color-mix(in oklab, ${accent} 50%, transparent)`,
-                background: `color-mix(in oklab, ${accent} 12%, transparent)`,
-              }}
-            >
-              {player.badge}
-            </span>
-          )}
+          <div className="flex shrink-0 items-center gap-1">
+            {player.isTurn && (
+              <span className="rounded-sm border border-[color:var(--gold)]/55 bg-[color:var(--gold)]/14 px-1.5 py-px text-[8px] font-bold uppercase tracking-[0.12em] text-[color:var(--gold)]">
+                Na tahu
+              </span>
+            )}
+            {player.badge && (
+              <span
+                className="text-[8px] font-bold uppercase tracking-[0.12em] px-1.5 py-px rounded-sm border"
+                style={{
+                  color: accent,
+                  borderColor: `color-mix(in oklab, ${accent} 50%, transparent)`,
+                  background: `color-mix(in oklab, ${accent} 12%, transparent)`,
+                }}
+              >
+                {player.badge}
+              </span>
+            )}
+          </div>
         </div>
 
         {/* Stats row: cards + chips */}

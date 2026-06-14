@@ -80,3 +80,15 @@ export interface GameState {
   created_at: string;
   updated_at: string;
 }
+
+export type GameActionType = "play" | "draw" | "pass" | "suit-change";
+
+export interface GameActionEvent {
+  id: string;
+  playerId: string;
+  type: GameActionType;
+  playedCard?: CardData | null;
+  drawCount?: number | null;
+  chosenSuit?: Suit | null;
+  at: string;
+}

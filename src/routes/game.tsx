@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { getPortrait, PORTRAITS } from "@/lib/portraits";
 import { useReconnect } from "@/hooks/use-reconnect";
 import { useRoomRealtime } from "@/hooks/use-room-realtime";
+import type { GameActionEvent, RoomPlayer } from "@/types/room";
 import {
   acceptRematch,
   declineRematch,
@@ -30,6 +31,8 @@ import {
 } from "@/lib/rooms.functions";
 import { clearSession } from "@/lib/room-session";
 import { toast } from "sonner";
+import { createGameActionEvent } from "@/lib/game-actions";
+import { triggerAiTurn } from "@/lib/ai-player";
 
 export const Route = createFileRoute("/game")({
   head: () => ({
@@ -40,6 +43,12 @@ export const Route = createFileRoute("/game")({
 
 const FALLBACK_CARD: CardData = { suit: "hearts", rank: "10" };
 const SUITS: Suit[] = ["hearts", "diamonds", "clubs", "spades"];
+const SUIT_SYMBOL: Record<Suit, string> = {
+  hearts: "♥",
+  diamonds: "♦",
+  clubs: "♣",
+  spades: "♠",
+};
 
 function adjacentPlayerId(
   players: { id: string }[],
@@ -70,6 +79,29 @@ function createActionId() {
   )}${hex(3)}-${hex(12)}`;
 }
 
+function cardLabel(card: CardData | null | undefined) {
+  if (!card) return "";
+  return `${SUIT_SYMBOL[card.suit]}${card.rank}`;
+}
+
+function playerName(players: RoomPlayer[], playerId: string | null | undefined) {
+  return players.find((p) => p.id === playerId)?.nickname ?? "Hráč";
+}
+
+function actionText(action: GameActionEvent, players: RoomPlayer[]) {
+  const name = playerName(players, action.playerId);
+  if (action.type === "draw") {
+    const count = action.drawCount ?? 1;
+    return count > 1 ? `${name} líže ${count} karet` : `${name} líže kartu`;
+  }
+  if (action.type === "suit-change") {
+    const suit = action.chosenSuit ? SUIT_LABEL[action.chosenSuit] : null;
+    return `${name} odhodil svrška${suit ? ` a mění barvu na ${suit}` : ""}`;
+  }
+  if (action.type === "pass") return `${name} stojí`;
+  return `${name} odhodil ${cardLabel(action.playedCard)}`;
+}
+
 function Game() {
   const navigate = useNavigate();
   const { session, status: reconnectStatus } = useReconnect();
@@ -84,6 +116,7 @@ function Game() {
   const callLeave = useServerFn(leaveRoom);
   const callAcceptRematch = useServerFn(acceptRematch);
   const callDeclineRematch = useServerFn(declineRematch);
+  const callTriggerAiTurn = useServerFn(triggerAiTurn);
   const [leaving, setLeaving] = useState(false);
   const [busyRematch, setBusyRematch] = useState<"accept" | "decline" | null>(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -127,8 +160,12 @@ function Game() {
   const [dealt, setDealt] = useState(false);
   const [busyAction, setBusyAction] = useState<"draw" | "play" | null>(null);
   const [suitPickerIndex, setSuitPickerIndex] = useState<number | null>(null);
+  const [visibleActionId, setVisibleActionId] = useState<string | null>(null);
+  const [pulsingPlayerId, setPulsingPlayerId] = useState<string | null>(null);
+  const [recentActions, setRecentActions] = useState<GameActionEvent[]>([]);
   const busyActionRef = useRef(false);
   const aceSkipToastRef = useRef<string | null>(null);
+  const aiTriggerRef = useRef<string | null>(null);
 
   const sortedPlayers = useMemo(() => [...players].sort((a, b) => a.seat - b.seat), [players]);
   const rotatedPlayers = useMemo(
@@ -149,6 +186,26 @@ function Game() {
   const myTurn =
     gameState?.status === "playing" && gameState?.current_player_id === session?.playerId;
   const activePlayer = players.find((p) => p.id === gameState?.current_player_id) ?? me;
+  const latestAction = useMemo(() => {
+    if (!gameState?.last_action_id || !gameState.last_action_player_id) return null;
+    const action = createGameActionEvent({
+      actionId: gameState.last_action_id,
+      playerId: gameState.last_action_player_id,
+      signature: gameState.last_action_signature,
+      at: gameState.updated_at,
+    });
+    if (action?.type !== "draw" && !action.playedCard) {
+      return { ...action, playedCard: topDiscard };
+    }
+    return action;
+  }, [
+    gameState?.last_action_id,
+    gameState?.last_action_player_id,
+    gameState?.last_action_signature,
+    gameState?.updated_at,
+    topDiscard,
+  ]);
+  const showLatestAction = latestAction && latestAction.id === visibleActionId ? latestAction : null;
   const gameFinished = room?.status === "finished" || gameState?.status === "finished";
   const winner = gameFinished ? players.find((p) => p.id === gameState?.current_player_id) : null;
   const connectedPlayers = players.filter((p) => p.connected !== false);
@@ -206,9 +263,18 @@ function Game() {
             chips: 0,
             accent: portrait.accent ?? PORTRAITS[index % PORTRAITS.length].accent,
             badge: p.is_ai ? "AI" : undefined,
+            actionPulse:
+              pulsingPlayerId === p.id && latestAction?.type === "draw" ? "draw" : undefined,
           };
         }),
-    [gameState?.current_player_id, gameState?.hands, rotatedPlayers, session?.playerId],
+    [
+      gameState?.current_player_id,
+      gameState?.hands,
+      latestAction?.type,
+      pulsingPlayerId,
+      rotatedPlayers,
+      session?.playerId,
+    ],
   );
 
   const mePortrait = getPortrait(me?.avatar ?? session?.avatar);
@@ -225,6 +291,7 @@ function Game() {
     cardsDrawn: me?.stats?.cards_drawn ?? 0,
     chips: 0,
     accent: mePortrait.accent,
+    actionPulse: pulsingPlayerId === session?.playerId && latestAction?.type === "draw" ? "draw" : undefined,
   };
 
   useEffect(() => {
@@ -236,6 +303,69 @@ function Game() {
       navigate({ to: "/", replace: true });
     }
   }, [navigate, reconnectStatus]);
+
+  useEffect(() => {
+    if (!gameState?.current_player_id) return;
+    console.debug("[game] active player changed", {
+      playerId: gameState.current_player_id,
+      nickname: activePlayer?.nickname,
+      isAi: activePlayer?.is_ai ?? false,
+      turnVersion: gameState.turn_version,
+    });
+  }, [
+    activePlayer?.is_ai,
+    activePlayer?.nickname,
+    gameState?.current_player_id,
+    gameState?.turn_version,
+  ]);
+
+  useEffect(() => {
+    if (!room?.id || gameState?.status !== "playing" || !gameState.current_player_id) return;
+    const current = players.find((p) => p.id === gameState.current_player_id);
+    if (!current?.is_ai) return;
+
+    const triggerKey = `${gameState.current_player_id}:${gameState.turn_version}`;
+    if (aiTriggerRef.current === triggerKey) return;
+    aiTriggerRef.current = triggerKey;
+
+    void callTriggerAiTurn({ data: { roomId: room.id } }).catch((error) => {
+      console.debug("[AI] trigger failed", {
+        roomId: room.id,
+        playerId: gameState.current_player_id,
+        turnVersion: gameState.turn_version,
+        error,
+      });
+      aiTriggerRef.current = null;
+    });
+  }, [
+    callTriggerAiTurn,
+    gameState?.current_player_id,
+    gameState?.status,
+    gameState?.turn_version,
+    players,
+    room?.id,
+  ]);
+
+  useEffect(() => {
+    if (!latestAction) return;
+
+    console.debug("[game] last action updated", latestAction);
+    setRecentActions((prev) => [latestAction, ...prev.filter((a) => a.id !== latestAction.id)].slice(0, 5));
+    setVisibleActionId(latestAction.id);
+    setPulsingPlayerId(latestAction.playerId);
+
+    if (latestAction.type === "draw") setDrawNonce((n) => n + 1);
+    if (latestAction.type === "play" || latestAction.type === "suit-change") {
+      setPileNonce((n) => n + 1);
+    }
+
+    const hideAction = window.setTimeout(() => setVisibleActionId(null), 4_500);
+    const stopPulse = window.setTimeout(() => setPulsingPlayerId(null), 900);
+    return () => {
+      window.clearTimeout(hideAction);
+      window.clearTimeout(stopPulse);
+    };
+  }, [latestAction?.id]);
 
   useEffect(() => {
     setDealt(false);
@@ -528,6 +658,32 @@ function Game() {
 
                   <div className="table-spotlight" aria-hidden="true" />
 
+                  {showLatestAction && (
+                    <div className="pointer-events-none absolute inset-x-4 top-[38%] z-20 flex justify-center">
+                      <div className="animate-last-action rounded-full border border-[color:var(--gold)]/35 bg-black/72 px-4 py-2 text-center text-sm font-semibold text-foreground shadow-2xl shadow-black/60 backdrop-blur-md">
+                        {actionText(showLatestAction, players)}
+                      </div>
+                    </div>
+                  )}
+
+                  {recentActions.length > 0 && (
+                    <div className="absolute left-2 top-10 z-20 w-44 rounded-xl border border-white/10 bg-black/48 px-2.5 py-2 shadow-xl shadow-black/35 backdrop-blur-md sm:w-56">
+                      <div className="mb-1 text-[8px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
+                        Poslední akce
+                      </div>
+                      <ol className="space-y-1">
+                        {recentActions.slice(0, 3).map((action) => (
+                          <li
+                            key={action.id}
+                            className="truncate text-[10px] leading-tight text-foreground/86"
+                          >
+                            {actionText(action, players)}
+                          </li>
+                        ))}
+                      </ol>
+                    </div>
+                  )}
+
                   {aceSkip && (
                     <div className="absolute inset-x-6 top-12 z-20 rounded-3xl border border-[color:var(--gold)]/35 bg-black/70 px-4 py-3 text-center shadow-2xl shadow-black/50 backdrop-blur-md sm:inset-x-16">
                       <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-[color:var(--gold)]">
@@ -680,15 +836,30 @@ function Game() {
                     Kept small so the hand gets the visual priority. */}
                 <div className="absolute z-30 left-1/2 bottom-0 -translate-x-1/2 translate-y-[55%] pointer-events-none">
                   <div className="flex flex-col items-center">
-                    <img
-                      src={you.avatar}
-                      alt={you.name}
-                      draggable={false}
-                      className="h-14 w-12 object-contain object-bottom drop-shadow-[0_8px_14px_rgba(0,0,0,0.6)] sm:h-16 sm:w-14"
-                      style={{
-                        filter: `drop-shadow(0 0 6px ${you.accent})`,
-                      }}
-                    />
+                    <div
+                      className={cn(
+                        "relative rounded-full transition-all duration-300",
+                        you.isTurn && "ring-2 ring-[color:var(--gold)]/80 animate-turn",
+                        you.actionPulse === "draw" && "animate-seat-action-pulse",
+                      )}
+                    >
+                      {you.isTurn && (
+                        <span className="absolute -top-5 left-1/2 z-[2] -translate-x-1/2 whitespace-nowrap rounded-sm border border-[color:var(--gold)]/55 bg-black/75 px-1.5 py-px text-[8px] font-bold uppercase tracking-[0.12em] text-[color:var(--gold)] shadow-lg shadow-black/40">
+                          Na tahu
+                        </span>
+                      )}
+                      <img
+                        src={you.avatar}
+                        alt={you.name}
+                        draggable={false}
+                        className="h-14 w-12 object-contain object-bottom drop-shadow-[0_8px_14px_rgba(0,0,0,0.6)] sm:h-16 sm:w-14"
+                        style={{
+                          filter: you.isTurn
+                            ? `drop-shadow(0 0 14px ${you.accent}) drop-shadow(0 8px 14px rgba(0,0,0,0.6))`
+                            : `drop-shadow(0 0 6px ${you.accent})`,
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
