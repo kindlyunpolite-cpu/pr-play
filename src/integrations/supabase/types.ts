@@ -197,6 +197,7 @@ export type Database = {
           avatar: string | null
           connected: boolean
           id: string
+          is_ai: boolean
           is_host: boolean
           is_ready: boolean
           joined_at: string
@@ -210,6 +211,7 @@ export type Database = {
           avatar?: string | null
           connected?: boolean
           id?: string
+          is_ai?: boolean
           is_host?: boolean
           is_ready?: boolean
           joined_at?: string
@@ -223,6 +225,7 @@ export type Database = {
           avatar?: string | null
           connected?: boolean
           id?: string
+          is_ai?: boolean
           is_host?: boolean
           is_ready?: boolean
           joined_at?: string
