@@ -478,10 +478,11 @@ function Waiting() {
                           offline={status === "offline"}
                         />
                         {p.is_ai && (
-                          <span className="absolute -top-1 left-0 rounded-md border border-[color:var(--gold)]/50 bg-black/70 px-1 text-[8px] font-bold uppercase tracking-[0.18em] text-[color:var(--gold)]">
+                          <span className="absolute -top-1 left-0 z-10 rounded-md border border-[color:var(--gold)]/50 bg-black/70 px-1 text-[8px] font-bold uppercase tracking-[0.18em] text-[color:var(--gold)]">
                             AI
                           </span>
                         )}
+                        {p.is_host && (
                           <Crown className="absolute -top-1 right-0 h-4 w-4 fill-[color:var(--gold)] text-[color:var(--gold)] drop-shadow" />
                         )}
                         <span
