@@ -14,7 +14,7 @@ import {
   type Suit,
 } from "@/components/cards";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AlertCircle, Loader2, Timer, Sparkles, Trophy } from "lucide-react";
+import { Loader2, Timer, Sparkles, Trophy } from "lucide-react";
 import { SUIT_LABEL, isRedSuit } from "@/components/cards/types";
 import { SuitIcon } from "@/components/cards/SuitIcon";
 import { cn } from "@/lib/utils";
@@ -72,7 +72,7 @@ function createActionId() {
 
 function Game() {
   const navigate = useNavigate();
-  const { session, status: reconnectStatus, error: reconnectError } = useReconnect();
+  const { session, status: reconnectStatus } = useReconnect();
   const code = session?.roomCode;
   const realtimeSession = reconnectStatus === "ready" ? session : null;
   const { room, players, messages, gameState, loading, resync } = useRoomRealtime(
@@ -232,6 +232,12 @@ function Game() {
   }, [room?.status, room?.code, navigate]);
 
   useEffect(() => {
+    if (reconnectStatus === "missing-session" || reconnectStatus === "expired-session") {
+      navigate({ to: "/", replace: true });
+    }
+  }, [navigate, reconnectStatus]);
+
+  useEffect(() => {
     setDealt(false);
     const t = setTimeout(() => setDealt(true), hand.length * 70 + 600);
     return () => clearTimeout(t);
@@ -372,19 +378,8 @@ function Game() {
 
   if (reconnectStatus === "missing-session" || reconnectStatus === "expired-session") {
     return (
-      <RoomShell className="items-center justify-center p-6 text-center">
-        <div className="max-w-sm rounded-3xl border border-white/10 bg-black/35 p-6 shadow-2xl shadow-black/40">
-          <AlertCircle className="mx-auto mb-3 h-7 w-7 text-[color:var(--gold)]" />
-          <h1 className="text-lg font-bold text-foreground">
-            {reconnectStatus === "missing-session" ? "Chybí uložená session" : "Session vypršela"}
-          </h1>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {reconnectError ?? "Vrať se do lobby a připoj se ke hře znovu."}
-          </p>
-          <RoomButton className="mt-5" variant="primary" onClick={() => navigate({ to: "/" })}>
-            Zpět do lobby
-          </RoomButton>
-        </div>
+      <RoomShell className="items-center justify-center">
+        <Loader2 className="m-auto h-6 w-6 animate-spin text-[color:var(--gold)]" />
       </RoomShell>
     );
   }
