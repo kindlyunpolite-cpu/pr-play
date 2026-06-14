@@ -137,8 +137,9 @@ function Waiting() {
   const handleRefresh = async () => {
     setRefreshing(true);
     try {
-      await resync();
-      toast.success("Místnost obnovena");
+      const refreshed = await resync();
+      if (refreshed) toast.success("Místnost obnovena");
+      else toast.error("Nepodařilo se obnovit místnost");
     } catch {
       toast.error("Nepodařilo se obnovit místnost");
     } finally {

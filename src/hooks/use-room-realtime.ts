@@ -36,9 +36,11 @@ export function useRoomRealtime(code: string | undefined, session: RoomSession |
   const channelRef = useRef<RealtimeChannel | null>(null);
   const roomIdRef = useRef<string | null>(null);
 
-  // Full resync — used on initial load and after reconnect
+  // Full resync — used on initial load and after reconnect.
+  // Returns whether all room state was refreshed successfully so callers can
+  // decide whether to show success/failure UI without relying on thrown errors.
   const resync = useCallback(async () => {
-    if (!code) return;
+    if (!code) return false;
     try {
       const data = await fetchRoom({
         data: session
@@ -47,22 +49,24 @@ export function useRoomRealtime(code: string | undefined, session: RoomSession |
       });
       if (!data) {
         setLoading(false);
-        return;
+        return false;
       }
       setRoom(data.room as RoomState);
       setPlayers(data.players as RoomPlayer[]);
       setGameState((data.gameState as GameState | null) ?? null);
       roomIdRef.current = data.room.id;
 
-      const { data: msgs } = await supabase
+      const { data: msgs, error: messagesError } = await supabase
         .from("room_messages")
         .select("*")
         .eq("room_id", data.room.id)
         .order("created_at", { ascending: true })
         .limit(200);
+      if (messagesError) throw messagesError;
       if (msgs) setMessages(msgs as RoomMessage[]);
+      return true;
     } catch {
-      /* swallow — connection state will reflect failure */
+      return false;
     } finally {
       setLoading(false);
     }
