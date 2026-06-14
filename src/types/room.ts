@@ -23,6 +23,7 @@ export interface RoomPlayer {
   joined_at: string;
   last_seen_at: string;
   connected?: boolean;
+  is_ai?: boolean;
   stats?: PlayerStats | null;
 }
 
