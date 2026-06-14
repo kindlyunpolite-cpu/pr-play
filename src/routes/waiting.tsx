@@ -76,9 +76,13 @@ function Waiting() {
   const callLeave = useServerFn(leaveRoom);
   const callKick = useServerFn(kickPlayer);
   const callStart = useServerFn(startGame);
+  const callAddAi = useServerFn(addAiPlayer);
+  const callFillAi = useServerFn(fillWithAiPlayers);
 
   const [copied, setCopied] = useState<"code" | "link" | null>(null);
-  const [busy, setBusy] = useState<"ready" | "start" | "leave" | `kick:${string}` | null>(null);
+  const [busy, setBusy] = useState<
+    "ready" | "start" | "leave" | "add-ai" | "fill-ai" | `kick:${string}` | null
+  >(null);
 
   const me = useMemo(
     () => players.find((p) => p.id === session?.playerId) ?? null,
