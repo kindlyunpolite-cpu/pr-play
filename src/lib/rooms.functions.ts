@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Json } from "@/integrations/supabase/types";
 import { randomBytes } from "crypto";
 import type { CardData, Rank, Suit } from "@/components/cards";
+import { runAiTurn } from "@/lib/ai-player";
 
 // ------------- helpers (server-only) -------------
 
