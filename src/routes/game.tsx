@@ -188,6 +188,7 @@ function Game() {
             cardsDrawn: p.stats?.cards_drawn ?? 0,
             chips: 0,
             accent: portrait.accent ?? PORTRAITS[index % PORTRAITS.length].accent,
+            badge: p.is_ai ? "AI" : undefined,
           };
         }),
     [gameState?.current_player_id, gameState?.hands, rotatedPlayers, session?.playerId],

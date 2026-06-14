@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Json } from "@/integrations/supabase/types";
 import { randomBytes } from "crypto";
 import type { CardData, Rank, Suit } from "@/components/cards";
+import { runAiTurn } from "@/lib/ai-player";
 
 // ------------- helpers (server-only) -------------
 
@@ -519,7 +520,9 @@ export const getRoomState = createServerFn({ method: "POST" })
     if (room.status === "waiting" && !(await normalizeWaitingRoom(room.id))) return null;
     const { data: players } = await supabaseAdmin
       .from("players")
-      .select("id, nickname, avatar, is_host, is_ready, seat, joined_at, last_seen_at, connected")
+      .select(
+        "id, nickname, avatar, is_host, is_ready, seat, joined_at, last_seen_at, connected, is_ai",
+      )
       .eq("room_id", room.id)
       .order("seat", { ascending: true });
     const { data: playerStats } = await supabaseAdmin
@@ -739,6 +742,7 @@ export const startGame = createServerFn({ method: "POST" })
       .update({ status: "playing", started_at: new Date().toISOString() })
       .eq("id", player.room_id);
     if (error) throw new Error("Failed to start game");
+    await runAiTurn(player.room_id);
     return { ok: true };
   });
 
@@ -826,6 +830,7 @@ export const drawCard = createServerFn({ method: "POST" })
       cardsDrawn: draw.cards.length,
       turnsTaken: 1,
     });
+    await runAiTurn(player.room_id);
     return { ok: true };
   });
 
@@ -949,6 +954,7 @@ export const playCard = createServerFn({ method: "POST" })
       turnsTaken: 1,
     });
 
+    if (!finished) await runAiTurn(player.room_id);
     return { ok: true };
   });
 

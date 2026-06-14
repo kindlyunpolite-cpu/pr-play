@@ -18,6 +18,8 @@ import {
   Link as LinkIcon,
   UserX,
   AlertCircle,
+  Bot,
+  Users,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
@@ -27,6 +29,7 @@ import { clearSession } from "@/lib/room-session";
 import { useRoomRealtime, type RoomPlayer } from "@/hooks/use-room-realtime";
 import { useReconnect } from "@/hooks/use-reconnect";
 import { setReady, leaveRoom, kickPlayer, startGame } from "@/lib/rooms.functions";
+import { addAiPlayer, fillWithAiPlayers } from "@/lib/ai-player";
 import { toast } from "sonner";
 
 const searchSchema = z.object({ code: z.string().optional() });
@@ -73,9 +76,13 @@ function Waiting() {
   const callLeave = useServerFn(leaveRoom);
   const callKick = useServerFn(kickPlayer);
   const callStart = useServerFn(startGame);
+  const callAddAi = useServerFn(addAiPlayer);
+  const callFillAi = useServerFn(fillWithAiPlayers);
 
   const [copied, setCopied] = useState<"code" | "link" | null>(null);
-  const [busy, setBusy] = useState<"ready" | "start" | "leave" | `kick:${string}` | null>(null);
+  const [busy, setBusy] = useState<
+    "ready" | "start" | "leave" | "add-ai" | "fill-ai" | `kick:${string}` | null
+  >(null);
 
   const me = useMemo(
     () => players.find((p) => p.id === session?.playerId) ?? null,
@@ -209,6 +216,37 @@ function Waiting() {
       await resync();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Nepodařilo se odebrat hráče");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleAddAi = async () => {
+    if (!session || !me?.is_host) return;
+    setBusy("add-ai");
+    try {
+      await callAddAi({
+        data: { playerId: session.playerId, sessionToken: session.sessionToken },
+      });
+      await resync();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Nepodařilo se přidat AI hráče");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleFillAi = async () => {
+    if (!session || !me?.is_host) return;
+    setBusy("fill-ai");
+    try {
+      const res = await callFillAi({
+        data: { playerId: session.playerId, sessionToken: session.sessionToken },
+      });
+      if (res.added === 0) toast.info("Stůl je už plný");
+      await resync();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Nepodařilo se doplnit AI");
     } finally {
       setBusy(null);
     }
@@ -439,6 +477,11 @@ function Waiting() {
                           active={p.is_ready}
                           offline={status === "offline"}
                         />
+                        {p.is_ai && (
+                          <span className="absolute -top-1 left-0 z-10 rounded-md border border-[color:var(--gold)]/50 bg-black/70 px-1 text-[8px] font-bold uppercase tracking-[0.18em] text-[color:var(--gold)]">
+                            AI
+                          </span>
+                        )}
                         {p.is_host && (
                           <Crown className="absolute -top-1 right-0 h-4 w-4 fill-[color:var(--gold)] text-[color:var(--gold)] drop-shadow" />
                         )}
@@ -483,6 +526,31 @@ function Waiting() {
                 </li>
               ))}
             </ul>
+
+            {me?.is_host && players.length < maxPlayers && (
+              <div className="mt-3 grid grid-cols-2 gap-2">
+                <RoomButton
+                  size="sm"
+                  variant="secondary"
+                  onClick={handleAddAi}
+                  loading={busy === "add-ai"}
+                  disabled={busy === "fill-ai"}
+                  icon={<Bot className="h-3.5 w-3.5" />}
+                >
+                  Přidat AI hráče
+                </RoomButton>
+                <RoomButton
+                  size="sm"
+                  variant="secondary"
+                  onClick={handleFillAi}
+                  loading={busy === "fill-ai"}
+                  disabled={busy === "add-ai" || players.length >= Math.min(4, maxPlayers)}
+                  icon={<Users className="h-3.5 w-3.5" />}
+                >
+                  Doplnit AI do 4 hráčů
+                </RoomButton>
+              </div>
+            )}
           </section>
         </main>
 
