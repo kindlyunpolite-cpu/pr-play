@@ -88,7 +88,7 @@ function Lobby() {
   const navigate = useNavigate();
   const callCreate = useServerFn(createRoom);
   const callJoin = useServerFn(joinRoom);
-  const { status: reconnectStatus } = useReconnect({
+  useReconnect({
     showMissingError: false,
     showExpiredError: false,
   });
