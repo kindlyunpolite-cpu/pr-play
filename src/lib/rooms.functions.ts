@@ -845,7 +845,9 @@ export const applyTurnTimeout = createServerFn({ method: "POST" })
         roomId: data.roomId,
         type: "system",
         playerId: activePlayerId,
-        message: `${activePlayerName} timed out`,
+        message: `${activePlayerName} timed out and drew ${draw.cards.length} ${
+          draw.cards.length === 1 ? "card" : "cards"
+        }`,
       }),
     ]);
 
