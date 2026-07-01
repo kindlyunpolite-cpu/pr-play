@@ -1,10 +1,16 @@
 -- Durable room event log for system notices and player actions.
+-- Security model: room events intentionally follow the existing public-read
+-- room/players/messages model in this prototype. Events must therefore contain
+-- only table-visible gameplay facts and immutable actor snapshots, never secrets
+-- such as session tokens or hidden hand/deck information.
 CREATE TABLE IF NOT EXISTS public.room_events (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   room_id uuid NOT NULL REFERENCES public.rooms(id) ON DELETE CASCADE,
   timestamp timestamptz NOT NULL DEFAULT now(),
   type text NOT NULL CHECK (char_length(type) BETWEEN 1 AND 64),
-  player_id uuid REFERENCES public.players(id) ON DELETE SET NULL,
+  player_id uuid,
+  actor_nickname text,
+  actor_seat smallint,
   message text NOT NULL CHECK (char_length(message) BETWEEN 1 AND 500)
 );
 

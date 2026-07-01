@@ -253,6 +253,8 @@ export type Database = {
       }
       room_events: {
         Row: {
+          actor_nickname: string | null
+          actor_seat: number | null
           id: string
           message: string
           player_id: string | null
@@ -261,6 +263,8 @@ export type Database = {
           type: string
         }
         Insert: {
+          actor_nickname?: string | null
+          actor_seat?: number | null
           id?: string
           message: string
           player_id?: string | null
@@ -269,6 +273,8 @@ export type Database = {
           type: string
         }
         Update: {
+          actor_nickname?: string | null
+          actor_seat?: number | null
           id?: string
           message?: string
           player_id?: string | null
@@ -277,13 +283,6 @@ export type Database = {
           type?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "room_events_player_id_fkey"
-            columns: ["player_id"]
-            isOneToOne: false
-            referencedRelation: "players"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "room_events_room_id_fkey"
             columns: ["room_id"]

@@ -40,17 +40,44 @@ async function writeRoomEvent(input: {
   roomId: string;
   type: RoomEventType;
   playerId?: string | null;
+  actorNickname?: string | null;
+  actorSeat?: number | null;
   message: string;
   timestamp?: string;
 }) {
-  const { error } = await supabaseAdmin.from("room_events").insert({
-    room_id: input.roomId,
-    timestamp: input.timestamp ?? new Date().toISOString(),
-    type: input.type,
-    player_id: input.playerId ?? null,
-    message: input.message,
-  });
-  if (error) throw new Error("Failed to write room event");
+  try {
+    const { error } = await supabaseAdmin.from("room_events").insert({
+      room_id: input.roomId,
+      timestamp: input.timestamp ?? new Date().toISOString(),
+      type: input.type,
+      player_id: input.playerId ?? null,
+      actor_nickname: input.actorNickname ?? null,
+      actor_seat: input.actorSeat ?? null,
+      message: input.message,
+    });
+
+    // Room events are best-effort audit/UI records. Never fail a completed
+    // room/game mutation just because an event insert failed.
+    if (error) {
+      console.debug("[room-events] failed to write room event", {
+        roomId: input.roomId,
+        type: input.type,
+        playerId: input.playerId,
+        error,
+      });
+    }
+  } catch (error) {
+    console.debug("[room-events] failed to write room event", {
+      roomId: input.roomId,
+      type: input.type,
+      playerId: input.playerId,
+      error,
+    });
+  }
+}
+
+function eventActor(player: { id: string; nickname: string; seat: number }) {
+  return { playerId: player.id, actorNickname: player.nickname, actorSeat: player.seat };
 }
 
 function createDeck(): CardData[] {
@@ -442,7 +469,7 @@ export const createRoom = createServerFn({ method: "POST" })
     await writeRoomEvent({
       roomId: room.id,
       type: "player-joined",
-      playerId: player.id,
+      ...eventActor(player),
       message: `${player.nickname} joined room`,
     });
 
@@ -531,7 +558,7 @@ export const joinRoom = createServerFn({ method: "POST" })
     await writeRoomEvent({
       roomId: room.id,
       type: "player-joined",
-      playerId: player.id,
+      ...eventActor(player),
       message: `${player.nickname} joined room`,
     });
 
@@ -701,7 +728,7 @@ export const leaveRoom = createServerFn({ method: "POST" })
       await writeRoomEvent({
         roomId: player.room_id,
         type: "player-left",
-        playerId: player.id,
+        ...eventActor(player),
         message: `${player.nickname} left room`,
       });
 
@@ -721,7 +748,7 @@ export const leaveRoom = createServerFn({ method: "POST" })
     await writeRoomEvent({
       roomId: player.room_id,
       type: "player-left",
-      playerId: player.id,
+      ...eventActor(player),
       message: `${player.nickname} left room`,
     });
 
@@ -755,7 +782,7 @@ export const kickPlayer = createServerFn({ method: "POST" })
 
     const { data: target, error: targetErr } = await supabaseAdmin
       .from("players")
-      .select("id, room_id")
+      .select("id, room_id, nickname, seat")
       .eq("id", data.targetPlayerId)
       .maybeSingle();
     if (targetErr || !target || target.room_id !== host.room_id) {
@@ -767,6 +794,13 @@ export const kickPlayer = createServerFn({ method: "POST" })
       .delete()
       .eq("id", data.targetPlayerId);
     if (deleteErr) throw new Error("Failed to remove player");
+
+    await writeRoomEvent({
+      roomId: host.room_id,
+      type: "player-kicked",
+      ...eventActor(target),
+      message: `${target.nickname} was kicked from room`,
+    });
 
     await normalizeWaitingRoom(host.room_id);
     return { ok: true };
@@ -809,14 +843,20 @@ export const startGame = createServerFn({ method: "POST" })
   });
 
 async function writeSystemEvent(roomId: string, text: string) {
-  const { error } = await supabaseAdmin.from("room_messages").insert({
-    room_id: roomId,
-    player_id: null,
-    nickname: "System",
-    avatar: null,
-    text,
-  });
-  if (error) throw new Error("Failed to write system event");
+  try {
+    const { error } = await supabaseAdmin.from("room_messages").insert({
+      room_id: roomId,
+      player_id: null,
+      nickname: "System",
+      avatar: null,
+      text,
+    });
+    if (error) {
+      console.debug("[room-events] failed to write legacy system chat event", { roomId, error });
+    }
+  } catch (error) {
+    console.debug("[room-events] failed to write legacy system chat event", { roomId, error });
+  }
 }
 
 // ------------- applyTurnTimeout -------------
@@ -848,6 +888,7 @@ export const applyTurnTimeout = createServerFn({ method: "POST" })
     const players = await loadTurnPlayers(data.roomId);
     const hands = { ...gameState.hands };
     const activePlayerId = gameState.current_player_id;
+    const activePlayer = players.find((p) => p.id === activePlayerId);
     const activeHand = [...(hands[activePlayerId] ?? [])];
     const draw = takeDrawableCards(gameState.deck, gameState.discard_pile, 1);
     activeHand.push(...draw.cards);
@@ -896,7 +937,9 @@ export const applyTurnTimeout = createServerFn({ method: "POST" })
         roomId: data.roomId,
         type: "turn-timeout",
         playerId: activePlayerId,
-        message: `${players.find((p) => p.id === activePlayerId)?.nickname ?? "Player"} timed out`,
+        actorNickname: activePlayer?.nickname ?? null,
+        actorSeat: activePlayer?.seat ?? null,
+        message: `${activePlayer?.nickname ?? "Player"} timed out`,
         timestamp: updatedAt,
       }),
     ]);
@@ -996,7 +1039,7 @@ export const drawCard = createServerFn({ method: "POST" })
       writeRoomEvent({
         roomId: player.room_id,
         type: "card-drawn",
-        playerId: player.id,
+        ...eventActor(player),
         message: `${player.nickname} drew ${
           draw.cards.length === 1 ? "a card" : `${draw.cards.length} cards`
         }`,
@@ -1141,7 +1184,7 @@ export const playCard = createServerFn({ method: "POST" })
       writeRoomEvent({
         roomId: player.room_id,
         type: "card-played",
-        playerId: player.id,
+        ...eventActor(player),
         message: `${player.nickname} played ${cardEventLabel(card)}`,
       }),
     ]);
