@@ -213,9 +213,11 @@ function Game() {
     });
     if (!action) return null;
     if (action.type !== "draw" && !action.playedCard) {
-      return { ...action, playedCard: topDiscard };
+      const withCard: GameActionEvent = { ...action, playedCard: topDiscard ?? null };
+      return withCard;
     }
     return action;
+
 
   }, [
     gameState?.last_action_id,
