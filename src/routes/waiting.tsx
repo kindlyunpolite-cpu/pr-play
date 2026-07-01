@@ -106,6 +106,7 @@ function Waiting() {
 
   useEffect(() => {
     if (reconnectStatus !== "ready" || !session || loading || !room || me) return;
+    if (room.status !== "waiting") return;
     clearSession();
     toast.info(`Správce odpojil hráče ${session.nickname} z místnosti`);
     navigate({ to: "/", replace: true });
