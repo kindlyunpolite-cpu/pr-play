@@ -36,6 +36,12 @@ function cardEventLabel(card: CardData) {
   return `${card.rank} ${SUIT_NAMES[card.suit]}`;
 }
 
+function cardPlayedEventMessage(nickname: string, card: CardData, chosenSuit?: Suit | null) {
+  return `${nickname} played ${cardEventLabel(card)}${
+    chosenSuit ? ` and chose ${SUIT_NAMES[chosenSuit]}` : ""
+  }`;
+}
+
 async function writeRoomEvent(input: {
   roomId: string;
   type: RoomEventType;
@@ -1185,7 +1191,7 @@ export const playCard = createServerFn({ method: "POST" })
         roomId: player.room_id,
         type: "card-played",
         ...eventActor(player),
-        message: `${player.nickname} played ${cardEventLabel(card)}`,
+        message: cardPlayedEventMessage(player.nickname, card, data.chosenSuit ?? null),
       }),
     ]);
     console.debug("[game] last action updated", {

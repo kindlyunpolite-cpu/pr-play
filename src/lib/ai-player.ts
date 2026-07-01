@@ -10,7 +10,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Json } from "@/integrations/supabase/types";
 import type { CardData, Suit } from "@/components/cards";
 import { PORTRAITS } from "./portraits";
-import type { GameState } from "@/types/room";
+import type { GameState, RoomEventType } from "@/types/room";
 import { createVisibleActionSignature } from "@/lib/game-actions";
 
 // ---------- Pure helpers (safe to import anywhere) ----------
@@ -72,6 +72,65 @@ export function pickAiAction(
 }
 
 // ---------- Server-only helpers ----------
+
+const SUIT_NAMES: Record<Suit, string> = {
+  hearts: "Hearts",
+  diamonds: "Diamonds",
+  clubs: "Clubs",
+  spades: "Spades",
+};
+
+function cardEventLabel(card: CardData) {
+  return `${card.rank} ${SUIT_NAMES[card.suit]}`;
+}
+
+function cardPlayedEventMessage(nickname: string, card: CardData, chosenSuit?: Suit | null) {
+  return `${nickname} played ${cardEventLabel(card)}${
+    chosenSuit ? ` and chose ${SUIT_NAMES[chosenSuit]}` : ""
+  }`;
+}
+
+function eventActor(player: { id: string; nickname: string; seat: number }) {
+  return { playerId: player.id, actorNickname: player.nickname, actorSeat: player.seat };
+}
+
+async function writeRoomEvent(input: {
+  roomId: string;
+  type: RoomEventType;
+  playerId?: string | null;
+  actorNickname?: string | null;
+  actorSeat?: number | null;
+  message: string;
+  timestamp?: string;
+}) {
+  try {
+    const { error } = await supabaseAdmin.from("room_events").insert({
+      room_id: input.roomId,
+      timestamp: input.timestamp ?? new Date().toISOString(),
+      type: input.type,
+      player_id: input.playerId ?? null,
+      actor_nickname: input.actorNickname ?? null,
+      actor_seat: input.actorSeat ?? null,
+      message: input.message,
+    });
+
+    if (error) {
+      console.debug("[room-events] failed to write AI room event", {
+        roomId: input.roomId,
+        type: input.type,
+        playerId: input.playerId,
+        error,
+      });
+    }
+  } catch (error) {
+    console.debug("[room-events] failed to write AI room event", {
+      roomId: input.roomId,
+      type: input.type,
+      playerId: input.playerId,
+      error,
+    });
+  }
+}
 
 function toCardArray(value: unknown): CardData[] {
   return Array.isArray(value) ? (value as CardData[]) : [];
@@ -194,16 +253,27 @@ async function insertAiPlayer(roomId: string) {
 
   const { nickname, avatar } = await pickAiIdentity(roomId);
 
-  const { error } = await supabaseAdmin.from("players").insert({
-    room_id: roomId,
-    nickname,
-    avatar,
-    seat,
-    is_ready: true,
-    is_ai: true,
-    connected: true,
+  const { data: player, error } = await supabaseAdmin
+    .from("players")
+    .insert({
+      room_id: roomId,
+      nickname,
+      avatar,
+      seat,
+      is_ready: true,
+      is_ai: true,
+      connected: true,
+    })
+    .select("id, nickname, seat")
+    .single();
+  if (error || !player) throw new Error("Nepodařilo se přidat AI hráče");
+
+  await writeRoomEvent({
+    roomId,
+    type: "player-joined",
+    ...eventActor(player),
+    message: `${player.nickname} joined room`,
   });
-  if (error) throw new Error("Nepodařilo se přidat AI hráče");
 }
 
 // ---------- Server functions ----------
@@ -257,7 +327,7 @@ async function loadAiContext(roomId: string) {
   if (!gameState || gameState.status !== "playing") return null;
   const { data: players } = await supabaseAdmin
     .from("players")
-    .select("id, seat, is_ai")
+    .select("id, seat, nickname, is_ai")
     .eq("room_id", roomId)
     .order("seat", { ascending: true });
   if (!players || players.length < 2) return null;
@@ -357,6 +427,14 @@ export async function runAiTurn(roomId: string): Promise<void> {
         .select("room_id")
         .maybeSingle();
       if (!updated) return;
+      await writeRoomEvent({
+        roomId,
+        type: "card-drawn",
+        ...eventActor(freshCurrent),
+        message: `${freshCurrent.nickname} drew ${
+          draw.cards.length === 1 ? "a card" : `${draw.cards.length} cards`
+        }`,
+      });
       console.debug("[AI] action executed", {
         roomId,
         playerId: freshCurrent.id,
@@ -415,6 +493,14 @@ export async function runAiTurn(roomId: string): Promise<void> {
       .select("room_id")
       .maybeSingle();
     if (!updated) return;
+
+    await writeRoomEvent({
+      roomId,
+      type: "card-played",
+      ...eventActor(freshCurrent),
+      message: cardPlayedEventMessage(freshCurrent.nickname, card, decision.chosenSuit ?? null),
+      timestamp: finishedAt,
+    });
 
     console.debug("[AI] action executed", {
       roomId,
