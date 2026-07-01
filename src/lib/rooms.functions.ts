@@ -5,6 +5,7 @@ import type { Json } from "@/integrations/supabase/types";
 import { randomBytes } from "crypto";
 import type { CardData, Rank, Suit } from "@/components/cards";
 import { createVisibleActionSignature } from "@/lib/game-actions";
+import { cardEventLabel, drawnCardEventMessage, recordRoomEvent } from "@/lib/room-events";
 
 // ------------- helpers (server-only) -------------
 
@@ -335,6 +336,7 @@ const AvatarSchema = z.string().trim().max(8).optional().nullable();
 const CodeSchema = z.string().trim().toUpperCase().length(5);
 const TokenSchema = z.string().min(8).max(128);
 const PlayerIdSchema = z.string().uuid();
+const RoomIdSchema = z.string().uuid();
 const ActionIdSchema = z.string().uuid();
 const TurnVersionSchema = z.number().int().min(0);
 
@@ -408,6 +410,12 @@ export const createRoom = createServerFn({ method: "POST" })
     });
 
     await supabaseAdmin.from("rooms").update({ host_player_id: player.id }).eq("id", room.id);
+    await recordRoomEvent({
+      roomId: room.id,
+      type: "system",
+      playerId: player.id,
+      message: `${player.nickname} joined room`,
+    });
 
     return {
       roomCode: room.code,
@@ -489,6 +497,12 @@ export const joinRoom = createServerFn({ method: "POST" })
     await supabaseAdmin.from("player_secrets").insert({
       player_id: player.id,
       session_token: sessionToken,
+    });
+    await recordRoomEvent({
+      roomId: room.id,
+      type: "system",
+      playerId: player.id,
+      message: `${player.nickname} joined room`,
     });
 
     return {
@@ -744,6 +758,100 @@ export const startGame = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
+async function loadPlayerName(playerId: string) {
+  const { data: player, error } = await supabaseAdmin
+    .from("players")
+    .select("nickname")
+    .eq("id", playerId)
+    .maybeSingle();
+  if (error) throw new Error("Failed to load player name");
+  return player?.nickname ?? "Player";
+}
+
+// ------------- applyTurnTimeout -------------
+
+export const applyTurnTimeout = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => z.object({ roomId: RoomIdSchema }).parse(input))
+  .handler(async ({ data }) => {
+    const gameState = await loadGameState(data.roomId);
+    if (gameState.status !== "playing") return { ok: true, finished: true };
+    if (!gameState.current_player_id) return { ok: true, stale: true };
+
+    const now = new Date();
+    const deadline = new Date(gameState.turn_deadline_at);
+    if (Number.isNaN(deadline.getTime())) {
+      throw actionError("invalid", "turn deadline is invalid");
+    }
+    if (deadline > now) return { ok: true, notExpired: true };
+
+    const timeoutActionId = `timeout:${gameState.turn_version}:${gameState.current_player_id}`;
+    const signature = "timeout";
+    const duplicate = resolveDuplicateAction(
+      gameState.processed_actions,
+      timeoutActionId,
+      gameState.current_player_id,
+      signature,
+    );
+    if (duplicate) return duplicate;
+
+    const players = await loadTurnPlayers(data.roomId);
+    const hands = { ...gameState.hands };
+    const activePlayerId = gameState.current_player_id;
+    const activeHand = [...(hands[activePlayerId] ?? [])];
+    const draw = takeDrawableCards(gameState.deck, gameState.discard_pile, 1);
+    activeHand.push(...draw.cards);
+    hands[activePlayerId] = activeHand;
+
+    const processedActions = {
+      ...gameState.processed_actions,
+      [timeoutActionId]: { playerId: activePlayerId, signature },
+    };
+    const nextTurnPlayerId = nextPlayerId(players, activePlayerId, gameState.direction);
+    const updatedAt = now.toISOString();
+
+    const { data: updated, error } = await supabaseAdmin
+      .from("game_states")
+      .update({
+        deck: draw.deck as unknown as Json,
+        discard_pile: draw.discardPile as unknown as Json,
+        hands: hands as unknown as Json,
+        current_player_id: nextTurnPlayerId,
+        active_suit: gameState.active_suit,
+        pending_draw: gameState.pending_draw,
+        turn_version: gameState.turn_version + 1,
+        last_action_id: timeoutActionId,
+        last_action_player_id: activePlayerId,
+        last_action_signature: signature,
+        processed_actions: processedActions as unknown as Json,
+        updated_at: updatedAt,
+      })
+      .eq("room_id", data.roomId)
+      .eq("current_player_id", activePlayerId)
+      .eq("status", "playing")
+      .eq("turn_version", gameState.turn_version)
+      .lte("turn_deadline_at", updatedAt)
+      .select("room_id")
+      .maybeSingle();
+    if (error) throw new Error("Failed to apply turn timeout");
+    if (!updated) return { ok: true, stale: true };
+
+    const activePlayerName = await loadPlayerName(activePlayerId);
+    await Promise.all([
+      incrementPlayerStats(activePlayerId, data.roomId, {
+        cardsDrawn: draw.cards.length,
+        turnsTaken: 1,
+      }),
+      recordRoomEvent({
+        roomId: data.roomId,
+        type: "system",
+        playerId: activePlayerId,
+        message: `${activePlayerName} timed out`,
+      }),
+    ]);
+
+    return { ok: true, timedOut: true, drawn: draw.cards.length };
+  });
+
 // ------------- drawCard -------------
 
 export const drawCard = createServerFn({ method: "POST" })
@@ -828,10 +936,18 @@ export const drawCard = createServerFn({ method: "POST" })
         data.expectedTurnVersion,
       );
     }
-    await incrementPlayerStats(player.id, player.room_id, {
-      cardsDrawn: draw.cards.length,
-      turnsTaken: 1,
-    });
+    await Promise.all([
+      incrementPlayerStats(player.id, player.room_id, {
+        cardsDrawn: draw.cards.length,
+        turnsTaken: 1,
+      }),
+      recordRoomEvent({
+        roomId: player.room_id,
+        type: "player_action",
+        playerId: player.id,
+        message: drawnCardEventMessage(player.nickname, draw.cards.length),
+      }),
+    ]);
     console.debug("[game] last action updated", {
       roomId: player.room_id,
       playerId: player.id,
@@ -963,10 +1079,18 @@ export const playCard = createServerFn({ method: "POST" })
       await recordFinishedGame(player.room_id, player.id, finishedAt);
     }
 
-    await incrementPlayerStats(player.id, player.room_id, {
-      cardsPlayed: 1,
-      turnsTaken: 1,
-    });
+    await Promise.all([
+      incrementPlayerStats(player.id, player.room_id, {
+        cardsPlayed: 1,
+        turnsTaken: 1,
+      }),
+      recordRoomEvent({
+        roomId: player.room_id,
+        type: "player_action",
+        playerId: player.id,
+        message: `${player.nickname} played ${cardEventLabel(card)}`,
+      }),
+    ]);
     console.debug("[game] last action updated", {
       roomId: player.room_id,
       playerId: player.id,

@@ -6,13 +6,14 @@ import { getRoomState, heartbeat } from "@/lib/rooms.functions";
 import type {
   ConnectionStatus,
   GameState,
+  RoomEvent,
   RoomMessage,
   RoomPlayer,
   RoomSession,
   RoomState,
 } from "@/types/room";
 
-export type { ConnectionStatus, GameState, RoomMessage, RoomPlayer, RoomState };
+export type { ConnectionStatus, GameState, RoomEvent, RoomMessage, RoomPlayer, RoomState };
 
 /**
  * Subscribes to room + players + messages for the given room code.
@@ -27,6 +28,7 @@ export function useRoomRealtime(code: string | undefined, session: RoomSession |
   const [room, setRoom] = useState<RoomState | null>(null);
   const [players, setPlayers] = useState<RoomPlayer[]>([]);
   const [messages, setMessages] = useState<RoomMessage[]>([]);
+  const [events, setEvents] = useState<RoomEvent[]>([]);
   const [gameState, setGameState] = useState<GameState | null>(null);
   const [loading, setLoading] = useState(true);
   const [connection, setConnection] = useState<ConnectionStatus>("connecting");
@@ -64,6 +66,15 @@ export function useRoomRealtime(code: string | undefined, session: RoomSession |
         .limit(200);
       if (messagesError) throw messagesError;
       if (msgs) setMessages(msgs as RoomMessage[]);
+
+      const { data: roomEvents, error: eventsError } = await supabase
+        .from("room_events")
+        .select("*")
+        .eq("room_id", data.room.id)
+        .order("timestamp", { ascending: true })
+        .limit(200);
+      if (eventsError) throw eventsError;
+      if (roomEvents) setEvents(roomEvents as RoomEvent[]);
       return true;
     } catch {
       return false;
@@ -159,6 +170,21 @@ export function useRoomRealtime(code: string | undefined, session: RoomSession |
         (payload) => {
           const msg = payload.new as RoomMessage;
           setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "room_events",
+          filter: `room_id=eq.${roomId}`,
+        },
+        (payload) => {
+          const event = payload.new as RoomEvent;
+          setEvents((prev) =>
+            prev.some((existing) => existing.id === event.id) ? prev : [...prev, event],
+          );
         },
       )
       .subscribe((status) => {
@@ -258,5 +284,5 @@ export function useRoomRealtime(code: string | undefined, session: RoomSession |
     };
   }, [session, ping]);
 
-  return { room, players, messages, gameState, loading, connection, resync };
+  return { room, players, messages, events, gameState, loading, connection, resync };
 }

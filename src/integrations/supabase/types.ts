@@ -72,6 +72,8 @@ export type Database = {
           rematch_votes: Json
           room_id: string
           status: string
+          turn_started_at: string
+          turn_deadline_at: string
           turn_version: number
           updated_at: string
         }
@@ -90,6 +92,8 @@ export type Database = {
           rematch_votes?: Json
           room_id: string
           status?: string
+          turn_started_at?: string
+          turn_deadline_at?: string
           turn_version?: number
           updated_at?: string
         }
@@ -108,6 +112,8 @@ export type Database = {
           rematch_votes?: Json
           room_id?: string
           status?: string
+          turn_started_at?: string
+          turn_deadline_at?: string
           turn_version?: number
           updated_at?: string
         }
@@ -238,6 +244,48 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "players_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      room_events: {
+        Row: {
+          id: string
+          message: string
+          player_id: string | null
+          room_id: string
+          timestamp: string
+          type: string
+        }
+        Insert: {
+          id?: string
+          message: string
+          player_id?: string | null
+          room_id: string
+          timestamp?: string
+          type: string
+        }
+        Update: {
+          id?: string
+          message?: string
+          player_id?: string | null
+          room_id?: string
+          timestamp?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_events_player_id_fkey"
+            columns: ["player_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_events_room_id_fkey"
             columns: ["room_id"]
             isOneToOne: false
             referencedRelation: "rooms"

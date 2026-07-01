@@ -12,6 +12,7 @@ import type { CardData, Suit } from "@/components/cards";
 import { PORTRAITS } from "./portraits";
 import type { GameState } from "@/types/room";
 import { createVisibleActionSignature } from "@/lib/game-actions";
+import { cardEventLabel, drawnCardEventMessage, recordRoomEvent } from "@/lib/room-events";
 
 // ---------- Pure helpers (safe to import anywhere) ----------
 
@@ -194,16 +195,26 @@ async function insertAiPlayer(roomId: string) {
 
   const { nickname, avatar } = await pickAiIdentity(roomId);
 
-  const { error } = await supabaseAdmin.from("players").insert({
-    room_id: roomId,
-    nickname,
-    avatar,
-    seat,
-    is_ready: true,
-    is_ai: true,
-    connected: true,
+  const { data: player, error } = await supabaseAdmin
+    .from("players")
+    .insert({
+      room_id: roomId,
+      nickname,
+      avatar,
+      seat,
+      is_ready: true,
+      is_ai: true,
+      connected: true,
+    })
+    .select("id, nickname")
+    .single();
+  if (error || !player) throw new Error("Nepodařilo se přidat AI hráče");
+  await recordRoomEvent({
+    roomId,
+    type: "system",
+    playerId: player.id,
+    message: `${player.nickname} joined room`,
   });
-  if (error) throw new Error("Nepodařilo se přidat AI hráče");
 }
 
 // ---------- Server functions ----------
@@ -257,7 +268,7 @@ async function loadAiContext(roomId: string) {
   if (!gameState || gameState.status !== "playing") return null;
   const { data: players } = await supabaseAdmin
     .from("players")
-    .select("id, seat, is_ai")
+    .select("id, seat, is_ai, nickname")
     .eq("room_id", roomId)
     .order("seat", { ascending: true });
   if (!players || players.length < 2) return null;
@@ -370,6 +381,12 @@ export async function runAiTurn(roomId: string): Promise<void> {
         type: "draw",
         actionId,
       });
+      await recordRoomEvent({
+        roomId,
+        type: "player_action",
+        playerId: freshCurrent.id,
+        message: drawnCardEventMessage(freshCurrent.nickname, draw.cards.length),
+      });
       await wait(1000);
       continue;
     }
@@ -429,6 +446,12 @@ export async function runAiTurn(roomId: string): Promise<void> {
       playerId: freshCurrent.id,
       type: decision.chosenSuit ? "suit-change" : "play",
       actionId,
+    });
+    await recordRoomEvent({
+      roomId,
+      type: "player_action",
+      playerId: freshCurrent.id,
+      message: `${freshCurrent.nickname} played ${cardEventLabel(card)}`,
     });
 
     if (finished) {
