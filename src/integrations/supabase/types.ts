@@ -72,6 +72,8 @@ export type Database = {
           rematch_votes: Json
           room_id: string
           status: string
+          turn_started_at: string
+          turn_deadline_at: string
           turn_version: number
           updated_at: string
         }
@@ -90,6 +92,8 @@ export type Database = {
           rematch_votes?: Json
           room_id: string
           status?: string
+          turn_started_at?: string
+          turn_deadline_at?: string
           turn_version?: number
           updated_at?: string
         }
@@ -108,6 +112,8 @@ export type Database = {
           rematch_votes?: Json
           room_id?: string
           status?: string
+          turn_started_at?: string
+          turn_deadline_at?: string
           turn_version?: number
           updated_at?: string
         }

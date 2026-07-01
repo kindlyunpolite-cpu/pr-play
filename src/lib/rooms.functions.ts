@@ -335,6 +335,7 @@ const AvatarSchema = z.string().trim().max(8).optional().nullable();
 const CodeSchema = z.string().trim().toUpperCase().length(5);
 const TokenSchema = z.string().min(8).max(128);
 const PlayerIdSchema = z.string().uuid();
+const RoomIdSchema = z.string().uuid();
 const ActionIdSchema = z.string().uuid();
 const TurnVersionSchema = z.number().int().min(0);
 
@@ -742,6 +743,95 @@ export const startGame = createServerFn({ method: "POST" })
       .eq("id", player.room_id);
     if (error) throw new Error("Failed to start game");
     return { ok: true };
+  });
+
+async function writeSystemEvent(roomId: string, text: string) {
+  const { error } = await supabaseAdmin.from("room_messages").insert({
+    room_id: roomId,
+    player_id: null,
+    nickname: "System",
+    avatar: null,
+    text,
+  });
+  if (error) throw new Error("Failed to write system event");
+}
+
+// ------------- applyTurnTimeout -------------
+
+export const applyTurnTimeout = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => z.object({ roomId: RoomIdSchema }).parse(input))
+  .handler(async ({ data }) => {
+    const gameState = await loadGameState(data.roomId);
+    if (gameState.status !== "playing") return { ok: true, finished: true };
+    if (!gameState.current_player_id) return { ok: true, stale: true };
+
+    const now = new Date();
+    const deadline = new Date(gameState.turn_deadline_at);
+    if (Number.isNaN(deadline.getTime())) {
+      throw actionError("invalid", "turn deadline is invalid");
+    }
+    if (deadline > now) return { ok: true, notExpired: true };
+
+    const timeoutActionId = `timeout:${gameState.turn_version}:${gameState.current_player_id}`;
+    const signature = "timeout";
+    const duplicate = resolveDuplicateAction(
+      gameState.processed_actions,
+      timeoutActionId,
+      gameState.current_player_id,
+      signature,
+    );
+    if (duplicate) return duplicate;
+
+    const players = await loadTurnPlayers(data.roomId);
+    const hands = { ...gameState.hands };
+    const activePlayerId = gameState.current_player_id;
+    const activeHand = [...(hands[activePlayerId] ?? [])];
+    const draw = takeDrawableCards(gameState.deck, gameState.discard_pile, 1);
+    activeHand.push(...draw.cards);
+    hands[activePlayerId] = activeHand;
+
+    const processedActions = {
+      ...gameState.processed_actions,
+      [timeoutActionId]: { playerId: activePlayerId, signature },
+    };
+    const nextTurnPlayerId = nextPlayerId(players, activePlayerId, gameState.direction);
+    const updatedAt = now.toISOString();
+
+    const { data: updated, error } = await supabaseAdmin
+      .from("game_states")
+      .update({
+        deck: draw.deck as unknown as Json,
+        discard_pile: draw.discardPile as unknown as Json,
+        hands: hands as unknown as Json,
+        current_player_id: nextTurnPlayerId,
+        active_suit: gameState.active_suit,
+        pending_draw: gameState.pending_draw,
+        turn_version: gameState.turn_version + 1,
+        last_action_id: timeoutActionId,
+        last_action_player_id: activePlayerId,
+        last_action_signature: signature,
+        processed_actions: processedActions as unknown as Json,
+        updated_at: updatedAt,
+      })
+      .eq("room_id", data.roomId)
+      .eq("current_player_id", activePlayerId)
+      .eq("status", "playing")
+      .eq("turn_version", gameState.turn_version)
+      .lte("turn_deadline_at", updatedAt)
+      .select("room_id")
+      .maybeSingle();
+    if (error) throw new Error("Failed to apply turn timeout");
+    if (!updated) return { ok: true, stale: true };
+
+    await Promise.all([
+      incrementPlayerStats(activePlayerId, data.roomId, {
+        cardsDrawn: draw.cards.length,
+        turnsTaken: 1,
+      }),
+      writeSystemEvent(data.roomId, `Player timed out and drew ${draw.cards.length} card.`),
+    ]);
+
+    return { ok: true, timedOut: true, drawn: draw.cards.length };
   });
 
 // ------------- drawCard -------------
