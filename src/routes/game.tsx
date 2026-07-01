@@ -357,28 +357,7 @@ function Game() {
       nickname: activePlayer?.nickname,
       isAi: activePlayer?.is_ai ?? false,
       turnVersion: gameState.turn_version,
-  });
-
-  const activeIndicatorPlayer = useMemo(() => {
-    const player = activePlayer ?? me;
-    const portrait = getPortrait(player?.avatar ?? session?.avatar);
-    return {
-      id: player?.id ?? session?.playerId ?? "turn",
-      name: player?.nickname ?? you.name,
-      avatar: portrait.src,
-      accent: portrait.accent,
-    };
-  }, [
-    activePlayer?.avatar,
-    activePlayer?.id,
-    activePlayer?.nickname,
-    me?.avatar,
-    me?.id,
-    me?.nickname,
-    session?.avatar,
-    session?.playerId,
-    you.name,
-  ]);
+    });
   }, [
     activePlayer?.is_ai,
     activePlayer?.nickname,
