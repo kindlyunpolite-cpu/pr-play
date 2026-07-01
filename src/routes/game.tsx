@@ -50,6 +50,13 @@ const SUIT_SYMBOL: Record<Suit, string> = {
   spades: "♠",
 };
 
+function formatTurnTime(ms: number) {
+  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
+}
+
 function adjacentPlayerId(
   players: { id: string }[],
   currentPlayerId: string | null,
@@ -120,6 +127,12 @@ function Game() {
   const [leaving, setLeaving] = useState(false);
   const [busyRematch, setBusyRematch] = useState<"accept" | "decline" | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [nowMs, setNowMs] = useState(() => Date.now());
+
+  useEffect(() => {
+    const id = window.setInterval(() => setNowMs(Date.now()), 250);
+    return () => window.clearInterval(id);
+  }, []);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -183,6 +196,10 @@ function Game() {
     : [topDiscard];
   const activeSuit = gameState?.active_suit ?? topDiscard.suit;
   const pendingDraw = gameState?.pending_draw ?? 0;
+  const turnDeadlineMs = gameState?.turn_deadline_at
+    ? Date.parse(gameState.turn_deadline_at)
+    : Number.NaN;
+  const turnRemainingMs = Number.isFinite(turnDeadlineMs) ? turnDeadlineMs - nowMs : 0;
   const myTurn =
     gameState?.status === "playing" && gameState?.current_player_id === session?.playerId;
   const activePlayer = players.find((p) => p.id === gameState?.current_player_id) ?? me;
@@ -205,7 +222,8 @@ function Game() {
     gameState?.updated_at,
     topDiscard,
   ]);
-  const showLatestAction = latestAction && latestAction.id === visibleActionId ? latestAction : null;
+  const showLatestAction =
+    latestAction && latestAction.id === visibleActionId ? latestAction : null;
   const gameFinished = room?.status === "finished" || gameState?.status === "finished";
   const winner = gameFinished ? players.find((p) => p.id === gameState?.current_player_id) : null;
   const connectedPlayers = players.filter((p) => p.connected !== false);
@@ -291,7 +309,8 @@ function Game() {
     cardsDrawn: me?.stats?.cards_drawn ?? 0,
     chips: 0,
     accent: mePortrait.accent,
-    actionPulse: pulsingPlayerId === session?.playerId && latestAction?.type === "draw" ? "draw" : undefined,
+    actionPulse:
+      pulsingPlayerId === session?.playerId && latestAction?.type === "draw" ? "draw" : undefined,
   };
 
   useEffect(() => {
@@ -350,7 +369,9 @@ function Game() {
     if (!latestAction) return;
 
     console.debug("[game] last action updated", latestAction);
-    setRecentActions((prev) => [latestAction, ...prev.filter((a) => a.id !== latestAction.id)].slice(0, 5));
+    setRecentActions((prev) =>
+      [latestAction, ...prev.filter((a) => a.id !== latestAction.id)].slice(0, 5),
+    );
     setVisibleActionId(latestAction.id);
     setPulsingPlayerId(latestAction.playerId);
 
@@ -590,7 +611,7 @@ function Game() {
                     <span className="h-3 w-px bg-white/10" />
                     <Timer className="h-3 w-3 text-muted-foreground" />
                     <span className="text-[10px] font-mono tabular-nums text-muted-foreground">
-                      0:18
+                      {formatTurnTime(turnRemainingMs)}
                     </span>
                   </div>
 

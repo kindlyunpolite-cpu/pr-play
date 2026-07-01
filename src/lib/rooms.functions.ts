@@ -22,6 +22,7 @@ function genToken() {
 const SUITS: Suit[] = ["hearts", "diamonds", "clubs", "spades"];
 const RANKS: Rank[] = ["7", "8", "9", "10", "J", "Q", "K", "A"];
 const DEAL_COUNT = 4;
+const TURN_DURATION_MS = 30_000;
 
 function createDeck(): CardData[] {
   return SUITS.flatMap((suit) => RANKS.map((rank) => ({ suit, rank })));
@@ -255,6 +256,9 @@ async function initializeGame(roomId: string, players: { id: string }[], firstPl
   const firstDiscard = deck.shift();
   if (!firstDiscard) throw new Error("Could not initialize deck");
 
+  const turnStartedAt = new Date();
+  const turnDeadlineAt = new Date(turnStartedAt.getTime() + TURN_DURATION_MS);
+
   const { error: stateError } = await supabaseAdmin.from("game_states").upsert({
     room_id: roomId,
     deck: deck as unknown as Json,
@@ -266,6 +270,8 @@ async function initializeGame(roomId: string, players: { id: string }[], firstPl
     status: "playing",
     pending_draw: 0,
     turn_version: 0,
+    turn_started_at: turnStartedAt.toISOString(),
+    turn_deadline_at: turnDeadlineAt.toISOString(),
     last_action_id: null,
     last_action_player_id: null,
     last_action_signature: null,
@@ -652,10 +658,7 @@ export const leaveRoom = createServerFn({ method: "POST" })
     if (roomErr || !room) throw new Error("Room no longer exists");
 
     if (room.status === "waiting") {
-      const { error: deleteErr } = await supabaseAdmin
-        .from("players")
-        .delete()
-        .eq("id", player.id);
+      const { error: deleteErr } = await supabaseAdmin.from("players").delete().eq("id", player.id);
       if (deleteErr) throw new Error("Failed to leave room");
 
       await normalizeWaitingRoom(player.room_id);
