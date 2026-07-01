@@ -41,6 +41,8 @@ export function useReconnect(options: UseReconnectOptions = {}) {
       setStatus("missing-session");
       return;
     }
+    setSession(stored);
+    setStatus("checking");
 
     let cancelled = false;
     (async () => {
