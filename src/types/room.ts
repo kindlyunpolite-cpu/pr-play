@@ -48,6 +48,27 @@ export interface RoomMessage {
   created_at: string;
 }
 
+export type RoomEventType =
+  | "system"
+  | "player-joined"
+  | "player-left"
+  | "player-kicked"
+  | "game-started"
+  | "card-played"
+  | "card-drawn"
+  | "turn-timeout";
+
+export interface RoomEvent {
+  id: string;
+  room_id: string;
+  timestamp: string;
+  type: RoomEventType | string;
+  player_id: string | null;
+  actor_nickname: string | null;
+  actor_seat: number | null;
+  message: string;
+}
+
 export type ConnectionStatus = "connecting" | "connected" | "reconnecting" | "offline";
 
 /** Persisted in localStorage so the player can resume after refresh. */
