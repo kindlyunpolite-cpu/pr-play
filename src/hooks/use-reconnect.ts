@@ -25,10 +25,8 @@ function getInitialSession() {
 export function useReconnect(options: UseReconnectOptions = {}) {
   const navigate = useNavigate();
   const reconnectFn = useServerFn(reconnect);
-  const [session, setSession] = useState<RoomSession | null>(getInitialSession);
-  const [status, setStatus] = useState<ReconnectStatus>(() =>
-    loadSession() ? "checking" : "missing-session",
-  );
+  const [session, setSession] = useState<RoomSession | null>(null);
+  const [status, setStatus] = useState<ReconnectStatus>("missing-session");
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
