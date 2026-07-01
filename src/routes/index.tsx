@@ -154,16 +154,8 @@ function Lobby() {
     setCode("");
   };
 
-  if (reconnectStatus === "checking") {
-    return (
-      <RoomShell className="items-center justify-center">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Loader2 className="h-4 w-4 animate-spin text-[color:var(--gold)]" />
-          Obnovuji uloženou session…
-        </div>
-      </RoomShell>
-    );
-  }
+  // Don't block the lobby on reconnect — if a stored session is valid, useReconnect
+  // will navigate to /waiting or /game; otherwise the user can start fresh here.
 
   return (
     <RoomShell>
