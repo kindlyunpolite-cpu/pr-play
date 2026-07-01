@@ -29,6 +29,8 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-turn-warning: var(--turn-warning);
+  --color-turn-critical: var(--turn-critical);
   --color-felt: var(--felt);
   --color-felt-deep: var(--felt-deep);
   --color-gold: var(--gold);
@@ -49,6 +51,9 @@
   --felt: oklch(0.32 0.07 160);
   --felt-deep: oklch(0.22 0.05 160);
   --gold: oklch(0.82 0.14 85);
+
+  --turn-warning: oklch(0.75 0.18 75);
+  --turn-critical: oklch(0.62 0.22 25);
 
   --card: oklch(0.24 0.03 160);
   --card-foreground: oklch(0.97 0.01 100);
