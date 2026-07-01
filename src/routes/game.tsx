@@ -2,6 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { TopNav } from "@/components/TopNav";
 import { ChatPanel } from "@/components/ChatPanel";
+import { TurnIndicator } from "@/components/TurnIndicator";
 import { Opponent, type OpponentData, type SeatPlacement } from "@/components/Opponent";
 import { RoomShell } from "@/components/ui-room/RoomShell";
 import { RoomButton } from "@/components/ui-room/RoomButton";
@@ -14,7 +15,7 @@ import {
   type Suit,
 } from "@/components/cards";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, Timer, Sparkles, Trophy } from "lucide-react";
+import { Loader2, Sparkles, Trophy } from "lucide-react";
 import { SUIT_LABEL, isRedSuit } from "@/components/cards/types";
 import { SuitIcon } from "@/components/cards/SuitIcon";
 import { cn } from "@/lib/utils";
@@ -50,12 +51,6 @@ const SUIT_SYMBOL: Record<Suit, string> = {
   spades: "♠",
 };
 
-function formatTurnTime(ms: number) {
-  const totalSeconds = Math.max(0, Math.ceil(ms / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return `${minutes}:${seconds.toString().padStart(2, "0")}`;
-}
 
 function adjacentPlayerId(
   players: { id: string }[],
@@ -199,6 +194,13 @@ function Game() {
   const turnDeadlineMs = gameState?.turn_deadline_at
     ? Date.parse(gameState.turn_deadline_at)
     : Number.NaN;
+  const turnStartedMs = gameState?.turn_started_at
+    ? Date.parse(gameState.turn_started_at)
+    : Number.NaN;
+  const turnDurationMs =
+    Number.isFinite(turnDeadlineMs) && Number.isFinite(turnStartedMs)
+      ? Math.max(0, turnDeadlineMs - turnStartedMs)
+      : 30_000;
   const turnRemainingMs = Number.isFinite(turnDeadlineMs) ? turnDeadlineMs - nowMs : 0;
   const myTurn =
     gameState?.status === "playing" && gameState?.current_player_id === session?.playerId;
@@ -317,6 +319,27 @@ function Game() {
       pulsingPlayerId === session?.playerId && latestAction?.type === "draw" ? "draw" : undefined,
   };
 
+  const activeIndicatorPlayer = useMemo(() => {
+    const player = activePlayer ?? me;
+    const portrait = getPortrait(player?.avatar ?? session?.avatar);
+    return {
+      id: player?.id ?? session?.playerId ?? "turn",
+      name: player?.nickname ?? you.name,
+      avatar: portrait.src,
+      accent: portrait.accent,
+    };
+  }, [
+    activePlayer?.avatar,
+    activePlayer?.id,
+    activePlayer?.nickname,
+    me?.avatar,
+    me?.id,
+    me?.nickname,
+    session?.avatar,
+    session?.playerId,
+    you.name,
+  ]);
+
   useEffect(() => {
     if (room?.status === "waiting") navigate({ to: "/waiting", search: { code: room.code } });
   }, [room?.status, room?.code, navigate]);
@@ -334,7 +357,28 @@ function Game() {
       nickname: activePlayer?.nickname,
       isAi: activePlayer?.is_ai ?? false,
       turnVersion: gameState.turn_version,
-    });
+  });
+
+  const activeIndicatorPlayer = useMemo(() => {
+    const player = activePlayer ?? me;
+    const portrait = getPortrait(player?.avatar ?? session?.avatar);
+    return {
+      id: player?.id ?? session?.playerId ?? "turn",
+      name: player?.nickname ?? you.name,
+      avatar: portrait.src,
+      accent: portrait.accent,
+    };
+  }, [
+    activePlayer?.avatar,
+    activePlayer?.id,
+    activePlayer?.nickname,
+    me?.avatar,
+    me?.id,
+    me?.nickname,
+    session?.avatar,
+    session?.playerId,
+    you.name,
+  ]);
   }, [
     activePlayer?.is_ai,
     activePlayer?.nickname,
@@ -603,21 +647,16 @@ function Game() {
                       "radial-gradient(ellipse at center, color-mix(in oklab, var(--primary) 10%, transparent) 0%, transparent 62%)",
                   }}
                 >
-                  {/* HUD: turn + suit */}
-                  <div className="absolute top-2 left-2 z-20 inline-flex items-center gap-1.5 rounded-full bg-black/55 backdrop-blur-md px-2 py-0.5 ring-1 ring-white/8">
-                    <span className="relative flex h-1.5 w-1.5">
-                      <span className="absolute inline-flex h-full w-full rounded-full bg-[color:var(--gold)] opacity-60 animate-ping" />
-                      <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[color:var(--gold)]" />
-                    </span>
-                    <span className="text-[10px] font-semibold truncate max-w-[5rem]">
-                      {activePlayer?.nickname ?? you.name}
-                    </span>
-                    <span className="h-3 w-px bg-white/10" />
-                    <Timer className="h-3 w-3 text-muted-foreground" />
-                    <span className="text-[10px] font-mono tabular-nums text-muted-foreground">
-                      {formatTurnTime(turnRemainingMs)}
-                    </span>
-                  </div>
+                  {/* HUD: active turn indicator */}
+                  {gameState?.status === "playing" && (
+                    <div className="absolute top-2 left-2 z-20">
+                      <TurnIndicator
+                        player={activeIndicatorPlayer}
+                        remainingMs={turnRemainingMs}
+                        durationMs={turnDurationMs}
+                      />
+                    </div>
+                  )}
 
                   <div
                     className={cn(
