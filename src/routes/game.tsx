@@ -211,10 +211,12 @@ function Game() {
       signature: gameState.last_action_signature,
       at: gameState.updated_at,
     });
-    if (action?.type !== "draw" && !action.playedCard) {
+    if (!action) return null;
+    if (action.type !== "draw" && !action.playedCard) {
       return { ...action, playedCard: topDiscard };
     }
     return action;
+
   }, [
     gameState?.last_action_id,
     gameState?.last_action_player_id,
