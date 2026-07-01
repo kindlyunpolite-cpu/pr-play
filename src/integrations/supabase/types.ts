@@ -73,6 +73,8 @@ export type Database = {
           room_id: string
           status: string
           turn_version: number
+          turn_started_at: string
+          turn_deadline_at: string
           updated_at: string
         }
         Insert: {
@@ -91,6 +93,8 @@ export type Database = {
           room_id: string
           status?: string
           turn_version?: number
+          turn_started_at?: string
+          turn_deadline_at?: string
           updated_at?: string
         }
         Update: {
@@ -109,6 +113,8 @@ export type Database = {
           room_id?: string
           status?: string
           turn_version?: number
+          turn_started_at?: string
+          turn_deadline_at?: string
           updated_at?: string
         }
         Relationships: [
