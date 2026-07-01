@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Json } from "@/integrations/supabase/types";
 import { randomBytes } from "crypto";
 import type { CardData, Rank, Suit } from "@/components/cards";
+import type { RoomEventType } from "@/types/room";
 import { createVisibleActionSignature } from "@/lib/game-actions";
 
 // ------------- helpers (server-only) -------------
@@ -23,6 +24,34 @@ const SUITS: Suit[] = ["hearts", "diamonds", "clubs", "spades"];
 const RANKS: Rank[] = ["7", "8", "9", "10", "J", "Q", "K", "A"];
 const DEAL_COUNT = 4;
 const TURN_DURATION_MS = 30_000;
+
+const SUIT_NAMES: Record<Suit, string> = {
+  hearts: "Hearts",
+  diamonds: "Diamonds",
+  clubs: "Clubs",
+  spades: "Spades",
+};
+
+function cardEventLabel(card: CardData) {
+  return `${card.rank} ${SUIT_NAMES[card.suit]}`;
+}
+
+async function writeRoomEvent(input: {
+  roomId: string;
+  type: RoomEventType;
+  playerId?: string | null;
+  message: string;
+  timestamp?: string;
+}) {
+  const { error } = await supabaseAdmin.from("room_events").insert({
+    room_id: input.roomId,
+    timestamp: input.timestamp ?? new Date().toISOString(),
+    type: input.type,
+    player_id: input.playerId ?? null,
+    message: input.message,
+  });
+  if (error) throw new Error("Failed to write room event");
+}
 
 function createDeck(): CardData[] {
   return SUITS.flatMap((suit) => RANKS.map((rank) => ({ suit, rank })));
@@ -193,7 +222,7 @@ async function resolveFailedTurnMutation(
 async function loadTurnPlayers(roomId: string) {
   const { data: players, error } = await supabaseAdmin
     .from("players")
-    .select("id, seat")
+    .select("id, seat, nickname")
     .eq("room_id", roomId)
     .order("seat", { ascending: true });
   if (error || !players || players.length < 2) throw new Error("Could not load players");
@@ -410,6 +439,13 @@ export const createRoom = createServerFn({ method: "POST" })
 
     await supabaseAdmin.from("rooms").update({ host_player_id: player.id }).eq("id", room.id);
 
+    await writeRoomEvent({
+      roomId: room.id,
+      type: "player-joined",
+      playerId: player.id,
+      message: `${player.nickname} joined room`,
+    });
+
     return {
       roomCode: room.code,
       roomId: room.id,
@@ -490,6 +526,13 @@ export const joinRoom = createServerFn({ method: "POST" })
     await supabaseAdmin.from("player_secrets").insert({
       player_id: player.id,
       session_token: sessionToken,
+    });
+
+    await writeRoomEvent({
+      roomId: room.id,
+      type: "player-joined",
+      playerId: player.id,
+      message: `${player.nickname} joined room`,
     });
 
     return {
@@ -655,6 +698,13 @@ export const leaveRoom = createServerFn({ method: "POST" })
     if (roomErr || !room) throw new Error("Room no longer exists");
 
     if (room.status === "waiting") {
+      await writeRoomEvent({
+        roomId: player.room_id,
+        type: "player-left",
+        playerId: player.id,
+        message: `${player.nickname} left room`,
+      });
+
       const { error: deleteErr } = await supabaseAdmin.from("players").delete().eq("id", player.id);
       if (deleteErr) throw new Error("Failed to leave room");
 
@@ -667,6 +717,13 @@ export const leaveRoom = createServerFn({ method: "POST" })
       .update({ connected: false, is_ready: false })
       .eq("id", data.playerId);
     if (error) throw new Error("Failed to leave room");
+
+    await writeRoomEvent({
+      roomId: player.room_id,
+      type: "player-left",
+      playerId: player.id,
+      message: `${player.nickname} left room`,
+    });
 
     return { ok: true };
   });
@@ -742,6 +799,12 @@ export const startGame = createServerFn({ method: "POST" })
       .update({ status: "playing", started_at: new Date().toISOString() })
       .eq("id", player.room_id);
     if (error) throw new Error("Failed to start game");
+
+    await writeRoomEvent({
+      roomId: player.room_id,
+      type: "game-started",
+      message: "Game started",
+    });
     return { ok: true };
   });
 
@@ -829,6 +892,13 @@ export const applyTurnTimeout = createServerFn({ method: "POST" })
         turnsTaken: 1,
       }),
       writeSystemEvent(data.roomId, `Player timed out and drew ${draw.cards.length} card.`),
+      writeRoomEvent({
+        roomId: data.roomId,
+        type: "turn-timeout",
+        playerId: activePlayerId,
+        message: `${players.find((p) => p.id === activePlayerId)?.nickname ?? "Player"} timed out`,
+        timestamp: updatedAt,
+      }),
     ]);
 
     return { ok: true, timedOut: true, drawn: draw.cards.length };
@@ -918,10 +988,20 @@ export const drawCard = createServerFn({ method: "POST" })
         data.expectedTurnVersion,
       );
     }
-    await incrementPlayerStats(player.id, player.room_id, {
-      cardsDrawn: draw.cards.length,
-      turnsTaken: 1,
-    });
+    await Promise.all([
+      incrementPlayerStats(player.id, player.room_id, {
+        cardsDrawn: draw.cards.length,
+        turnsTaken: 1,
+      }),
+      writeRoomEvent({
+        roomId: player.room_id,
+        type: "card-drawn",
+        playerId: player.id,
+        message: `${player.nickname} drew ${
+          draw.cards.length === 1 ? "a card" : `${draw.cards.length} cards`
+        }`,
+      }),
+    ]);
     console.debug("[game] last action updated", {
       roomId: player.room_id,
       playerId: player.id,
@@ -1053,10 +1133,18 @@ export const playCard = createServerFn({ method: "POST" })
       await recordFinishedGame(player.room_id, player.id, finishedAt);
     }
 
-    await incrementPlayerStats(player.id, player.room_id, {
-      cardsPlayed: 1,
-      turnsTaken: 1,
-    });
+    await Promise.all([
+      incrementPlayerStats(player.id, player.room_id, {
+        cardsPlayed: 1,
+        turnsTaken: 1,
+      }),
+      writeRoomEvent({
+        roomId: player.room_id,
+        type: "card-played",
+        playerId: player.id,
+        message: `${player.nickname} played ${cardEventLabel(card)}`,
+      }),
+    ]);
     console.debug("[game] last action updated", {
       roomId: player.room_id,
       playerId: player.id,
