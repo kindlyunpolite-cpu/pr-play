@@ -25,7 +25,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { cn } from "@/lib/utils";
-import { clearSession } from "@/lib/room-session";
+import { clearSession, loadSession } from "@/lib/room-session";
 import { useRoomRealtime, type RoomPlayer } from "@/hooks/use-room-realtime";
 import { useReconnect } from "@/hooks/use-reconnect";
 import { setReady, leaveRoom, kickPlayer, startGame } from "@/lib/rooms.functions";
@@ -95,13 +95,13 @@ function Waiting() {
   }, [room?.status, navigate]);
 
   useEffect(() => {
-    if (
-      code &&
-      !session &&
-      (reconnectStatus === "missing-session" || reconnectStatus === "expired-session")
-    ) {
-      navigate({ to: "/", search: { code }, replace: true });
-    }
+    if (!code || session) return;
+    if (reconnectStatus !== "missing-session" && reconnectStatus !== "expired-session") return;
+    // useReconnect starts as "missing-session" before its effect runs. If a
+    // session is actually persisted, wait for the hook to validate it instead
+    // of ping-ponging back to the lobby.
+    if (typeof window !== "undefined" && loadSession()) return;
+    navigate({ to: "/", search: { code }, replace: true });
   }, [code, navigate, reconnectStatus, session]);
 
   useEffect(() => {
