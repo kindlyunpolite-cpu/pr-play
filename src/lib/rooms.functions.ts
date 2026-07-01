@@ -798,7 +798,8 @@ export const applyTurnTimeout = createServerFn({ method: "POST" })
     const hands = { ...gameState.hands };
     const activePlayerId = gameState.current_player_id;
     const activeHand = [...(hands[activePlayerId] ?? [])];
-    const draw = takeDrawableCards(gameState.deck, gameState.discard_pile, 1);
+    const timeoutDrawCount = gameState.pending_draw > 0 ? gameState.pending_draw : 1;
+    const draw = takeDrawableCards(gameState.deck, gameState.discard_pile, timeoutDrawCount);
     activeHand.push(...draw.cards);
     hands[activePlayerId] = activeHand;
 
@@ -817,7 +818,7 @@ export const applyTurnTimeout = createServerFn({ method: "POST" })
         hands: hands as unknown as Json,
         current_player_id: nextTurnPlayerId,
         active_suit: gameState.active_suit,
-        pending_draw: gameState.pending_draw,
+        pending_draw: 0,
         turn_version: gameState.turn_version + 1,
         last_action_id: timeoutActionId,
         last_action_player_id: activePlayerId,

@@ -71,10 +71,10 @@ export function useRoomRealtime(code: string | undefined, session: RoomSession |
         .from("room_events")
         .select("*")
         .eq("room_id", data.room.id)
-        .order("timestamp", { ascending: true })
+        .order("timestamp", { ascending: false })
         .limit(200);
       if (eventsError) throw eventsError;
-      if (roomEvents) setEvents(roomEvents as RoomEvent[]);
+      if (roomEvents) setEvents([...(roomEvents as RoomEvent[])].reverse());
       return true;
     } catch {
       return false;
