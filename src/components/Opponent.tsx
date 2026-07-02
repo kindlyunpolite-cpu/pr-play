@@ -185,10 +185,17 @@ export function Opponent({
             </span>
           </div>
           <div className="flex shrink-0 items-center gap-1">
-            {player.isTurn && (
-              <span className="rounded-sm border border-[color:var(--gold)]/55 bg-[color:var(--gold)]/14 px-1.5 py-px text-[8px] font-bold uppercase tracking-[0.12em] text-[color:var(--gold)]">
-                Na tahu
-              </span>
+            {showTimer ? (
+              <HudCountdown
+                remainingMs={turnRemainingMs!}
+                durationMs={turnDurationMs!}
+              />
+            ) : (
+              player.isTurn && (
+                <span className="rounded-sm border border-[color:var(--gold)]/55 bg-[color:var(--gold)]/14 px-1.5 py-px text-[8px] font-bold uppercase tracking-[0.12em] text-[color:var(--gold)]">
+                  Na tahu
+                </span>
+              )
             )}
             {player.badge && (
               <span
