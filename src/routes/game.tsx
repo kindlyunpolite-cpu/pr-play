@@ -49,7 +49,15 @@ const FALLBACK_CARD: CardData = { suit: "hearts", rank: "10" };
 const PLAY_ANIMATION_MS = 320;
 
 function stableCardId(card: CardData, index?: number) {
-  return card.id ?? `${card.rank}-${card.suit}-${index ?? "unknown"}`;
+  if (card.id) return card.id;
+  const fallbackIndex = typeof index === "number" ? index : "unknown";
+  return `fallback:${card.rank}:${card.suit}:${fallbackIndex}`;
+}
+
+function cardsShareIdentity(a: CardData | null | undefined, b: CardData | null | undefined) {
+  if (!a || !b) return false;
+  if (a.id || b.id) return a.id === b.id;
+  return a.rank === b.rank && a.suit === b.suit;
 }
 
 const SUITS: Suit[] = ["hearts", "diamonds", "clubs", "spades"];
@@ -173,12 +181,15 @@ function Game() {
   };
 
   const [selected, setSelected] = useState<number | null>(null);
-  const [playingCard, setPlayingCard] = useState<{
+  const [pendingPlay, setPendingPlay] = useState<{
     card: CardData;
-    id: string;
-    from: DOMRect;
-    to: DOMRect;
+    cardId: string;
+    actionId: string;
+    fromRect: DOMRect;
+    toRect: DOMRect;
     previousDiscardPile: CardData[];
+    animationDone: boolean;
+    serverSucceeded: boolean;
   } | null>(null);
   const [pileNonce, setPileNonce] = useState(0);
   const [drawNonce, setDrawNonce] = useState(0);
@@ -190,6 +201,7 @@ function Game() {
 
   const busyActionRef = useRef(false);
   const localPendingPlayPlayerIdRef = useRef<string | null>(null);
+  const pendingPlayResyncActionIdRef = useRef<string | null>(null);
   const playAnimationTimeoutRef = useRef<number | null>(null);
   const handCardRefs = useRef(new Map<string, HTMLDivElement>());
   const discardPileRef = useRef<HTMLDivElement | null>(null);
@@ -231,12 +243,14 @@ function Game() {
   );
   const hand = session ? (gameState?.hands[session.playerId] ?? []) : [];
   const topDiscard = gameState?.discard_pile.at(-1) ?? FALLBACK_CARD;
-  const pendingPlayedCardId = playingCard?.id ?? null;
+  const pendingPlayedCardId = pendingPlay?.cardId ?? null;
   const visibleHand = hand
     .map((card, index) => ({ card, index, id: stableCardId(card, index) }))
     .filter((item) => item.id !== pendingPlayedCardId);
-  const visibleDiscardCards = playingCard
-    ? playingCard.previousDiscardPile
+  const visibleDiscardCards = pendingPlay
+    ? pendingPlay.animationDone
+      ? [...pendingPlay.previousDiscardPile, pendingPlay.card]
+      : pendingPlay.previousDiscardPile
     : (gameState?.discard_pile ?? []);
   const visibleTopDiscard = visibleDiscardCards.at(-1) ?? topDiscard;
   const discardPile: [CardData, ...CardData[]] = visibleDiscardCards.length
@@ -519,11 +533,56 @@ function Game() {
   }, [latestAction?.id]);
 
   useEffect(() => {
-    if (playingCard) return;
+    if (!pendingPlay || !session || !gameState) return;
+
+    const authoritativeHand = gameState.hands[session.playerId] ?? [];
+    const authoritativeHandIds = authoritativeHand.map((card, index) => stableCardId(card, index));
+    const handNoLongerContainsPendingCard = !authoritativeHandIds.includes(pendingPlay.cardId);
+    const authoritativeTopCard = gameState.discard_pile.at(-1);
+    const discardTopMatchesPendingCard = cardsShareIdentity(authoritativeTopCard, pendingPlay.card);
+    const latestActionMatchesPendingPlay =
+      gameState.last_action_id === pendingPlay.actionId &&
+      gameState.last_action_player_id === session.playerId &&
+      (gameState.last_action_signature?.startsWith("play:") ||
+        gameState.last_action_signature?.startsWith("suit-change:"));
+
+    const authoritativeStateConfirmsPlay =
+      handNoLongerContainsPendingCard ||
+      discardTopMatchesPendingCard ||
+      latestActionMatchesPendingPlay;
+
+    if (pendingPlay.animationDone && authoritativeStateConfirmsPlay) {
+      setPendingPlay(null);
+      localPendingPlayPlayerIdRef.current = null;
+      pendingPlayResyncActionIdRef.current = null;
+      busyActionRef.current = false;
+      setBusyAction(null);
+      return;
+    }
+
+    if (
+      pendingPlay.animationDone &&
+      pendingPlay.serverSucceeded &&
+      !authoritativeStateConfirmsPlay &&
+      pendingPlayResyncActionIdRef.current !== pendingPlay.actionId
+    ) {
+      pendingPlayResyncActionIdRef.current = pendingPlay.actionId;
+      void resync().catch((error) => {
+        console.debug("[game] pending play resync failed", {
+          actionId: pendingPlay.actionId,
+          error,
+        });
+        pendingPlayResyncActionIdRef.current = null;
+      });
+    }
+  }, [gameState, pendingPlay, resync, session]);
+
+  useEffect(() => {
+    if (pendingPlay) return;
     setDealt(false);
     const t = setTimeout(() => setDealt(true), visibleHand.length * 70 + 600);
     return () => clearTimeout(t);
-  }, [playingCard, visibleHand.length]);
+  }, [pendingPlay, visibleHand.length]);
 
   useEffect(() => {
     return () => {
@@ -546,7 +605,7 @@ function Game() {
     !!gameState &&
     myTurn &&
     !busyAction &&
-    !playingCard &&
+    !pendingPlay &&
     !gameFinished &&
     gameState.status === "playing";
 
@@ -616,42 +675,69 @@ function Game() {
       window.clearTimeout(playAnimationTimeoutRef.current);
       playAnimationTimeoutRef.current = null;
     }
-    setPlayingCard({
+    const actionId = createActionId();
+    pendingPlayResyncActionIdRef.current = null;
+    setPendingPlay({
       card,
-      id,
-      from,
-      to,
+      cardId: id,
+      actionId,
+      fromRect: from,
+      toRect: to,
       previousDiscardPile: gameState.discard_pile,
+      animationDone: false,
+      serverSucceeded: false,
     });
+    playAnimationTimeoutRef.current = window.setTimeout(() => {
+      setPendingPlay((current) =>
+        current?.actionId === actionId ? { ...current, animationDone: true } : current,
+      );
+      playAnimationTimeoutRef.current = null;
+    }, PLAY_ANIMATION_MS);
     try {
-      await callPlayCard({
+      const result = await callPlayCard({
         data: {
           playerId: session.playerId,
           sessionToken: session.sessionToken,
-          actionId: createActionId(),
+          actionId,
           expectedTurnVersion: gameState.turn_version,
           cardIndex,
           chosenSuit,
         },
       });
+      if (result && "stale" in result && result.stale) {
+        if (playAnimationTimeoutRef.current !== null) {
+          window.clearTimeout(playAnimationTimeoutRef.current);
+          playAnimationTimeoutRef.current = null;
+        }
+        setPendingPlay(null);
+        localPendingPlayPlayerIdRef.current = null;
+        pendingPlayResyncActionIdRef.current = null;
+        busyActionRef.current = false;
+        setBusyAction(null);
+        return;
+      }
+      setPendingPlay((current) =>
+        current?.actionId === actionId ? { ...current, serverSucceeded: true } : current,
+      );
       setSelected(null);
       setSuitPickerIndex(null);
     } catch (error) {
+      if (playAnimationTimeoutRef.current !== null) {
+        window.clearTimeout(playAnimationTimeoutRef.current);
+        playAnimationTimeoutRef.current = null;
+      }
+      setPendingPlay(null);
+      localPendingPlayPlayerIdRef.current = null;
+      pendingPlayResyncActionIdRef.current = null;
+      busyActionRef.current = false;
+      setBusyAction(null);
       const msg = error instanceof Error ? error.message : "Nepodařilo se zahrát kartu";
       if (!/stale|není.*tah|not your turn/i.test(msg)) toast.error(msg);
-    } finally {
-      playAnimationTimeoutRef.current = window.setTimeout(() => {
-        setPlayingCard(null);
-        localPendingPlayPlayerIdRef.current = null;
-        playAnimationTimeoutRef.current = null;
-        busyActionRef.current = false;
-        setBusyAction(null);
-      }, PLAY_ANIMATION_MS);
     }
   };
 
   const handlePlay = (i: number) => {
-    if (!canAct || playingCard) return;
+    if (!canAct || pendingPlay) return;
     if (selected !== i) {
       setSelected(i);
       return;
@@ -925,13 +1011,13 @@ function Game() {
                           ref={discardPileRef}
                           className={cn(
                             "relative",
-                            pileNonce && !playingCard && "animate-pile-bump",
+                            pileNonce && !pendingPlay && "animate-pile-bump",
                           )}
                         >
                           <DiscardPile
                             cards={discardPile}
                             size="md"
-                            recent={!playingCard && Boolean(pileNonce)}
+                            recent={!pendingPlay && Boolean(pileNonce)}
                           />
                           {/* Current suit marker — placed outside the card, above and to the right. */}
                           <div
@@ -1021,22 +1107,22 @@ function Game() {
             </div>
           </div>
 
-          {playingCard && (
+          {pendingPlay && !pendingPlay.animationDone && (
             <div
               className="pointer-events-none fixed z-[100]"
               style={
                 {
                   left: 0,
                   top: 0,
-                  "--play-from-x": `${playingCard.from.left}px`,
-                  "--play-from-y": `${playingCard.from.top}px`,
-                  "--play-to-x": `${playingCard.to.left + (playingCard.to.width - playingCard.from.width) / 2}px`,
-                  "--play-to-y": `${playingCard.to.top + (playingCard.to.height - playingCard.from.height) / 2}px`,
+                  "--play-from-x": `${pendingPlay.fromRect.left}px`,
+                  "--play-from-y": `${pendingPlay.fromRect.top}px`,
+                  "--play-to-x": `${pendingPlay.toRect.left + (pendingPlay.toRect.width - pendingPlay.fromRect.width) / 2}px`,
+                  "--play-to-y": `${pendingPlay.toRect.top + (pendingPlay.toRect.height - pendingPlay.fromRect.height) / 2}px`,
                 } as CSSProperties
               }
             >
               <PlayingCard
-                card={playingCard.card}
+                card={pendingPlay.card}
                 size="md"
                 className="animate-card-play-to-discard shadow-2xl shadow-black/70"
               />

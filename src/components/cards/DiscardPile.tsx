@@ -2,8 +2,8 @@ import { cn } from "@/lib/utils";
 import { PlayingCard } from "./PlayingCard";
 import type { CardData, CardSize } from "./types";
 
-function cardKey(card: CardData) {
-  return card.id ?? `${card.rank}-${card.suit}`;
+function cardKey(card: CardData, index: number) {
+  return card.id ?? `fallback:${card.rank}:${card.suit}:${index}`;
 }
 
 export interface DiscardPileProps {
@@ -55,7 +55,7 @@ export function DiscardPile({ cards, size = "md", recent = false, className }: D
         const opacity = isTop ? 1 : 0.55 - (top - i - 1) * 0.15;
         return (
           <PlayingCard
-            key={cardKey(card)}
+            key={cardKey(card, i)}
             card={card}
             size={size}
             state={isTop && recent ? "recent" : "idle"}
