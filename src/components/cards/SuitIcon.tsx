@@ -1,8 +1,10 @@
+import type { CSSProperties } from "react";
 import type { Suit } from "./types";
 
 interface SuitProps {
   suit: Suit;
   className?: string;
+  style?: CSSProperties;
   title?: string;
 }
 
@@ -10,11 +12,12 @@ interface SuitProps {
  * Pure-SVG suit glyphs. No external assets.
  * `currentColor` lets parents control the color via Tailwind text-* classes.
  */
-export function SuitIcon({ suit, className, title }: SuitProps) {
+export function SuitIcon({ suit, className, style, title }: SuitProps) {
   const props = {
     viewBox: "0 0 32 32",
     xmlns: "http://www.w3.org/2000/svg",
     className,
+    style,
     "aria-label": title ?? suit,
     role: "img" as const,
   };
