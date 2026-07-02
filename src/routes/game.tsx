@@ -292,7 +292,13 @@ function Game() {
             accent: portrait.accent ?? PORTRAITS[index % PORTRAITS.length].accent,
             badge: p.is_ai ? "AI" : undefined,
             actionPulse:
-              pulsingPlayerId === p.id && latestAction?.type === "draw" ? "draw" : undefined,
+              pulsingPlayerId === p.id
+                ? latestAction?.type === "draw"
+                  ? "draw"
+                  : latestAction?.type === "play" || latestAction?.type === "suit-change"
+                    ? "play"
+                    : undefined
+                : undefined,
           };
         }),
     [
