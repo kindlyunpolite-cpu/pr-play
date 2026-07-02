@@ -835,47 +835,8 @@ function Game() {
 
                 </div>
 
-                <div className="absolute bottom-3 left-3 z-40 sm:bottom-4 sm:left-4">
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em]",
-                      myTurn
-                        ? "bg-gradient-to-r from-[color:var(--gold)]/25 to-transparent text-[color:var(--gold)] ring-1 ring-[color:var(--gold)]/40"
-                        : "bg-white/5 text-muted-foreground ring-1 ring-white/8",
-                    )}
-                  >
-                    <Sparkles className="h-3 w-3" />
-                    {gameFinished ? "Dohráno" : myTurn ? "Tvůj tah" : "Čekej"}
-                  </span>
-                </div>
 
-                <div className="absolute bottom-3 right-3 z-40 flex items-center gap-2 sm:bottom-4 sm:right-4">
-                  <RoomButton
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => void handleDraw()}
-                    disabled={!canAct}
-                    loading={busyAction === "draw"}
-                  >
-                    {pendingDraw > 0 ? `Lízni ${pendingDraw}` : "Lízni"}
-                  </RoomButton>
-                  <RoomButton
-                    size="sm"
-                    variant="primary"
-                    disabled={!canAct || selected === null || !selectedPlayable}
-                    loading={busyAction === "play"}
-                    onClick={() => {
-                      if (selected === null) return;
-                      if (hand[selected]?.rank === "Q") {
-                        setSuitPickerIndex(selected);
-                        return;
-                      }
-                      void submitPlay(selected);
-                    }}
-                  >
-                    Zahraj
-                  </RoomButton>
-                </div>
+
 
                 {/* === Seats anchored to the table rim ===
                     Each portrait translates by 50% of its own size so it sits
