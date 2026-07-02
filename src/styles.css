@@ -343,7 +343,7 @@
   @keyframes card-played {
     0% {
       transform: translateY(-130px) rotate(85deg) scale(1.05);
-      opacity: .5;
+      opacity: .1;
     }
     60% {
       transform: translateY(2px) rotate(2deg) scale(1.02);
