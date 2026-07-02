@@ -630,44 +630,94 @@ function Game() {
                       "radial-gradient(ellipse at center, color-mix(in oklab, var(--primary) 10%, transparent) 0%, transparent 62%)",
                   }}
                 >
-                  {/* HUD: active turn indicator */}
+                  {/* HUD — four corner panels, board-game style */}
                   {gameState?.status === "playing" && (
-                    <div className="absolute top-2 left-2 z-20">
-                      <TurnIndicator
-                        player={activeIndicatorPlayer}
-                        remainingMs={turnRemainingMs}
-                        durationMs={turnDurationMs}
-                      />
-                    </div>
+                    <HudPanel className="absolute top-2 left-2 z-20" tone="active">
+                      <div className="flex items-center gap-2.5 pr-1">
+                        <div
+                          className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full ring-2 ring-offset-2 ring-offset-black/40"
+                          style={{
+                            ["--tw-ring-color" as string]:
+                              activeIndicatorPlayer.accent ?? "oklch(0.82 0.14 85)",
+                          }}
+                        >
+                          <img
+                            src={activeIndicatorPlayer.avatar}
+                            alt=""
+                            className="h-full w-full object-cover object-top"
+                            draggable={false}
+                          />
+                        </div>
+                        <div className="flex min-w-0 flex-col leading-tight">
+                          <HudLabel>Na tahu</HudLabel>
+                          <span className="max-w-[7rem] truncate text-sm font-bold text-foreground">
+                            {activeIndicatorPlayer.name}
+                          </span>
+                        </div>
+                      </div>
+                    </HudPanel>
                   )}
 
-                  <div
-                    className={cn(
-                      "absolute top-2 right-2 z-20 flex items-center gap-2 rounded-full bg-black/70 backdrop-blur-md pl-1.5 pr-3 py-1 ring-2 shadow-lg",
-                      isRedSuit(activeSuit)
-                        ? "ring-[color:var(--suit-red)]/70 shadow-[0_0_18px_-4px_oklch(0.62_0.22_25/0.7)]"
-                        : "ring-[color:var(--gold)]/60 shadow-[0_0_18px_-4px_oklch(0.82_0.14_85/0.6)]",
-                    )}
+                  <HudPanel
+                    className="absolute top-2 right-2 z-20"
+                    tone={isRedSuit(activeSuit) ? "danger" : "default"}
                   >
-                    <div
-                      className={cn(
-                        "flex h-7 w-7 items-center justify-center rounded-full bg-[color:var(--card-face)]",
-                        isRedSuit(activeSuit)
-                          ? "text-[color:var(--suit-red)]"
-                          : "text-[color:var(--suit-dark)]",
-                      )}
+                    <div className="flex items-center gap-2.5 pr-1">
+                      <div
+                        className={cn(
+                          "flex h-9 w-9 items-center justify-center rounded-lg bg-[color:var(--card-face)] shadow-inner",
+                          isRedSuit(activeSuit)
+                            ? "text-[color:var(--suit-red)]"
+                            : "text-[color:var(--suit-dark)]",
+                        )}
+                      >
+                        <SuitIcon suit={activeSuit} className="h-5 w-5" />
+                      </div>
+                      <div className="flex flex-col leading-tight">
+                        <HudLabel>Barva</HudLabel>
+                        <span className="text-sm font-bold tracking-wide text-foreground">
+                          {SUIT_LABEL[activeSuit]}
+                        </span>
+                      </div>
+                    </div>
+                  </HudPanel>
+
+                  {/* Bottom-left: room code */}
+                  <HudPanel className="absolute bottom-2 left-2 z-20">
+                    <div className="flex flex-col leading-tight px-0.5">
+                      <HudLabel>Místnost</HudLabel>
+                      <span className="font-mono text-sm font-bold tracking-[0.32em] text-foreground">
+                        {code}
+                      </span>
+                    </div>
+                  </HudPanel>
+
+                  {/* Bottom-right: countdown */}
+                  {gameState?.status === "playing" && (
+                    <HudPanel
+                      className="absolute bottom-2 right-2 z-20"
+                      tone={
+                        Math.ceil(turnRemainingMs / 1000) < 5
+                          ? "danger"
+                          : Math.ceil(turnRemainingMs / 1000) < 10
+                            ? "warning"
+                            : "default"
+                      }
                     >
-                      <SuitIcon suit={activeSuit} className="h-4 w-4" />
-                    </div>
-                    <div className="flex flex-col leading-tight">
-                      <span className="text-[8px] uppercase tracking-[0.18em] text-muted-foreground">
-                        Barva
-                      </span>
-                      <span className="text-[12px] font-bold tracking-wide text-foreground">
-                        {SUIT_LABEL[activeSuit]}
-                      </span>
-                    </div>
-                  </div>
+                      <div className="flex items-center gap-2.5 pr-1">
+                        <HudCountdown
+                          remainingMs={turnRemainingMs}
+                          durationMs={turnDurationMs}
+                        />
+                        <div className="flex flex-col leading-tight">
+                          <HudLabel>Časovač</HudLabel>
+                          <span className="text-sm font-bold tabular-nums text-foreground">
+                            {Math.max(0, Math.ceil(turnRemainingMs / 1000))} s
+                          </span>
+                        </div>
+                      </div>
+                    </HudPanel>
+                  )}
 
                   {pendingDraw > 0 && (
                     <div className="absolute left-1/2 top-2 z-20 -translate-x-1/2 rounded-full bg-red-950/80 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-red-100 ring-1 ring-red-400/40 shadow-lg shadow-red-950/50 backdrop-blur-md">
