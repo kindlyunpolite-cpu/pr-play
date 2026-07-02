@@ -892,15 +892,6 @@ function Game() {
                     </div>
                   );
                 })}
-                        player={p}
-                        placement={pos}
-                        compactMobile
-                        turnRemainingMs={p.isTurn ? turnRemainingMs : undefined}
-                        turnDurationMs={p.isTurn ? turnDurationMs : undefined}
-                      />
-                    </div>
-                  );
-                })}
 
                 {/* Self seat — compact portrait sitting on bottom rail.
                     Kept small so the hand gets the visual priority. */}
