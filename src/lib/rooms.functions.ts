@@ -5,6 +5,7 @@ import type { Json } from "@/integrations/supabase/types";
 import type { CardData, Rank, Suit } from "@/components/cards";
 import type { RoomEventType } from "@/types/room";
 import { createVisibleActionSignature } from "@/lib/game-actions";
+import { getCurrentProfileId } from "@/lib/accounts.functions";
 
 // ------------- helpers (server-only) -------------
 
@@ -561,12 +562,15 @@ export const createRoom = createServerFn({ method: "POST" })
       .single();
     if (roomErr || !room) throw new Error("Failed to create room");
 
+    const profileId = await getCurrentProfileId();
+
     const { data: player, error: playerErr } = await supabaseAdmin
       .from("players")
       .insert({
         room_id: room.id,
         nickname: data.nickname,
         avatar: data.avatar ?? null,
+        user_id: profileId,
         is_host: true,
         is_ready: true,
         seat: 0,
@@ -606,6 +610,8 @@ export const joinRoom = createServerFn({ method: "POST" })
     z.object({ code: CodeSchema, nickname: NicknameSchema, avatar: AvatarSchema }).parse(input),
   )
   .handler(async ({ data }) => {
+    const profileId = await getCurrentProfileId();
+
     const { data: room, error: roomErr } = await supabaseAdmin
       .from("rooms")
       .select("*")
@@ -660,6 +666,7 @@ export const joinRoom = createServerFn({ method: "POST" })
         room_id: room.id,
         nickname: data.nickname,
         avatar: data.avatar ?? null,
+        user_id: profileId,
         seat,
       })
       .select("*")
