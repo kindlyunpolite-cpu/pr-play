@@ -93,7 +93,7 @@ export function PlayingCard({
       aria-label={ariaLabel ?? `${card.rank} of ${card.suit}`}
       style={composedStyle}
       className={cn(
-        "card-face shrink-0 relative flex flex-col justify-between p-1.5 transition-transform duration-300 ease-out will-change-transform select-none",
+        "card-face shrink-0 relative flex flex-col justify-between p-1.5 transition-[transform,box-shadow] duration-150 ease-out will-change-transform select-none",
         SIZE_CLASSES[size],
         red ? "text-[color:var(--suit-red)]" : "text-[color:var(--suit-dark)]",
         stateClasses[state],
