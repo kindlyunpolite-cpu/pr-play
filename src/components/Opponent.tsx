@@ -152,7 +152,8 @@ export function Opponent({
             player.isTurn
               ? "border-[color:var(--gold)] animate-turn ring-2 ring-[color:var(--gold)]/70 shadow-[0_12px_32px_-8px_rgba(0,0,0,0.78),0_0_28px_-4px_var(--seat-accent)]"
               : "border-white/12 shadow-[0_10px_24px_-10px_rgba(0,0,0,0.78)] hover:border-[color:var(--gold)]/35",
-            player.actionPulse === "draw" && "animate-seat-action-pulse",
+            (player.actionPulse === "draw" || player.actionPulse === "play") &&
+              "animate-seat-action-pulse",
           )}
         style={{
           background:

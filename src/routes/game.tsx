@@ -292,7 +292,13 @@ function Game() {
             accent: portrait.accent ?? PORTRAITS[index % PORTRAITS.length].accent,
             badge: p.is_ai ? "AI" : undefined,
             actionPulse:
-              pulsingPlayerId === p.id && latestAction?.type === "draw" ? "draw" : undefined,
+              pulsingPlayerId === p.id
+                ? latestAction?.type === "draw"
+                  ? "draw"
+                  : latestAction?.type === "play" || latestAction?.type === "suit-change"
+                    ? "play"
+                    : undefined
+                : undefined,
           };
         }),
     [
@@ -444,7 +450,7 @@ function Game() {
     }
 
     const hideAction = window.setTimeout(() => setVisibleActionId(null), 4_500);
-    const stopPulse = window.setTimeout(() => setPulsingPlayerId(null), 900);
+    const stopPulse = window.setTimeout(() => setPulsingPlayerId(null), 260);
     return () => {
       window.clearTimeout(hideAction);
       window.clearTimeout(stopPulse);
@@ -549,7 +555,7 @@ function Game() {
       const msg = error instanceof Error ? error.message : "Nepodařilo se zahrát kartu";
       if (!/stale|není.*tah|not your turn/i.test(msg)) toast.error(msg);
     } finally {
-      window.setTimeout(() => setPlayingIdx(null), 320);
+      window.setTimeout(() => setPlayingIdx(null), 220);
       busyActionRef.current = false;
       setBusyAction(null);
     }
@@ -871,13 +877,18 @@ function Game() {
                         : "right-0 top-1/2 translate-x-[18%] sm:translate-x-[30%] -translate-y-1/2";
                   return (
                     <div key={p.id} className={cn("absolute z-30 pointer-events-auto", cls)}>
-                      <Opponent
-                        player={p}
-                        placement={pos}
-                        compactMobile
-                        turnRemainingMs={p.isTurn ? turnRemainingMs : undefined}
-                        turnDurationMs={p.isTurn ? turnDurationMs : undefined}
-                      />
+                      <div
+                        key={p.isTurn ? `turn-${gameState?.turn_version ?? 0}` : "idle"}
+                        className={cn("rounded-2xl", p.isTurn && "animate-turn-arrive")}
+                      >
+                        <Opponent
+                          player={p}
+                          placement={pos}
+                          compactMobile
+                          turnRemainingMs={p.isTurn ? turnRemainingMs : undefined}
+                          turnDurationMs={p.isTurn ? turnDurationMs : undefined}
+                        />
+                      </div>
                     </div>
                   );
                 })}
@@ -887,10 +898,11 @@ function Game() {
                 <div className="absolute z-30 left-1/2 bottom-0 -translate-x-1/2 translate-y-[55%] pointer-events-none">
                   <div className="flex flex-col items-center">
                     <div
+                      key={you.isTurn ? `me-turn-${gameState?.turn_version ?? 0}` : "me-idle"}
                       className={cn(
                         "relative rounded-full transition-all duration-300",
-                        you.isTurn && "ring-2 ring-[color:var(--gold)]/80 animate-turn",
-                        you.actionPulse === "draw" && "animate-seat-action-pulse",
+                        you.isTurn && "ring-2 ring-[color:var(--gold)]/80 animate-turn animate-turn-arrive",
+                        (you.actionPulse === "draw" || you.actionPulse === "play") && "animate-seat-action-pulse",
                       )}
                     >
                       {you.isTurn && (
