@@ -26,6 +26,59 @@ const CENTER_GLYPH: Record<CardSize, string> = {
   xl: "h-12 w-12",
 };
 
+const PIP_GLYPH: Record<CardSize, string> = {
+  xs: "h-1.5 w-1.5",
+  sm: "h-2.5 w-2.5",
+  md: "h-3.5 w-3.5",
+  lg: "h-4.5 w-4.5",
+  xl: "h-5 w-5",
+};
+
+const PIP_LAYOUTS = {
+  "7": [
+    { x: 28, y: 18 },
+    { x: 72, y: 18 },
+    { x: 28, y: 38 },
+    { x: 72, y: 38 },
+    { x: 50, y: 50 },
+    { x: 28, y: 72 },
+    { x: 72, y: 72 },
+  ],
+  "8": [
+    { x: 28, y: 16 },
+    { x: 72, y: 16 },
+    { x: 28, y: 36 },
+    { x: 72, y: 36 },
+    { x: 28, y: 56 },
+    { x: 72, y: 56 },
+    { x: 28, y: 76 },
+    { x: 72, y: 76 },
+  ],
+  "9": [
+    { x: 28, y: 16 },
+    { x: 72, y: 16 },
+    { x: 28, y: 36 },
+    { x: 72, y: 36 },
+    { x: 50, y: 50 },
+    { x: 28, y: 64 },
+    { x: 72, y: 64 },
+    { x: 28, y: 82 },
+    { x: 72, y: 82 },
+  ],
+  "10": [
+    { x: 28, y: 14 },
+    { x: 72, y: 14 },
+    { x: 50, y: 26 },
+    { x: 28, y: 38 },
+    { x: 72, y: 38 },
+    { x: 28, y: 58 },
+    { x: 72, y: 58 },
+    { x: 50, y: 70 },
+    { x: 28, y: 82 },
+    { x: 72, y: 82 },
+  ],
+} satisfies Partial<Record<CardData["rank"], Array<{ x: number; y: number }>>>;
+
 export type CardAnimation = "deal" | "draw" | "play" | "tap" | "winner";
 
 export interface PlayingCardProps {
@@ -67,6 +120,7 @@ export function PlayingCard({
 }: PlayingCardProps) {
   const red = isRedSuit(card.suit);
   const interactive = state === "playable" || state === "selected";
+  const pipLayout = PIP_LAYOUTS[card.rank as keyof typeof PIP_LAYOUTS];
 
   const stateClasses: Record<CardState, string> = {
     idle: "",
@@ -108,11 +162,28 @@ export function PlayingCard({
         <SuitIcon suit={card.suit} className={CORNER_GLYPH[size]} />
       </div>
 
-      {/* Center pip */}
-      <SuitIcon
-        suit={card.suit}
-        className={cn("self-center opacity-95", CENTER_GLYPH[size])}
-      />
+      {/* Center pips */}
+      {pipLayout ? (
+        <div className="pointer-events-none absolute inset-x-[22%] bottom-[16%] top-[18%]">
+          {pipLayout.map((pip, index) => (
+            <SuitIcon
+              key={`${pip.x}-${pip.y}-${index}`}
+              suit={card.suit}
+              className={cn(
+                "absolute -translate-x-1/2 -translate-y-1/2 opacity-95",
+                pip.y > 50 && "rotate-180",
+                PIP_GLYPH[size],
+              )}
+              style={{ left: `${pip.x}%`, top: `${pip.y}%` }}
+            />
+          ))}
+        </div>
+      ) : (
+        <SuitIcon
+          suit={card.suit}
+          className={cn("self-center opacity-95", CENTER_GLYPH[size])}
+        />
+      )}
 
       {/* Bottom-right index */}
       <div className="flex items-center gap-0.5 leading-none font-bold rotate-180 self-end">
