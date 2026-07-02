@@ -898,10 +898,11 @@ function Game() {
                 <div className="absolute z-30 left-1/2 bottom-0 -translate-x-1/2 translate-y-[55%] pointer-events-none">
                   <div className="flex flex-col items-center">
                     <div
+                      key={you.isTurn ? `me-turn-${gameState?.turn_version ?? 0}` : "me-idle"}
                       className={cn(
                         "relative rounded-full transition-all duration-300",
-                        you.isTurn && "ring-2 ring-[color:var(--gold)]/80 animate-turn",
-                        you.actionPulse === "draw" && "animate-seat-action-pulse",
+                        you.isTurn && "ring-2 ring-[color:var(--gold)]/80 animate-turn animate-turn-arrive",
+                        (you.actionPulse === "draw" || you.actionPulse === "play") && "animate-seat-action-pulse",
                       )}
                     >
                       {you.isTurn && (
