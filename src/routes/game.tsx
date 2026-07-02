@@ -2,7 +2,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { TopNav } from "@/components/TopNav";
 import { ChatPanel } from "@/components/ChatPanel";
-import { TurnIndicator } from "@/components/TurnIndicator";
+
 import { Opponent, type OpponentData, type SeatPlacement } from "@/components/Opponent";
 import { RoomShell } from "@/components/ui-room/RoomShell";
 import { RoomButton } from "@/components/ui-room/RoomButton";
