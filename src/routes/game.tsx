@@ -48,8 +48,8 @@ export const Route = createFileRoute("/game")({
 const FALLBACK_CARD: CardData = { suit: "hearts", rank: "10" };
 const PLAY_ANIMATION_MS = 320;
 
-function stableCardId(card: CardData) {
-  return card.id ?? `${card.rank}-${card.suit}`;
+function stableCardId(card: CardData, index?: number) {
+  return card.id ?? `${card.rank}-${card.suit}-${index ?? "unknown"}`;
 }
 
 function sameCard(a: CardData | null | undefined, b: CardData | null | undefined) {
@@ -233,9 +233,9 @@ function Game() {
   );
   const hand = session ? (gameState?.hands[session.playerId] ?? []) : [];
   const topDiscard = gameState?.discard_pile.at(-1) ?? FALLBACK_CARD;
-  const visibleHand = playingCard
-    ? hand.filter((card) => stableCardId(card) !== playingCard.id)
-    : hand;
+  const visibleHand = hand
+    .map((card, index) => ({ card, index, id: stableCardId(card, index) }))
+    .filter((item) => item.id !== playingCard?.id);
   const visibleDiscardCards =
     playingCard &&
     gameState?.discard_pile.length &&
@@ -593,7 +593,7 @@ function Game() {
     if (!session || !gameState || !canAct || busyActionRef.current) return;
     const card = hand[cardIndex];
     if (!card) return;
-    const id = stableCardId(card);
+    const id = stableCardId(card, cardIndex);
     const from = handCardRefs.current.get(id)?.getBoundingClientRect();
     const to = discardPileRef.current?.getBoundingClientRect();
     if (!from || !to) return;
@@ -1027,10 +1027,7 @@ function Game() {
           {/* === Bottom hand area === */}
           <div className="relative z-20 shrink-0 bg-gradient-to-t from-background via-background/85 to-transparent pb-safe pt-6 sm:pt-8">
             <div className="fan-hand hand-scroll relative flex items-end justify-center overflow-x-auto sm:overflow-visible no-scrollbar px-4 pt-8 pb-1 min-h-[5.5rem] sm:min-h-[6.2rem]">
-              {visibleHand.map((card, visibleIndex) => {
-                const originalIndex = hand.findIndex((handCard) => sameCard(handCard, card));
-                const i = originalIndex < 0 ? visibleIndex : originalIndex;
-                const cardId = stableCardId(card);
+              {visibleHand.map(({ card, index: i, id: cardId }, visibleIndex) => {
                 const n = visibleHand.length;
                 const mid = (n - 1) / 2;
                 const offset = visibleIndex - mid;

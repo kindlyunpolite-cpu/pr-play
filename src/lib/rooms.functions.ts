@@ -130,7 +130,9 @@ function eventActor(player: { id: string; nickname: string; seat: number }) {
 }
 
 function createDeck(): CardData[] {
-  return SUITS.flatMap((suit) => RANKS.map((rank) => ({ suit, rank })));
+  return SUITS.flatMap((suit) =>
+    RANKS.map((rank) => ({ id: `${rank}-${suit}`, suit, rank })),
+  );
 }
 
 function shuffleDeck(deck: CardData[]) {
