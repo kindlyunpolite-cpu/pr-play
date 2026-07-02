@@ -34,7 +34,7 @@ import {
 } from "@/lib/rooms.functions";
 import { clearSession, loadSession } from "@/lib/room-session";
 import { toast } from "sonner";
-import { createGameActionEvent } from "@/lib/game-actions";
+import { createGameActionEvent, isCardPlayable } from "@/lib/game-actions";
 import { triggerAiTurn } from "@/lib/ai-player";
 
 export const Route = createFileRoute("/game")({
