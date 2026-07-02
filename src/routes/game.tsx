@@ -29,6 +29,7 @@ import {
   declineRematch,
   drawCard,
   playCard,
+  applyTurnTimeout,
   leaveRoom,
 } from "@/lib/rooms.functions";
 import { clearSession, loadSession } from "@/lib/room-session";
@@ -116,6 +117,7 @@ function Game() {
   );
   const callDrawCard = useServerFn(drawCard);
   const callPlayCard = useServerFn(playCard);
+  const callApplyTurnTimeout = useServerFn(applyTurnTimeout);
   const callLeave = useServerFn(leaveRoom);
   const callAcceptRematch = useServerFn(acceptRematch);
   const callDeclineRematch = useServerFn(declineRematch);
@@ -175,6 +177,7 @@ function Game() {
   const busyActionRef = useRef(false);
   const aceSkipToastRef = useRef<string | null>(null);
   const aiTriggerRef = useRef<string | null>(null);
+  const timeoutTriggerRef = useRef<string | null>(null);
 
   const sortedPlayers = useMemo(() => [...players].sort((a, b) => a.seat - b.seat), [players]);
   const rotatedPlayers = useMemo(
@@ -374,6 +377,52 @@ function Game() {
     gameState?.status,
     gameState?.turn_version,
     players,
+    room?.id,
+  ]);
+
+
+  useEffect(() => {
+    if (
+      !room?.id ||
+      gameState?.status !== "playing" ||
+      !gameState.current_player_id ||
+      !gameState.turn_deadline_at
+    ) {
+      return;
+    }
+
+    const deadlineMs = Date.parse(gameState.turn_deadline_at);
+    if (!Number.isFinite(deadlineMs)) return;
+
+    const triggerKey = `${room.id}:${gameState.current_player_id}:${gameState.turn_version}:${gameState.turn_deadline_at}`;
+    const delayMs = Math.max(0, deadlineMs - Date.now());
+
+    const timeoutId = window.setTimeout(() => {
+      if (timeoutTriggerRef.current === triggerKey) return;
+      timeoutTriggerRef.current = triggerKey;
+
+      void callApplyTurnTimeout({ data: { roomId: room.id } })
+        .then(() => resync())
+        .catch((error) => {
+          console.debug("[game] turn timeout trigger failed", {
+            roomId: room.id,
+            playerId: gameState.current_player_id,
+            turnVersion: gameState.turn_version,
+            turnDeadlineAt: gameState.turn_deadline_at,
+            error,
+          });
+          timeoutTriggerRef.current = null;
+        });
+    }, delayMs);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    callApplyTurnTimeout,
+    gameState?.current_player_id,
+    gameState?.status,
+    gameState?.turn_deadline_at,
+    gameState?.turn_version,
+    resync,
     room?.id,
   ]);
 
