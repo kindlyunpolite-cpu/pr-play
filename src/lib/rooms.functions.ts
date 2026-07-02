@@ -2,7 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import type { Json } from "@/integrations/supabase/types";
-import { randomBytes } from "crypto";
 import type { CardData, Rank, Suit } from "@/components/cards";
 import type { RoomEventType } from "@/types/room";
 import { createVisibleActionSignature } from "@/lib/game-actions";
@@ -10,14 +9,21 @@ import { createVisibleActionSignature } from "@/lib/game-actions";
 // ------------- helpers (server-only) -------------
 
 const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I
+
+function getRandomBytes(len: number) {
+  const bytes = new Uint8Array(len);
+  globalThis.crypto.getRandomValues(bytes);
+  return bytes;
+}
+
 function genCode(len = 5) {
-  const buf = randomBytes(len);
+  const buf = getRandomBytes(len);
   let out = "";
   for (let i = 0; i < len; i++) out += CODE_ALPHABET[buf[i] % CODE_ALPHABET.length];
   return out;
 }
 function genToken() {
-  return randomBytes(24).toString("base64url");
+  return Array.from(getRandomBytes(24), (byte) => byte.toString(36).padStart(2, "0")).join("");
 }
 
 const SUITS: Suit[] = ["hearts", "diamonds", "clubs", "spades"];
@@ -130,7 +136,7 @@ function createDeck(): CardData[] {
 function shuffleDeck(deck: CardData[]) {
   const next = [...deck];
   for (let i = next.length - 1; i > 0; i--) {
-    const j = randomBytes(1)[0] % (i + 1);
+    const j = getRandomBytes(1)[0] % (i + 1);
     [next[i], next[j]] = [next[j], next[i]];
   }
   return next;
