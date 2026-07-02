@@ -91,38 +91,66 @@
 }
 
 @layer base {
-  * { border-color: var(--color-border); }
-  html, body, #root { height: 100%; }
-  html { -webkit-text-size-adjust: 100%; touch-action: manipulation; }
+  * {
+    border-color: var(--color-border);
+  }
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+    touch-action: manipulation;
+  }
   body {
     background:
       radial-gradient(ellipse 80% 55% at 50% 0%, oklch(0.18 0.04 175) 0%, transparent 58%),
-      radial-gradient(ellipse 70% 40% at 16% 48%, oklch(0.34 0.08 42 / 0.20) 0%, transparent 62%),
+      radial-gradient(ellipse 70% 40% at 16% 48%, oklch(0.34 0.08 42 / 0.2) 0%, transparent 62%),
       radial-gradient(ellipse 70% 42% at 84% 46%, oklch(0.46 0.16 315 / 0.14) 0%, transparent 64%),
-      radial-gradient(ellipse at bottom, oklch(0.09 0.03 160) 0%, transparent 62%),
-      var(--color-background);
+      radial-gradient(ellipse at bottom, oklch(0.09 0.03 160) 0%, transparent 62%), var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
     -webkit-tap-highlight-color: transparent;
     overscroll-behavior: none;
   }
-  button, a { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
-  h1, h2, h3, h4 { font-family: var(--font-display); letter-spacing: -0.02em; }
+  button,
+  a {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
 }
 
 @layer utilities {
   .felt-table {
     background:
       /* Subtle woven texture */
-      repeating-linear-gradient(45deg, oklch(1 0 0 / 0.020) 0 1px, transparent 1px 3px),
+      repeating-linear-gradient(45deg, oklch(1 0 0 / 0.02) 0 1px, transparent 1px 3px),
       repeating-linear-gradient(-45deg, oklch(0 0 0 / 0.035) 0 1px, transparent 1px 3px),
       /* Center hotspot under the cards */
-      radial-gradient(ellipse 34% 30% at 50% 49%, oklch(0.44 0.08 155 / 0.78) 0%, oklch(0.30 0.07 160 / 0.55) 42%, transparent 78%),
+        radial-gradient(
+          ellipse 34% 30% at 50% 49%,
+          oklch(0.44 0.08 155 / 0.78) 0%,
+          oklch(0.3 0.07 160 / 0.55) 42%,
+          transparent 78%
+        ),
       /* Mid felt with cinematic vignette */
-      radial-gradient(ellipse 72% 64% at 50% 48%, oklch(0.29 0.07 160) 0%, transparent 80%),
+        radial-gradient(ellipse 72% 64% at 50% 48%, oklch(0.29 0.07 160) 0%, transparent 80%),
       /* Outer dark fade */
-      radial-gradient(ellipse at 50% 35%, oklch(0.20 0.05 160) 0%, oklch(0.105 0.03 160) 57%, oklch(0.04 0.015 160) 100%);
+        radial-gradient(
+          ellipse at 50% 35%,
+          oklch(0.2 0.05 160) 0%,
+          oklch(0.105 0.03 160) 57%,
+          oklch(0.04 0.015 160) 100%
+        );
     box-shadow:
       inset 0 1px 0 oklch(1 0 0 / 0.06),
       inset 0 0 220px oklch(0 0 0 / 0.78),
@@ -138,8 +166,8 @@
     border-radius: inherit;
     pointer-events: none;
     box-shadow:
-      inset 0 0 0 1px oklch(0.82 0.14 85 / 0.20),
-      inset 0 0 30px oklch(0.55 0.18 220 / 0.10),
+      inset 0 0 0 1px oklch(0.82 0.14 85 / 0.2),
+      inset 0 0 30px oklch(0.55 0.18 220 / 0.1),
       inset 0 -2px 0 0 oklch(0 0 0 / 0.5);
   }
   .felt-table::after {
@@ -149,8 +177,7 @@
     inset: 0;
     border-radius: inherit;
     pointer-events: none;
-    background:
-      radial-gradient(ellipse 90% 70% at 50% 50%, transparent 50%, oklch(0 0 0 / 0.35) 100%);
+    background: radial-gradient(ellipse 90% 70% at 50% 50%, transparent 50%, oklch(0 0 0 / 0.35) 100%);
   }
   .table-spotlight {
     position: absolute;
@@ -161,11 +188,12 @@
     transform: translate(-50%, -50%);
     pointer-events: none;
     border-radius: 50%;
-    background:
-      radial-gradient(circle at center,
-        oklch(0.82 0.14 85 / 0.18) 0%,
-        oklch(0.82 0.14 85 / 0.07) 30%,
-        transparent 65%);
+    background: radial-gradient(
+      circle at center,
+      oklch(0.82 0.14 85 / 0.18) 0%,
+      oklch(0.82 0.14 85 / 0.07) 30%,
+      transparent 65%
+    );
     filter: blur(4px);
   }
   .table-spotlight::after {
@@ -179,17 +207,20 @@
     position: relative;
     padding: 1.25rem 1.75rem;
     border-radius: 9999px;
-    background:
-      radial-gradient(ellipse at center, oklch(0 0 0 / 0.22) 0%, transparent 72%);
+    background: radial-gradient(ellipse at center, oklch(0 0 0 / 0.22) 0%, transparent 72%);
   }
   .table-shell {
     width: min(74vw, 900px);
   }
   @media (min-width: 1024px) {
-    .table-shell { width: min(54vw, 820px); }
+    .table-shell {
+      width: min(54vw, 820px);
+    }
   }
   @media (max-width: 899px) {
-    .table-shell { width: min(86vw, 760px); }
+    .table-shell {
+      width: min(86vw, 760px);
+    }
   }
   .game-stage::before {
     content: "";
@@ -205,7 +236,9 @@
     border-radius: 9999px;
     border: 1px solid oklch(1 0 0 / 0.12);
     background: linear-gradient(180deg, oklch(0.18 0.025 160 / 0.72), oklch(0.08 0.018 160 / 0.82));
-    box-shadow: inset 0 1px 0 oklch(1 0 0 / 0.08), 0 10px 24px -16px oklch(0 0 0 / 0.9);
+    box-shadow:
+      inset 0 1px 0 oklch(1 0 0 / 0.08),
+      0 10px 24px -16px oklch(0 0 0 / 0.9);
     backdrop-filter: blur(18px);
   }
   .card-face {
@@ -218,15 +251,16 @@
   }
   .card-back {
     background:
-      repeating-linear-gradient(45deg, oklch(0.52 0.17 25) 0 6px, oklch(0.42 0.15 25) 6px 12px),
-      var(--color-card-back);
+      repeating-linear-gradient(45deg, oklch(0.52 0.17 25) 0 6px, oklch(0.42 0.15 25) 6px 12px), var(--color-card-back);
     box-shadow:
       0 0 0 1.5px oklch(0.98 0.01 90 / 0.95) inset,
       0 0 0 3px oklch(0.4 0.15 25) inset,
       0 6px 14px -6px oklch(0 0 0 / 0.5),
       0 2px 4px -1px oklch(0 0 0 / 0.25);
   }
-  .gold-text { color: var(--color-gold); }
+  .gold-text {
+    color: var(--color-gold);
+  }
   .card-playable {
     box-shadow:
       0 1px 0 oklch(1 0 0 / 0.9) inset,
@@ -236,7 +270,13 @@
     animation: card-playable-in 200ms ease-out both;
   }
   @keyframes card-playable-in {
-    from { box-shadow: 0 1px 0 oklch(1 0 0 / 0.9) inset, 0 0 0 1px oklch(0.82 0.14 85 / 0), 0 0 0 -2px oklch(0.82 0.14 85 / 0), 0 6px 14px -6px oklch(0 0 0 / 0.45); }
+    from {
+      box-shadow:
+        0 1px 0 oklch(1 0 0 / 0.9) inset,
+        0 0 0 1px oklch(0.82 0.14 85 / 0),
+        0 0 0 -2px oklch(0.82 0.14 85 / 0),
+        0 6px 14px -6px oklch(0 0 0 / 0.45);
+    }
   }
   .glow-primary {
     box-shadow:
@@ -249,49 +289,111 @@
       0 0 0 1.5px var(--color-gold),
       0 6px 24px -6px oklch(0.82 0.14 85 / 0.55);
   }
-  .scrollbar-thin::-webkit-scrollbar { width: 4px; height: 4px; }
-  .scrollbar-thin::-webkit-scrollbar-thumb { background: var(--color-muted); border-radius: 9999px; }
-  .scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
-  .no-scrollbar::-webkit-scrollbar { display: none; }
-  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+    height: 4px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: var(--color-muted);
+    border-radius: 9999px;
+  }
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
   .hand-scroll {
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-x: contain;
     scroll-padding-inline: 1.5rem;
   }
-  .hand-scroll > * { scroll-snap-align: center; }
-  .pb-safe { padding-bottom: max(0.5rem, env(safe-area-inset-bottom)); }
-  .pt-safe { padding-top: max(0.5rem, env(safe-area-inset-top)); }
+  .hand-scroll > * {
+    scroll-snap-align: center;
+  }
+  .pb-safe {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+  .pt-safe {
+    padding-top: max(0.5rem, env(safe-area-inset-top));
+  }
 
   @keyframes pulse-turn {
-    0%, 100% { box-shadow: 0 0 0 1.5px var(--color-gold), 0 0 0 0 oklch(0.82 0.14 85 / 0.5); }
-    50% { box-shadow: 0 0 0 1.5px var(--color-gold), 0 0 0 8px oklch(0.82 0.14 85 / 0); }
+    0%,
+    100% {
+      box-shadow:
+        0 0 0 1.5px var(--color-gold),
+        0 0 0 0 oklch(0.82 0.14 85 / 0.5);
+    }
+    50% {
+      box-shadow:
+        0 0 0 1.5px var(--color-gold),
+        0 0 0 8px oklch(0.82 0.14 85 / 0);
+    }
   }
-  .animate-turn { animation: pulse-turn 2s ease-out infinite; }
+  .animate-turn {
+    animation: pulse-turn 2s ease-out infinite;
+  }
 
   @keyframes card-played {
-    0% { transform: translateY(-30px) rotate(15deg) scale(1.05); opacity: 0; }
-    60% { transform: translateY(2px) rotate(2deg) scale(1.02); opacity: 1; }
-    100% { transform: rotate(3deg) scale(1); opacity: 1; }
+    0% {
+      transform: translateY(-30px) rotate(15deg) scale(1.05);
+      opacity: 0;
+    }
+    60% {
+      transform: translateY(2px) rotate(2deg) scale(1.02);
+      opacity: 1;
+    }
+    100% {
+      transform: rotate(3deg) scale(1);
+      opacity: 1;
+    }
   }
-  .animate-card-played { animation: card-played 240ms cubic-bezier(0.22, 1, 0.36, 1); }
+  //.animate-card-played
+  {
+    animation: card-played 240ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .animate-card-played {
+    animation: card-played 20s cubic-bezier(0.22, 1, 0.36, 1);
+  }
 
   @keyframes card-active {
-    0%, 100% { box-shadow: 0 0 0 2px var(--color-gold), 0 0 0 0 oklch(0.82 0.14 85 / 0.4); }
-    50% { box-shadow: 0 0 0 2px var(--color-gold), 0 0 14px 4px oklch(0.82 0.14 85 / 0.35); }
+    0%,
+    100% {
+      box-shadow:
+        0 0 0 2px var(--color-gold),
+        0 0 0 0 oklch(0.82 0.14 85 / 0.4);
+    }
+    50% {
+      box-shadow:
+        0 0 0 2px var(--color-gold),
+        0 0 14px 4px oklch(0.82 0.14 85 / 0.35);
+    }
   }
-  .animate-card-active { animation: card-active 1.6s ease-in-out infinite; }
+  .animate-card-active {
+    animation: card-active 1.6s ease-in-out infinite;
+  }
 
   /* Dealing — slides + flips in from the deck position */
   @keyframes card-deal {
     0% {
-      transform: translate3d(var(--deal-from-x, 0), var(--deal-from-y, -120px), 0)
-        rotate(var(--deal-from-rot, -25deg)) scale(0.85);
+      transform: translate3d(var(--deal-from-x, 0), var(--deal-from-y, -120px), 0) rotate(var(--deal-from-rot, -25deg))
+        scale(0.85);
       opacity: 0;
     }
-    60% { opacity: 1; }
-    100% { transform: translate3d(0, 0, 0) rotate(0) scale(1); opacity: 1; }
+    60% {
+      opacity: 1;
+    }
+    100% {
+      transform: translate3d(0, 0, 0) rotate(0) scale(1);
+      opacity: 1;
+    }
   }
   .animate-card-deal {
     animation: card-deal 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
@@ -300,59 +402,129 @@
 
   /* Draw — pops up from the deck into the hand */
   @keyframes card-draw {
-    0% { transform: translateY(-40px) scale(0.9); opacity: 0; }
-    60% { transform: translateY(4px) scale(1.03); opacity: 1; }
-    100% { transform: translateY(0) scale(1); opacity: 1; }
+    0% {
+      transform: translateY(-40px) scale(0.9);
+      opacity: 0;
+    }
+    60% {
+      transform: translateY(4px) scale(1.03);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
   }
-.animate-card-draw{ animation: .22s cubic-bezier(.22, 1, .36, 1) both card-draw; }
+  .animate-card-draw {
+    animation: 0.22s cubic-bezier(0.22, 1, 0.36, 1) both card-draw;
+  }
 
   /* Play — lifts off and fades toward the pile */
   @keyframes card-play {
-    0% { transform: translateY(0) scale(1); opacity: 1; }
-    100% { transform: translateY(-90px) scale(0.92) rotate(6deg); opacity: 0; }
+    0% {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(-90px) scale(0.92) rotate(6deg);
+      opacity: 0;
+    }
   }
-  .animate-card-play { animation: card-play .22s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+  .animate-card-play {
+    animation: card-play 0.22s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+  }
 
   /* Discard pile bump — quick squash when a new card lands */
   @keyframes pile-bump {
-    0% { transform: scale(1); }
-    45% { transform: scale(1.06); }
-    100% { transform: scale(1); }
+    0% {
+      transform: scale(1);
+    }
+    45% {
+      transform: scale(1.06);
+    }
+    100% {
+      transform: scale(1);
+    }
   }
-  .animate-pile-bump { animation: pile-bump 220ms ease-out; }
+  .animate-pile-bump {
+    animation: pile-bump 220ms ease-out;
+  }
 
   @keyframes seat-action-pulse {
-    0%, 100% { box-shadow: 0 0 0 0 oklch(0.82 0.14 85 / 0); }
-    45% { box-shadow: 0 0 0 4px oklch(0.82 0.14 85 / 0.32), 0 0 20px 2px oklch(0.82 0.14 85 / 0.38); }
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 oklch(0.82 0.14 85 / 0);
+    }
+    45% {
+      box-shadow:
+        0 0 0 4px oklch(0.82 0.14 85 / 0.32),
+        0 0 20px 2px oklch(0.82 0.14 85 / 0.38);
+    }
   }
-  .animate-seat-action-pulse { animation: seat-action-pulse 220ms ease-out both; }
+  .animate-seat-action-pulse {
+    animation: seat-action-pulse 220ms ease-out both;
+  }
 
   /* Turn arrival — one-shot fade-in ring on the newly active player */
   @keyframes turn-arrive {
-    0% { box-shadow: 0 0 0 0 oklch(0.82 0.14 85 / 0); opacity: 0.6; }
-    60% { box-shadow: 0 0 0 6px oklch(0.82 0.14 85 / 0.35), 0 0 22px 4px oklch(0.82 0.14 85 / 0.32); opacity: 1; }
-    100% { box-shadow: 0 0 0 0 oklch(0.82 0.14 85 / 0); opacity: 1; }
+    0% {
+      box-shadow: 0 0 0 0 oklch(0.82 0.14 85 / 0);
+      opacity: 0.6;
+    }
+    60% {
+      box-shadow:
+        0 0 0 6px oklch(0.82 0.14 85 / 0.35),
+        0 0 22px 4px oklch(0.82 0.14 85 / 0.32);
+      opacity: 1;
+    }
+    100% {
+      box-shadow: 0 0 0 0 oklch(0.82 0.14 85 / 0);
+      opacity: 1;
+    }
   }
-  .animate-turn-arrive { animation: turn-arrive 220ms ease-out both; }
+  .animate-turn-arrive {
+    animation: turn-arrive 220ms ease-out both;
+  }
 
   @keyframes last-action-pop {
-    0% { transform: translateY(8px) scale(0.96); opacity: 0; }
-    16%, 86% { transform: translateY(0) scale(1); opacity: 1; }
-    100% { transform: translateY(-4px) scale(0.98); opacity: 0; }
+    0% {
+      transform: translateY(8px) scale(0.96);
+      opacity: 0;
+    }
+    16%,
+    86% {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+    100% {
+      transform: translateY(-4px) scale(0.98);
+      opacity: 0;
+    }
   }
-  .animate-last-action { animation: last-action-pop 4.5s ease-out both; }
+  .animate-last-action {
+    animation: last-action-pop 4.5s ease-out both;
+  }
 
   /* Tap feedback — quick press */
   @keyframes card-tap {
-    0% { transform: scale(1); }
-    50% { transform: scale(0.96); }
-    100% { transform: scale(1); }
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(0.96);
+    }
+    100% {
+      transform: scale(1);
+    }
   }
-  .animate-card-tap { animation: card-tap 140ms ease-out; }
+  .animate-card-tap {
+    animation: card-tap 140ms ease-out;
+  }
 
   /* Winner — gold sheen sweep + glow pulse, no layout shift */
   @keyframes winner-glow {
-    0%, 100% {
+    0%,
+    100% {
       box-shadow:
         0 0 0 2px var(--color-gold),
         0 0 30px 4px oklch(0.82 0.14 85 / 0.55),
@@ -366,8 +538,12 @@
     }
   }
   @keyframes winner-sheen {
-    0% { background-position: -150% 0; }
-    100% { background-position: 250% 0; }
+    0% {
+      background-position: -150% 0;
+    }
+    100% {
+      background-position: 250% 0;
+    }
   }
   .animate-winner {
     position: relative;
@@ -379,12 +555,7 @@
     position: absolute;
     inset: 0;
     pointer-events: none;
-    background: linear-gradient(
-      105deg,
-      transparent 35%,
-      oklch(1 0 0 / 0.6) 50%,
-      transparent 65%
-    );
+    background: linear-gradient(105deg, transparent 35%, oklch(1 0 0 / 0.6) 50%, transparent 65%);
     background-size: 200% 100%;
     animation: winner-sheen 1.8s linear infinite;
     mix-blend-mode: overlay;
@@ -392,12 +563,16 @@
   }
 
   @keyframes seat-scan {
-    0% { transform: translateX(-100%); }
-    60%, 100% { transform: translateX(100%); }
+    0% {
+      transform: translateX(-100%);
+    }
+    60%,
+    100% {
+      transform: translateX(100%);
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
-
     .animate-card-deal,
     .animate-card-draw,
     .animate-card-play,
@@ -409,10 +584,20 @@
     .animate-winner,
     .animate-winner::after,
     .animate-card-active,
-    .animate-turn { animation: none !important; }
-    .animate-turn-arrive { animation: none !important; }
-    .card-playable { animation: none !important; }
-    .card-face { transition: none !important; }
-    .card-face:hover { transform: none !important; }
+    .animate-turn {
+      animation: none !important;
+    }
+    .animate-turn-arrive {
+      animation: none !important;
+    }
+    .card-playable {
+      animation: none !important;
+    }
+    .card-face {
+      transition: none !important;
+    }
+    .card-face:hover {
+      transform: none !important;
+    }
   }
 }
