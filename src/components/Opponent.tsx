@@ -50,10 +50,16 @@ export function Opponent({
   compact = false,
   compactMobile = false,
   self = false,
+  turnRemainingMs,
+  turnDurationMs,
 }: SeatProps) {
   const [expanded, setExpanded] = useState(false);
   const online = player.online ?? true;
   const accent = player.accent ?? "oklch(0.82 0.14 85)";
+  const showTimer =
+    player.isTurn &&
+    typeof turnRemainingMs === "number" &&
+    typeof turnDurationMs === "number";
 
   const portraitSize = compact
     ? "h-20 w-16"
