@@ -401,9 +401,6 @@ function Game() {
     if (!latestAction) return;
 
     console.debug("[game] last action updated", latestAction);
-    setRecentActions((prev) =>
-      [latestAction, ...prev.filter((a) => a.id !== latestAction.id)].slice(0, 5),
-    );
     setVisibleActionId(latestAction.id);
     setPulsingPlayerId(latestAction.playerId);
 
