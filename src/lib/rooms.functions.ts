@@ -25,11 +25,42 @@ const RANKS: Rank[] = ["7", "8", "9", "10", "J", "Q", "K", "A"];
 const DEAL_COUNT = 4;
 export const TURN_DURATION_MS = 30_000;
 
-export function createTurnClock(now = new Date()) {
+export function createTurnClock(
+  now = new Date(),
+  timer?: {
+    enabled?: boolean;
+    paused?: boolean;
+    remainingMs?: number | null;
+    durationMs?: number | null;
+  },
+) {
+  const durationMs = Math.max(1, timer?.durationMs ?? TURN_DURATION_MS);
+  const remainingMs = Math.max(0, timer?.remainingMs ?? durationMs);
+  const enabled = timer?.enabled ?? true;
+  const paused = timer?.paused ?? false;
+
   return {
     turn_started_at: now.toISOString(),
-    turn_deadline_at: new Date(now.getTime() + TURN_DURATION_MS).toISOString(),
+    turn_deadline_at: enabled && !paused
+      ? new Date(now.getTime() + remainingMs).toISOString()
+      : null,
+    turn_remaining_ms: enabled && paused ? remainingMs : null,
   };
+}
+
+export function createNextTurnClock(
+  gameState: {
+    turn_timer_enabled?: boolean | null;
+    turn_timer_paused?: boolean | null;
+    turn_timer_duration_ms?: number | null;
+  },
+  now = new Date(),
+) {
+  return createTurnClock(now, {
+    enabled: gameState.turn_timer_enabled ?? true,
+    paused: gameState.turn_timer_paused ?? false,
+    durationMs: gameState.turn_timer_duration_ms ?? TURN_DURATION_MS,
+  });
 }
 
 const SUIT_NAMES: Record<Suit, string> = {
@@ -231,6 +262,10 @@ async function loadGameState(roomId: string) {
     active_suit: gameState.active_suit as Suit | null,
     pending_draw: gameState.pending_draw ?? 0,
     turn_version: gameState.turn_version ?? 0,
+    turn_timer_enabled: gameState.turn_timer_enabled ?? true,
+    turn_timer_paused: gameState.turn_timer_paused ?? false,
+    turn_timer_duration_ms: gameState.turn_timer_duration_ms ?? TURN_DURATION_MS,
+    turn_remaining_ms: gameState.turn_remaining_ms ?? null,
   };
 }
 
@@ -338,6 +373,9 @@ async function initializeGame(roomId: string, players: { id: string }[], firstPl
     status: "playing",
     pending_draw: 0,
     turn_version: 0,
+    turn_timer_enabled: true,
+    turn_timer_paused: false,
+    turn_timer_duration_ms: TURN_DURATION_MS,
     ...turnClock,
 
     last_action_id: null,
@@ -883,6 +921,10 @@ export const applyTurnTimeout = createServerFn({ method: "POST" })
     const gameState = await loadGameState(data.roomId);
     if (gameState.status !== "playing") return { ok: true, finished: true };
     if (!gameState.current_player_id) return { ok: true, stale: true };
+    if (!gameState.turn_timer_enabled || gameState.turn_timer_paused) {
+      return { ok: true, timerInactive: true };
+    }
+    if (!gameState.turn_deadline_at) return { ok: true, timerInactive: true };
 
     const now = new Date();
     const deadline = new Date(gameState.turn_deadline_at);
@@ -916,7 +958,7 @@ export const applyTurnTimeout = createServerFn({ method: "POST" })
       [timeoutActionId]: { playerId: activePlayerId, signature },
     };
     const nextTurnPlayerId = nextPlayerId(players, activePlayerId, gameState.direction);
-    const turnClock = createTurnClock(now);
+    const turnClock = createNextTurnClock(gameState, now);
     const updatedAt = turnClock.turn_started_at;
     const visibleSignature = createVisibleActionSignature({
       type: "draw",
@@ -944,6 +986,8 @@ export const applyTurnTimeout = createServerFn({ method: "POST" })
       .eq("current_player_id", activePlayerId)
       .eq("status", "playing")
       .eq("turn_version", gameState.turn_version)
+      .eq("turn_timer_enabled", true)
+      .eq("turn_timer_paused", false)
       .lte("turn_deadline_at", updatedAt)
       .select("room_id")
       .maybeSingle();
@@ -968,6 +1012,70 @@ export const applyTurnTimeout = createServerFn({ method: "POST" })
     ]);
 
     return { ok: true, timedOut: true, drawn: draw.cards.length };
+  });
+
+// ------------- updateTurnTimerMode (host only) -------------
+
+export const updateTurnTimerMode = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) =>
+    z
+      .object({
+        playerId: PlayerIdSchema,
+        sessionToken: TokenSchema,
+        enabled: z.boolean().optional(),
+        paused: z.boolean().optional(),
+      })
+      .parse(input),
+  )
+  .handler(async ({ data }) => {
+    const player = await authenticatePlayer(data.playerId, data.sessionToken);
+    if (!player.is_host) throw new Error("Only the host can change the turn timer");
+
+    const gameState = await loadGameState(player.room_id);
+    if (gameState.status !== "playing") return { ok: true, finished: true };
+
+    const now = new Date();
+    const durationMs = gameState.turn_timer_duration_ms ?? TURN_DURATION_MS;
+    const wasEnabled = gameState.turn_timer_enabled ?? true;
+    const wasPaused = gameState.turn_timer_paused ?? false;
+    const enabled = data.enabled ?? wasEnabled;
+    const paused = enabled ? (data.paused ?? wasPaused) : false;
+
+    let remainingMs: number | null = null;
+    if (enabled) {
+      if (!wasEnabled) {
+        remainingMs = durationMs;
+      } else if (wasPaused) {
+        remainingMs = gameState.turn_remaining_ms ?? durationMs;
+      } else if (gameState.turn_deadline_at) {
+        remainingMs = Math.max(0, Date.parse(gameState.turn_deadline_at) - now.getTime());
+      } else {
+        remainingMs = durationMs;
+      }
+    }
+
+    const turnClock = enabled
+      ? createTurnClock(now, { enabled, paused, remainingMs, durationMs })
+      : {
+          turn_started_at: null,
+          turn_deadline_at: null,
+          turn_remaining_ms: null,
+        };
+
+    const { error } = await supabaseAdmin
+      .from("game_states")
+      .update({
+        turn_timer_enabled: enabled,
+        turn_timer_paused: paused,
+        turn_timer_duration_ms: durationMs,
+        ...turnClock,
+        updated_at: now.toISOString(),
+      })
+      .eq("room_id", player.room_id)
+      .eq("status", "playing");
+    if (error) throw new Error("Failed to update turn timer");
+
+    return { ok: true, enabled, paused };
   });
 
 // ------------- drawCard -------------
@@ -1021,7 +1129,7 @@ export const drawCard = createServerFn({ method: "POST" })
       type: "draw",
       drawCount: draw.cards.length,
     });
-    const turnClock = createTurnClock();
+    const turnClock = createNextTurnClock(gameState);
 
     const { data: updated, error } = await supabaseAdmin
       .from("game_states")
@@ -1151,7 +1259,7 @@ export const playCard = createServerFn({ method: "POST" })
     };
     const actionAt = new Date();
     const finishedAt = actionAt.toISOString();
-    const turnClock = finished ? {} : createTurnClock(actionAt);
+    const turnClock = finished ? {} : createNextTurnClock(gameState, actionAt);
     const visibleSignature = createVisibleActionSignature({
       type: data.chosenSuit ? "suit-change" : "play",
       card,
