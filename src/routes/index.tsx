@@ -75,16 +75,14 @@ function Lobby() {
         .replace(/[^A-Z0-9]/g, "")
         .slice(0, 5)
     : "";
-  const initialProfile = typeof window !== "undefined" ? loadProfile() : null;
-  const [nick, setNick] = useState(() => initialProfile?.nickname ?? randomName());
+  const [nick, setNick] = useState(NAME_POOL[0]);
   const [portraitId, setPortraitId] = useState(() =>
-    initialProfile?.avatar && PORTRAITS.some((p) => p.id === initialProfile.avatar)
-      ? initialProfile.avatar
-      : randomPortraitId(),
+    PORTRAITS[0]?.id ?? "",
   );
   const [code, setCode] = useState(initialCode);
   const [submitting, setSubmitting] = useState<"create" | "join" | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [hasSavedProfile, setHasSavedProfile] = useState(false);
   const navigate = useNavigate();
   const callCreate = useServerFn(createRoom);
   const callJoin = useServerFn(joinRoom);
@@ -96,6 +94,16 @@ function Lobby() {
   useEffect(() => {
     setCode(initialCode);
   }, [initialCode]);
+
+  useEffect(() => {
+    const profile = loadProfile();
+    if (!profile) return;
+    setHasSavedProfile(true);
+    if (profile.nickname) setNick(profile.nickname);
+    if (profile.avatar && PORTRAITS.some((p) => p.id === profile.avatar)) {
+      setPortraitId(profile.avatar);
+    }
+  }, []);
 
   const portrait = getPortrait(portraitId);
   const canCreate = !submitting && nick.trim().length >= 2;
@@ -143,12 +151,10 @@ function Lobby() {
     saveProfile({ nickname: trimmed, avatar: portraitId });
   }, [nick, portraitId]);
 
-  const hasSavedProfile =
-    typeof window !== "undefined" && (loadProfile() !== null || initialProfile !== null);
-
   const handleLogout = () => {
     clearSession();
     clearProfile();
+    setHasSavedProfile(false);
     setNick(randomName());
     setPortraitId(randomPortraitId());
     setCode("");
