@@ -30,7 +30,7 @@ import {
   playCard,
   leaveRoom,
 } from "@/lib/rooms.functions";
-import { clearSession } from "@/lib/room-session";
+import { clearSession, loadSession } from "@/lib/room-session";
 import { toast } from "sonner";
 import { createGameActionEvent } from "@/lib/game-actions";
 import { triggerAiTurn } from "@/lib/ai-player";
@@ -346,6 +346,10 @@ function Game() {
 
   useEffect(() => {
     if (reconnectStatus === "missing-session" || reconnectStatus === "expired-session") {
+      // useReconnect starts as "missing-session" before its mount effect can
+      // validate localStorage. If a room session exists, wait instead of
+      // bouncing a freshly-started game back to the lobby.
+      if (typeof window !== "undefined" && loadSession()) return;
       navigate({ to: "/", replace: true });
     }
   }, [navigate, reconnectStatus]);
