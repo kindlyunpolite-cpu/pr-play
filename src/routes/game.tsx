@@ -555,7 +555,7 @@ function Game() {
       const msg = error instanceof Error ? error.message : "Nepodařilo se zahrát kartu";
       if (!/stale|není.*tah|not your turn/i.test(msg)) toast.error(msg);
     } finally {
-      window.setTimeout(() => setPlayingIdx(null), 320);
+      window.setTimeout(() => setPlayingIdx(null), 220);
       busyActionRef.current = false;
       setBusyAction(null);
     }
