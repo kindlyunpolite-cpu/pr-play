@@ -395,14 +395,19 @@ function Game() {
     if (!Number.isFinite(deadlineMs)) return;
 
     const triggerKey = `${room.id}:${gameState.current_player_id}:${gameState.turn_version}:${gameState.turn_deadline_at}`;
-    const delayMs = Math.max(0, deadlineMs - Date.now());
+    const delayMs = Math.max(0, deadlineMs - Date.now() + 250);
 
     const timeoutId = window.setTimeout(() => {
       if (timeoutTriggerRef.current === triggerKey) return;
       timeoutTriggerRef.current = triggerKey;
 
       void callApplyTurnTimeout({ data: { roomId: room.id } })
-        .then(() => resync())
+        .then((result) => {
+          if (result?.notExpired) {
+            timeoutTriggerRef.current = null;
+          }
+          return resync();
+        })
         .catch((error) => {
           console.debug("[game] turn timeout trigger failed", {
             roomId: room.id,

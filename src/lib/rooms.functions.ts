@@ -906,7 +906,8 @@ export const applyTurnTimeout = createServerFn({ method: "POST" })
     const activePlayerId = gameState.current_player_id;
     const activePlayer = players.find((p) => p.id === activePlayerId);
     const activeHand = [...(hands[activePlayerId] ?? [])];
-    const draw = takeDrawableCards(gameState.deck, gameState.discard_pile, 1);
+    const drawCount = gameState.pending_draw > 0 ? gameState.pending_draw : 1;
+    const draw = takeDrawableCards(gameState.deck, gameState.discard_pile, drawCount);
     activeHand.push(...draw.cards);
     hands[activePlayerId] = activeHand;
 
