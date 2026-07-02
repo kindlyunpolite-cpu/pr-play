@@ -227,6 +227,17 @@
       0 2px 4px -1px oklch(0 0 0 / 0.25);
   }
   .gold-text { color: var(--color-gold); }
+  .card-playable {
+    box-shadow:
+      0 1px 0 oklch(1 0 0 / 0.9) inset,
+      0 0 0 1px oklch(0.82 0.14 85 / 0.55),
+      0 0 14px -2px oklch(0.82 0.14 85 / 0.35),
+      0 6px 14px -6px oklch(0 0 0 / 0.45);
+    animation: card-playable-in 200ms ease-out both;
+  }
+  @keyframes card-playable-in {
+    from { box-shadow: 0 1px 0 oklch(1 0 0 / 0.9) inset, 0 0 0 1px oklch(0.82 0.14 85 / 0), 0 0 0 -2px oklch(0.82 0.14 85 / 0), 0 6px 14px -6px oklch(0 0 0 / 0.45); }
+  }
   .glow-primary {
     box-shadow:
       0 0 0 1.5px var(--color-gold),
