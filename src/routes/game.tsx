@@ -450,7 +450,7 @@ function Game() {
     }
 
     const hideAction = window.setTimeout(() => setVisibleActionId(null), 4_500);
-    const stopPulse = window.setTimeout(() => setPulsingPlayerId(null), 900);
+    const stopPulse = window.setTimeout(() => setPulsingPlayerId(null), 260);
     return () => {
       window.clearTimeout(hideAction);
       window.clearTimeout(stopPulse);
