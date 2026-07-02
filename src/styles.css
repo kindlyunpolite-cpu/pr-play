@@ -354,11 +354,6 @@
       opacity: 1;
     }
   }
-  //.animate-card-played
-  //{
-    //animation: card-played 240ms cubic-bezier(0.22, 1, 0.36, 1);
- // }
-
   .animate-card-played {
     animation: card-played 240ms cubic-bezier(0.22, 1, 0.36, 1);
   }
