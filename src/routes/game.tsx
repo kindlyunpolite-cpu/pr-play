@@ -403,7 +403,7 @@ function Game() {
 
       void callApplyTurnTimeout({ data: { roomId: room.id } })
         .then((result) => {
-          if (result?.notExpired) {
+          if (result && "notExpired" in result && result.notExpired) {
             timeoutTriggerRef.current = null;
           }
           return resync();
