@@ -201,6 +201,7 @@ function Game() {
 
   const busyActionRef = useRef(false);
   const localPendingPlayPlayerIdRef = useRef<string | null>(null);
+  const pendingPlayResyncActionIdRef = useRef<string | null>(null);
   const playAnimationTimeoutRef = useRef<number | null>(null);
   const handCardRefs = useRef(new Map<string, HTMLDivElement>());
   const discardPileRef = useRef<HTMLDivElement | null>(null);
@@ -545,17 +546,36 @@ function Game() {
       (gameState.last_action_signature?.startsWith("play:") ||
         gameState.last_action_signature?.startsWith("suit-change:"));
 
-    if (
+    const authoritativeStateConfirmsPlay =
       handNoLongerContainsPendingCard ||
       discardTopMatchesPendingCard ||
-      latestActionMatchesPendingPlay
-    ) {
+      latestActionMatchesPendingPlay;
+
+    if (pendingPlay.animationDone && authoritativeStateConfirmsPlay) {
       setPendingPlay(null);
       localPendingPlayPlayerIdRef.current = null;
+      pendingPlayResyncActionIdRef.current = null;
       busyActionRef.current = false;
       setBusyAction(null);
+      return;
     }
-  }, [gameState, pendingPlay, session]);
+
+    if (
+      pendingPlay.animationDone &&
+      pendingPlay.serverSucceeded &&
+      !authoritativeStateConfirmsPlay &&
+      pendingPlayResyncActionIdRef.current !== pendingPlay.actionId
+    ) {
+      pendingPlayResyncActionIdRef.current = pendingPlay.actionId;
+      void resync().catch((error) => {
+        console.debug("[game] pending play resync failed", {
+          actionId: pendingPlay.actionId,
+          error,
+        });
+        pendingPlayResyncActionIdRef.current = null;
+      });
+    }
+  }, [gameState, pendingPlay, resync, session]);
 
   useEffect(() => {
     if (pendingPlay) return;
@@ -656,6 +676,7 @@ function Game() {
       playAnimationTimeoutRef.current = null;
     }
     const actionId = createActionId();
+    pendingPlayResyncActionIdRef.current = null;
     setPendingPlay({
       card,
       cardId: id,
@@ -690,6 +711,7 @@ function Game() {
         }
         setPendingPlay(null);
         localPendingPlayPlayerIdRef.current = null;
+        pendingPlayResyncActionIdRef.current = null;
         busyActionRef.current = false;
         setBusyAction(null);
         return;
@@ -706,6 +728,7 @@ function Game() {
       }
       setPendingPlay(null);
       localPendingPlayPlayerIdRef.current = null;
+      pendingPlayResyncActionIdRef.current = null;
       busyActionRef.current = false;
       setBusyAction(null);
       const msg = error instanceof Error ? error.message : "Nepodařilo se zahrát kartu";
