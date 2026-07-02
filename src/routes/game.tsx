@@ -171,7 +171,7 @@ function Game() {
   const [suitPickerIndex, setSuitPickerIndex] = useState<number | null>(null);
   const [visibleActionId, setVisibleActionId] = useState<string | null>(null);
   const [pulsingPlayerId, setPulsingPlayerId] = useState<string | null>(null);
-  const [recentActions, setRecentActions] = useState<GameActionEvent[]>([]);
+  
   const busyActionRef = useRef(false);
   const aceSkipToastRef = useRef<string | null>(null);
   const aiTriggerRef = useRef<string | null>(null);
