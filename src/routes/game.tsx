@@ -478,14 +478,8 @@ function Game() {
     !busyAction &&
     !gameFinished &&
     gameState.status === "playing";
-  const selectedCard = selected === null ? null : (hand[selected] ?? null);
-  const selectedPlayable =
-    !!selectedCard &&
-    (pendingDraw > 0
-      ? selectedCard.rank === "7"
-      : selectedCard.rank === "Q" ||
-        selectedCard.suit === activeSuit ||
-        selectedCard.rank === topDiscard.rank);
+
+
 
   const submitRematchVote = async (accepted: boolean) => {
     if (!session || !gameFinished || busyRematch) return;
