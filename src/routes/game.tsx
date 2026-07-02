@@ -863,9 +863,15 @@ function Game() {
                       )}
                     >
                       {you.isTurn && (
-                        <span className="absolute -top-5 left-1/2 z-[2] -translate-x-1/2 whitespace-nowrap rounded-sm border border-[color:var(--gold)]/55 bg-black/75 px-1.5 py-px text-[8px] font-bold uppercase tracking-[0.12em] text-[color:var(--gold)] shadow-lg shadow-black/40">
-                          Na tahu
-                        </span>
+                        <div className="absolute -top-9 left-1/2 z-[2] flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-[color:var(--gold)]/55 bg-black/80 pl-1 pr-2 py-0.5 shadow-lg shadow-black/40">
+                          <HudCountdown
+                            remainingMs={turnRemainingMs}
+                            durationMs={turnDurationMs}
+                          />
+                          <span className="whitespace-nowrap text-[8px] font-bold uppercase tracking-[0.14em] text-[color:var(--gold)]">
+                            Na tahu
+                          </span>
+                        </div>
                       )}
                       <img
                         src={you.avatar}
