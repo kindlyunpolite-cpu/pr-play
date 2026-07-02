@@ -275,7 +275,7 @@
     60% { transform: translateY(2px) rotate(2deg) scale(1.02); opacity: 1; }
     100% { transform: rotate(3deg) scale(1); opacity: 1; }
   }
-  .animate-card-played { animation: card-played 420ms cubic-bezier(0.22, 1, 0.36, 1); }
+  .animate-card-played { animation: card-played 240ms cubic-bezier(0.22, 1, 0.36, 1); }
 
   @keyframes card-active {
     0%, 100% { box-shadow: 0 0 0 2px var(--color-gold), 0 0 0 0 oklch(0.82 0.14 85 / 0.4); }
