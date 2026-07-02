@@ -71,9 +71,9 @@ export function PlayingCard({
   const stateClasses: Record<CardState, string> = {
     idle: "",
     playable:
-      "cursor-pointer hover:-translate-y-3 hover:shadow-xl active:scale-95 active:-translate-y-1",
-    disabled: "opacity-45 saturate-50 cursor-not-allowed",
-    selected: "-translate-y-5 ring-2 ring-[color:var(--color-gold)] glow-primary",
+      "card-playable cursor-pointer hover:-translate-y-2.5 hover:scale-[1.04] hover:shadow-xl active:scale-[0.97] active:-translate-y-1",
+    disabled: "opacity-60 saturate-75 cursor-not-allowed",
+    selected: "-translate-y-4 ring-2 ring-[color:var(--color-gold)] glow-primary",
     active: "ring-2 ring-[color:var(--color-gold)] animate-card-active",
     recent: "animate-card-played",
   };
