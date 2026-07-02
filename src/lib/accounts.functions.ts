@@ -1,5 +1,4 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getRequest } from "@tanstack/react-start/server";
 import { z } from "zod";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
@@ -29,17 +28,15 @@ function friendlyDuplicate(error: unknown) {
   }
 }
 
-async function currentAuthUserId() {
-  const authHeader = getRequest()?.headers?.get("authorization");
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice("Bearer ".length) : null;
-  if (!token) return null;
-  const { data, error } = await supabaseAdmin.auth.getUser(token);
+async function currentAuthUserId(accessToken?: string | null) {
+  if (!accessToken) return null;
+  const { data, error } = await supabaseAdmin.auth.getUser(accessToken);
   if (error) return null;
   return data.user?.id ?? null;
 }
 
-export async function getCurrentProfileId() {
-  const userId = await currentAuthUserId();
+export async function getCurrentProfileId(accessToken?: string | null) {
+  const userId = await currentAuthUserId(accessToken);
   if (!userId) return null;
   const { data } = await supabaseAdmin.from("profiles").select("id").eq("id", userId).maybeSingle();
   return data?.id ?? null;
@@ -92,22 +89,26 @@ export const resolveNickLogin = createServerFn({ method: "POST" })
     return { authEmail: profile.internal_auth_email };
   });
 
-export const getMyProfile = createServerFn({ method: "POST" }).handler(async () => {
-  const userId = await currentAuthUserId();
-  if (!userId) return null;
-  const { data, error } = await supabaseAdmin
-    .from("profiles")
-    .select("id, nick, avatar_url, auth_provider")
-    .eq("id", userId)
-    .maybeSingle();
-  if (error) throw new Error("Profil se nepodařilo načíst.");
-  return data;
-});
+export const getMyProfile = createServerFn({ method: "POST" })
+  .inputValidator((input: unknown) => z.object({ accessToken: z.string().optional().nullable() }).parse(input ?? {}))
+  .handler(async ({ data }) => {
+    const userId = await currentAuthUserId(data.accessToken);
+    if (!userId) return null;
+    const { data: profile, error } = await supabaseAdmin
+      .from("profiles")
+      .select("id, nick, avatar_url, auth_provider")
+      .eq("id", userId)
+      .maybeSingle();
+    if (error) throw new Error("Profil se nepodařilo načíst.");
+    return profile;
+  });
 
 export const reserveSocialNick = createServerFn({ method: "POST" })
-  .inputValidator((input: unknown) => z.object({ nick: NickSchema, provider: ProviderSchema }).parse(input))
+  .inputValidator((input: unknown) =>
+    z.object({ accessToken: z.string().optional().nullable(), nick: NickSchema, provider: ProviderSchema }).parse(input),
+  )
   .handler(async ({ data }) => {
-    const userId = await currentAuthUserId();
+    const userId = await currentAuthUserId(data.accessToken);
     if (!userId) throw new Error("Nejdřív se přihlas přes Google.");
     const nick = data.nick.trim();
     const { error } = await supabaseAdmin.from("profiles").insert({

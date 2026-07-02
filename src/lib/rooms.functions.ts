@@ -506,6 +506,7 @@ async function recordFinishedGame(roomId: string, winnerPlayerId: string, finish
 
 const NicknameSchema = z.string().trim().min(1).max(24);
 const AvatarSchema = z.string().trim().max(8).optional().nullable();
+const AccessTokenSchema = z.string().optional().nullable();
 const CodeSchema = z.string().trim().toUpperCase().length(5);
 const TokenSchema = z.string().min(8).max(128);
 const PlayerIdSchema = z.string().uuid();
@@ -536,7 +537,7 @@ async function authenticatePlayer(playerId: string, token: string) {
 
 export const createRoom = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
-    z.object({ nickname: NicknameSchema, avatar: AvatarSchema }).parse(input),
+    z.object({ nickname: NicknameSchema, avatar: AvatarSchema, accessToken: AccessTokenSchema }).parse(input),
   )
   .handler(async ({ data }) => {
     // Find a unique code (collisions are rare; cap retries)
@@ -562,7 +563,7 @@ export const createRoom = createServerFn({ method: "POST" })
       .single();
     if (roomErr || !room) throw new Error("Failed to create room");
 
-    const profileId = await getCurrentProfileId();
+    const profileId = await getCurrentProfileId(data.accessToken);
 
     const { data: player, error: playerErr } = await supabaseAdmin
       .from("players")
@@ -607,10 +608,10 @@ export const createRoom = createServerFn({ method: "POST" })
 
 export const joinRoom = createServerFn({ method: "POST" })
   .inputValidator((input: unknown) =>
-    z.object({ code: CodeSchema, nickname: NicknameSchema, avatar: AvatarSchema }).parse(input),
+    z.object({ code: CodeSchema, nickname: NicknameSchema, avatar: AvatarSchema, accessToken: AccessTokenSchema }).parse(input),
   )
   .handler(async ({ data }) => {
-    const profileId = await getCurrentProfileId();
+    const profileId = await getCurrentProfileId(data.accessToken);
 
     const { data: room, error: roomErr } = await supabaseAdmin
       .from("rooms")

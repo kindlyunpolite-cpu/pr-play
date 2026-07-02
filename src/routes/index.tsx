@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { createRoom, joinRoom } from "@/lib/rooms.functions";
 import { createQuickAccount, getMyProfile, resolveNickLogin, reserveSocialNick } from "@/lib/accounts.functions";
 import { supabase } from "@/integrations/supabase/client";
+import { getSupabaseAccessToken } from "@/lib/account-session";
 import {
   saveSession,
   saveProfile,
@@ -111,7 +112,8 @@ function Lobby() {
 
   useEffect(() => {
     const loadAuthProfile = async () => {
-      const profile = await callGetMyProfile();
+      const accessToken = await getSupabaseAccessToken();
+      const profile = await callGetMyProfile({ data: { accessToken } });
       const { data: sessionData } = await supabase.auth.getSession();
       if (profile?.nick) {
         setAuthProfile({ id: profile.id, nick: profile.nick });
@@ -152,10 +154,11 @@ function Lobby() {
     }
     setSubmitting(mode);
     try {
+      const accessToken = await getSupabaseAccessToken();
       const result =
         mode === "create"
-          ? await callCreate({ data: { nickname, avatar: portraitId } })
-          : await callJoin({ data: { code, nickname, avatar: portraitId } });
+          ? await callCreate({ data: { nickname, avatar: portraitId, accessToken } })
+          : await callJoin({ data: { code, nickname, avatar: portraitId, accessToken } });
       saveSession({
         roomCode: result.roomCode,
         roomId: result.roomId,
@@ -190,7 +193,8 @@ function Lobby() {
     setAccountSubmitting(true);
     try {
       if (socialNeedsNick) {
-        await callReserveSocialNick({ data: { nick: nextNick, provider: "google" } });
+        const accessToken = await getSupabaseAccessToken();
+        await callReserveSocialNick({ data: { accessToken, nick: nextNick, provider: "google" } });
       } else {
         const authEmail = accountMode === "signup"
           ? (await callCreateAccount({ data: { nick: nextNick, password: accountPassword, recoveryEmail } })).authEmail
@@ -198,7 +202,8 @@ function Lobby() {
         const { error } = await supabase.auth.signInWithPassword({ email: authEmail, password: accountPassword });
         if (error) throw new Error("Nick nebo heslo nesedí.");
       }
-      const profile = await callGetMyProfile();
+      const accessToken = await getSupabaseAccessToken();
+      const profile = await callGetMyProfile({ data: { accessToken } });
       if (profile?.nick) {
         setAuthProfile({ id: profile.id, nick: profile.nick });
         setNick(profile.nick);
@@ -404,17 +409,17 @@ function Lobby() {
             )}
             {socialNeedsNick && <p className="text-sm text-[color:var(--gold)]">Po Google přihlášení si vyber unikátní herní nick.</p>}
             <input value={accountNick} onChange={(e) => setAccountNick(e.target.value)} maxLength={24} placeholder="Nick" className="control-pill w-full px-3 py-2 outline-none" />
-            {!socialNeedsNick && <input value={accountPassword} onChange={(e) => setAccountPassword(e.target.value)} type="password" placeholder="Password" className="control-pill w-full px-3 py-2 outline-none" />}
+            {!socialNeedsNick && <input value={accountPassword} onChange={(e) => setAccountPassword(e.target.value)} type="password" placeholder="Heslo" className="control-pill w-full px-3 py-2 outline-none" />}
             {!socialNeedsNick && accountMode === "signup" && (
               <div className="space-y-1">
-                <input value={recoveryEmail} onChange={(e) => setRecoveryEmail(e.target.value)} type="email" placeholder="Recovery email optional" className="control-pill w-full px-3 py-2 outline-none" />
+                <input value={recoveryEmail} onChange={(e) => setRecoveryEmail(e.target.value)} type="email" placeholder="E-mail pro obnovu, nepovinné" className="control-pill w-full px-3 py-2 outline-none" />
                 <p className="text-[11px] text-muted-foreground">E-mail je nepovinný. Hodí se pro obnovu hesla. Bez e-mailu účet funguje, ale při zapomenutí hesla nemusí jít obnovit.</p>
               </div>
             )}
             <RoomButton block onClick={handleAccountSubmit} loading={accountSubmitting} disabled={accountSubmitting}>
               {socialNeedsNick || accountMode === "signup" ? "Zabrat nick" : "Přihlásit se"}
             </RoomButton>
-            <button type="button" onClick={handleGoogleLogin} className="w-full text-xs text-muted-foreground underline underline-offset-4">Google login (pokud je provider nakonfigurovaný)</button>
+            <button type="button" onClick={handleGoogleLogin} className="w-full text-xs text-muted-foreground underline underline-offset-4">Přihlásit přes Google (pokud je provider nakonfigurovaný)</button>
           </div>
         </DialogContent>
       </Dialog>
