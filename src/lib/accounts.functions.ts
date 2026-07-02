@@ -35,11 +35,20 @@ async function currentAuthUserId(accessToken?: string | null) {
   return data.user?.id ?? null;
 }
 
-export async function getCurrentProfileId(accessToken?: string | null) {
+export async function getCurrentProfileForAccessToken(accessToken?: string | null) {
   const userId = await currentAuthUserId(accessToken);
   if (!userId) return null;
-  const { data } = await supabaseAdmin.from("profiles").select("id").eq("id", userId).maybeSingle();
-  return data?.id ?? null;
+  const { data } = await supabaseAdmin
+    .from("profiles")
+    .select("id, nick, login_slug")
+    .eq("id", userId)
+    .maybeSingle();
+  return data ?? null;
+}
+
+export async function getCurrentProfileId(accessToken?: string | null) {
+  const profile = await getCurrentProfileForAccessToken(accessToken);
+  return profile?.id ?? null;
 }
 
 export const createQuickAccount = createServerFn({ method: "POST" })

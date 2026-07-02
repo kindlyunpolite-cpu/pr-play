@@ -5,7 +5,7 @@ import type { Json } from "@/integrations/supabase/types";
 import type { CardData, Rank, Suit } from "@/components/cards";
 import type { RoomEventType } from "@/types/room";
 import { createVisibleActionSignature } from "@/lib/game-actions";
-import { getCurrentProfileId } from "@/lib/accounts.functions";
+import { getCurrentProfileForAccessToken, toLoginSlug } from "@/lib/accounts.functions";
 
 // ------------- helpers (server-only) -------------
 
@@ -533,6 +533,31 @@ async function authenticatePlayer(playerId: string, token: string) {
   return player;
 }
 
+
+async function resolvePlayerIdentity(nickname: string, accessToken?: string | null) {
+  const loginSlug = toLoginSlug(nickname);
+  const authProfile = await getCurrentProfileForAccessToken(accessToken);
+
+  if (authProfile) {
+    if (loginSlug !== authProfile.login_slug) {
+      throw new Error("Použij svůj zabraný nick, nebo se odhlas pro hru jako host.");
+    }
+    return { profileId: authProfile.id, nickname: authProfile.nick };
+  }
+
+  const { data: reservedProfile, error } = await supabaseAdmin
+    .from("profiles")
+    .select("id")
+    .eq("login_slug", loginSlug)
+    .maybeSingle();
+  if (error) throw new Error("Nick se nepodařilo ověřit");
+  if (reservedProfile) {
+    throw new Error("Tenhle nick je zabraný. Přihlas se, nebo zvol jiný nick.");
+  }
+
+  return { profileId: null, nickname };
+}
+
 // ------------- createRoom -------------
 
 export const createRoom = createServerFn({ method: "POST" })
@@ -540,6 +565,8 @@ export const createRoom = createServerFn({ method: "POST" })
     z.object({ nickname: NicknameSchema, avatar: AvatarSchema, accessToken: AccessTokenSchema }).parse(input),
   )
   .handler(async ({ data }) => {
+    const playerIdentity = await resolvePlayerIdentity(data.nickname, data.accessToken);
+
     // Find a unique code (collisions are rare; cap retries)
     let code = "";
     for (let attempt = 0; attempt < 6; attempt++) {
@@ -563,15 +590,13 @@ export const createRoom = createServerFn({ method: "POST" })
       .single();
     if (roomErr || !room) throw new Error("Failed to create room");
 
-    const profileId = await getCurrentProfileId(data.accessToken);
-
     const { data: player, error: playerErr } = await supabaseAdmin
       .from("players")
       .insert({
         room_id: room.id,
-        nickname: data.nickname,
+        nickname: playerIdentity.nickname,
         avatar: data.avatar ?? null,
-        user_id: profileId,
+        user_id: playerIdentity.profileId,
         is_host: true,
         is_ready: true,
         seat: 0,
@@ -611,7 +636,7 @@ export const joinRoom = createServerFn({ method: "POST" })
     z.object({ code: CodeSchema, nickname: NicknameSchema, avatar: AvatarSchema, accessToken: AccessTokenSchema }).parse(input),
   )
   .handler(async ({ data }) => {
-    const profileId = await getCurrentProfileId(data.accessToken);
+    const playerIdentity = await resolvePlayerIdentity(data.nickname, data.accessToken);
 
     const { data: room, error: roomErr } = await supabaseAdmin
       .from("rooms")
@@ -624,7 +649,7 @@ export const joinRoom = createServerFn({ method: "POST" })
 
     const { data: existingPlayers, error: pErr } = await supabaseAdmin
       .from("players")
-      .select("id, seat, nickname")
+      .select("id, seat, nickname, user_id")
       .eq("room_id", room.id)
       .order("seat", { ascending: true });
     if (pErr) throw new Error("Nelze načíst hráče");
@@ -632,9 +657,12 @@ export const joinRoom = createServerFn({ method: "POST" })
     // Allow rejoin: if a player with the same nickname already sits in this
     // room, issue a fresh session token for them instead of inserting again.
     const existing = existingPlayers.find(
-      (p) => p.nickname.toLowerCase() === data.nickname.toLowerCase(),
+      (p) => p.nickname.toLowerCase() === playerIdentity.nickname.toLowerCase(),
     );
     if (existing) {
+      if (existing.user_id && existing.user_id !== playerIdentity.profileId) {
+        throw new Error("Tenhle nick je zabraný. Přihlas se, nebo zvol jiný nick.");
+      }
       const sessionToken = genToken();
       await supabaseAdmin.from("player_secrets").insert({
         player_id: existing.id,
@@ -665,9 +693,9 @@ export const joinRoom = createServerFn({ method: "POST" })
       .from("players")
       .insert({
         room_id: room.id,
-        nickname: data.nickname,
+        nickname: playerIdentity.nickname,
         avatar: data.avatar ?? null,
-        user_id: profileId,
+        user_id: playerIdentity.profileId,
         seat,
       })
       .select("*")

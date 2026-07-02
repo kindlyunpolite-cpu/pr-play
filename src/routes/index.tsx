@@ -143,7 +143,7 @@ function Lobby() {
   const joinIntent = code.length > 0;
 
   const submit = async (mode: "create" | "join") => {
-    const nickname = nick.trim();
+    const nickname = (authProfile?.nick ?? nick).trim();
     if (nickname.length < 2) {
       toast.error("Zadej přezdívku");
       return;
@@ -285,29 +285,32 @@ function Lobby() {
               </label>
               <div className="flex gap-2">
                 <input
-                  value={nick}
+                  value={authProfile?.nick ?? nick}
                   onChange={(e) => setNick(e.target.value)}
+                  disabled={Boolean(authProfile)}
                   maxLength={16}
                   placeholder="Tvoje jméno"
-                  className="control-pill w-full px-3 py-2.5 text-base outline-none transition focus:border-[color:var(--gold)]/50"
+                  className="control-pill w-full px-3 py-2.5 text-base outline-none transition focus:border-[color:var(--gold)]/50 disabled:cursor-not-allowed disabled:opacity-70"
                 />
-                <TooltipProvider delayDuration={200}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        onClick={() => setNick(randomName(nick.trim()))}
-                        className="shrink-0 flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 text-muted-foreground transition hover:text-[color:var(--gold)] hover:border-[color:var(--gold)]/50 active:scale-95"
-                        aria-label="Náhodná přezdívka"
-                      >
-                        <Dices className="h-5 w-5" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                      <p>Náhodná přezdívka</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                {!authProfile && (
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          onClick={() => setNick(randomName(nick.trim()))}
+                          className="shrink-0 flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 text-muted-foreground transition hover:text-[color:var(--gold)] hover:border-[color:var(--gold)]/50 active:scale-95"
+                          aria-label="Náhodná přezdívka"
+                        >
+                          <Dices className="h-5 w-5" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        <p>Náhodná přezdívka</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
               </div>
             </div>
           </div>
