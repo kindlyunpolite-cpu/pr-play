@@ -72,8 +72,12 @@ export type Database = {
           rematch_votes: Json
           room_id: string
           status: string
-          turn_deadline_at: string
-          turn_started_at: string
+          turn_deadline_at: string | null
+          turn_remaining_ms: number | null
+          turn_started_at: string | null
+          turn_timer_duration_ms: number
+          turn_timer_enabled: boolean
+          turn_timer_paused: boolean
           turn_version: number
           updated_at: string
         }
@@ -92,8 +96,12 @@ export type Database = {
           rematch_votes?: Json
           room_id: string
           status?: string
-          turn_deadline_at?: string
-          turn_started_at?: string
+          turn_deadline_at?: string | null
+          turn_remaining_ms?: number | null
+          turn_started_at?: string | null
+          turn_timer_duration_ms?: number
+          turn_timer_enabled?: boolean
+          turn_timer_paused?: boolean
           turn_version?: number
           updated_at?: string
         }
@@ -112,8 +120,12 @@ export type Database = {
           rematch_votes?: Json
           room_id?: string
           status?: string
-          turn_deadline_at?: string
-          turn_started_at?: string
+          turn_deadline_at?: string | null
+          turn_remaining_ms?: number | null
+          turn_started_at?: string | null
+          turn_timer_duration_ms?: number
+          turn_timer_enabled?: boolean
+          turn_timer_paused?: boolean
           turn_version?: number
           updated_at?: string
         }
