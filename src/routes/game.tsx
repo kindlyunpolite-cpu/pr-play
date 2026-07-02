@@ -15,7 +15,7 @@ import {
   type CardData,
   type Suit,
 } from "@/components/cards";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Loader2, Trophy } from "lucide-react";
 import { SUIT_LABEL, isRedSuit } from "@/components/cards/types";
 import { SuitIcon } from "@/components/cards/SuitIcon";
@@ -46,6 +46,17 @@ export const Route = createFileRoute("/game")({
 });
 
 const FALLBACK_CARD: CardData = { suit: "hearts", rank: "10" };
+const PLAY_ANIMATION_MS = 320;
+
+function stableCardId(card: CardData) {
+  return card.id ?? `${card.rank}-${card.suit}`;
+}
+
+function sameCard(a: CardData | null | undefined, b: CardData | null | undefined) {
+  if (!a || !b) return false;
+  if (a.id || b.id) return a.id === b.id;
+  return a.rank === b.rank && a.suit === b.suit;
+}
 const SUITS: Suit[] = ["hearts", "diamonds", "clubs", "spades"];
 const SUIT_SYMBOL: Record<Suit, string> = {
   hearts: "♥",
@@ -53,7 +64,6 @@ const SUIT_SYMBOL: Record<Suit, string> = {
   clubs: "♣",
   spades: "♠",
 };
-
 
 function adjacentPlayerId(
   players: { id: string }[],
@@ -168,7 +178,16 @@ function Game() {
   };
 
   const [selected, setSelected] = useState<number | null>(null);
-  const [playingIdx, setPlayingIdx] = useState<number | null>(null);
+  const [playingCard, setPlayingCard] = useState<{
+    card: CardData;
+    id: string;
+    from: DOMRect;
+    to: DOMRect;
+  } | null>(null);
+  const [suppressedPlayedCard, setSuppressedPlayedCard] = useState<{
+    card: CardData;
+    id: string;
+  } | null>(null);
   const [pileNonce, setPileNonce] = useState(0);
   const [drawNonce, setDrawNonce] = useState(0);
   const [dealt, setDealt] = useState(false);
@@ -176,8 +195,10 @@ function Game() {
   const [suitPickerIndex, setSuitPickerIndex] = useState<number | null>(null);
   const [visibleActionId, setVisibleActionId] = useState<string | null>(null);
   const [pulsingPlayerId, setPulsingPlayerId] = useState<string | null>(null);
-  
+
   const busyActionRef = useRef(false);
+  const handCardRefs = useRef(new Map<string, HTMLDivElement>());
+  const discardPileRef = useRef<HTMLDivElement | null>(null);
   const aceSkipToastRef = useRef<string | null>(null);
   const aiTriggerRef = useRef<string | null>(null);
   const timeoutTriggerRef = useRef<string | null>(null);
@@ -216,8 +237,18 @@ function Game() {
   );
   const hand = session ? (gameState?.hands[session.playerId] ?? []) : [];
   const topDiscard = gameState?.discard_pile.at(-1) ?? FALLBACK_CARD;
-  const discardPile: [CardData, ...CardData[]] = gameState?.discard_pile.length
-    ? [gameState.discard_pile[0] ?? topDiscard, ...gameState.discard_pile.slice(1)]
+  const visibleHand = suppressedPlayedCard
+    ? hand.filter((card) => stableCardId(card) !== suppressedPlayedCard.id)
+    : hand;
+  const visibleDiscardCards =
+    playingCard &&
+    gameState?.discard_pile.length &&
+    sameCard(gameState.discard_pile.at(-1), playingCard.card)
+      ? gameState.discard_pile.slice(0, -1)
+      : (gameState?.discard_pile ?? []);
+  const visibleTopDiscard = visibleDiscardCards.at(-1) ?? topDiscard;
+  const discardPile: [CardData, ...CardData[]] = visibleDiscardCards.length
+    ? [visibleDiscardCards[0] ?? visibleTopDiscard, ...visibleDiscardCards.slice(1)]
     : [topDiscard];
   const activeSuit = gameState?.active_suit ?? topDiscard.suit;
   const pendingDraw = gameState?.pending_draw ?? 0;
@@ -256,8 +287,6 @@ function Game() {
       return withCard;
     }
     return action;
-
-
   }, [
     gameState?.last_action_id,
     gameState?.last_action_player_id,
@@ -362,7 +391,6 @@ function Game() {
       pulsingPlayerId === session?.playerId && latestAction?.type === "draw" ? "draw" : undefined,
   };
 
-
   useEffect(() => {
     if (room?.status === "waiting") navigate({ to: "/waiting", search: { code: room.code } });
   }, [room?.status, room?.code, navigate]);
@@ -418,7 +446,6 @@ function Game() {
     players,
     room?.id,
   ]);
-
 
   useEffect(() => {
     if (
@@ -512,15 +539,22 @@ function Game() {
     );
   }, [aceSkip]);
 
+  useEffect(() => {
+    if (!suppressedPlayedCard) return;
+    if (!hand.some((card) => sameCard(card, suppressedPlayedCard.card))) {
+      setSuppressedPlayedCard(null);
+    }
+  }, [hand, suppressedPlayedCard]);
+
   const canAct =
     !!session &&
     !!gameState &&
     myTurn &&
     !busyAction &&
+    !playingCard &&
+    !suppressedPlayedCard &&
     !gameFinished &&
     gameState.status === "playing";
-
-
 
   const submitRematchVote = async (accepted: boolean) => {
     if (!session || !gameFinished || busyRematch) return;
@@ -569,9 +603,18 @@ function Game() {
 
   const submitPlay = async (cardIndex: number, chosenSuit?: Suit) => {
     if (!session || !gameState || !canAct || busyActionRef.current) return;
+    const card = hand[cardIndex];
+    if (!card) return;
+    const id = stableCardId(card);
+    const from = handCardRefs.current.get(id)?.getBoundingClientRect();
+    const to = discardPileRef.current?.getBoundingClientRect();
+    if (!from || !to) return;
     busyActionRef.current = true;
     setBusyAction("play");
-    setPlayingIdx(cardIndex);
+    setPlayingCard({ card, id, from, to });
+    setSuppressedPlayedCard({ card, id });
+    const animationStartedAt = performance.now();
+    let playAccepted = false;
     try {
       await callPlayCard({
         data: {
@@ -583,21 +626,34 @@ function Game() {
           chosenSuit,
         },
       });
+      playAccepted = true;
+      await resync();
       setSelected(null);
       setSuitPickerIndex(null);
       setPileNonce((n) => n + 1);
     } catch (error) {
       const msg = error instanceof Error ? error.message : "Nepodařilo se zahrát kartu";
-      if (!/stale|není.*tah|not your turn/i.test(msg)) toast.error(msg);
+      if (playAccepted) {
+        console.debug("[game] post-play resync failed", error);
+      } else if (!/stale|není.*tah|not your turn/i.test(msg)) {
+        toast.error(msg);
+      }
     } finally {
-      window.setTimeout(() => setPlayingIdx(null), 220);
-      busyActionRef.current = false;
-      setBusyAction(null);
+      window.setTimeout(
+        () => {
+          setPlayingCard(null);
+          if (!playAccepted) setSuppressedPlayedCard(null);
+          else window.setTimeout(() => setSuppressedPlayedCard(null), 3_000);
+          busyActionRef.current = false;
+          setBusyAction(null);
+        },
+        Math.max(0, PLAY_ANIMATION_MS - (performance.now() - animationStartedAt)),
+      );
     }
   };
 
   const handlePlay = (i: number) => {
-    if (!canAct) return;
+    if (!canAct || playingCard || suppressedPlayedCard) return;
     if (selected !== i) {
       setSelected(i);
       return;
@@ -706,7 +762,6 @@ function Game() {
                   {/* HUD is integrated into player seats and the discard pile —
                       no detached floating panels around the table. */}
 
-
                   {pendingDraw > 0 && (
                     <div className="absolute left-1/2 top-2 z-20 -translate-x-1/2 rounded-full bg-red-950/80 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-red-100 ring-1 ring-red-400/40 shadow-lg shadow-red-950/50 backdrop-blur-md">
                       Trest: lízni {pendingDraw} nebo zahraj 7
@@ -750,9 +805,6 @@ function Game() {
                       </div>
                     </div>
                   )}
-
-
-
 
                   {aceSkip && (
                     <div className="absolute inset-x-6 top-12 z-20 rounded-3xl border border-[color:var(--gold)]/35 bg-black/70 px-4 py-3 text-center shadow-2xl shadow-black/50 backdrop-blur-md sm:inset-x-16">
@@ -876,10 +928,17 @@ function Game() {
 
                       <div className="flex flex-col items-center gap-2">
                         <div
-                          key={pileNonce}
-                          className={cn("relative", pileNonce && "animate-pile-bump")}
+                          ref={discardPileRef}
+                          className={cn(
+                            "relative",
+                            pileNonce && !playingCard && "animate-pile-bump",
+                          )}
                         >
-                          <DiscardPile cards={discardPile} size="md" recent />
+                          <DiscardPile
+                            cards={discardPile}
+                            size="md"
+                            recent={!playingCard && Boolean(pileNonce)}
+                          />
                           {/* Current suit marker — placed outside the card, above and to the right. */}
                           <div
                             aria-label={`Aktivní barva: ${SUIT_LABEL[activeSuit]}`}
@@ -896,11 +955,7 @@ function Game() {
                       </div>
                     </div>
                   </div>
-
                 </div>
-
-
-
 
                 {/* === Seats anchored to the table rim ===
                     Each portrait translates by 50% of its own size so it sits
@@ -940,16 +995,15 @@ function Game() {
                       key={you.isTurn ? `me-turn-${gameState?.turn_version ?? 0}` : "me-idle"}
                       className={cn(
                         "relative rounded-full transition-all duration-300",
-                        you.isTurn && "ring-2 ring-[color:var(--gold)]/80 animate-turn animate-turn-arrive",
-                        (you.actionPulse === "draw" || you.actionPulse === "play") && "animate-seat-action-pulse",
+                        you.isTurn &&
+                          "ring-2 ring-[color:var(--gold)]/80 animate-turn animate-turn-arrive",
+                        (you.actionPulse === "draw" || you.actionPulse === "play") &&
+                          "animate-seat-action-pulse",
                       )}
                     >
                       {you.isTurn && timerEnabled && (
                         <div className="absolute -top-9 left-1/2 z-[2] flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-[color:var(--gold)]/55 bg-black/80 pl-1 pr-2 py-0.5 shadow-lg shadow-black/40">
-                          <HudCountdown
-                            remainingMs={turnRemainingMs}
-                            durationMs={turnDurationMs}
-                          />
+                          <HudCountdown remainingMs={turnRemainingMs} durationMs={turnDurationMs} />
                           <span className="whitespace-nowrap text-[8px] font-bold uppercase tracking-[0.14em] text-[color:var(--gold)]">
                             Na tahu
                           </span>
@@ -973,18 +1027,44 @@ function Game() {
             </div>
           </div>
 
+          {playingCard && (
+            <div
+              className="pointer-events-none fixed z-[100]"
+              style={
+                {
+                  left: 0,
+                  top: 0,
+                  "--play-from-x": `${playingCard.from.left}px`,
+                  "--play-from-y": `${playingCard.from.top}px`,
+                  "--play-to-x": `${playingCard.to.left + (playingCard.to.width - playingCard.from.width) / 2}px`,
+                  "--play-to-y": `${playingCard.to.top + (playingCard.to.height - playingCard.from.height) / 2}px`,
+                } as CSSProperties
+              }
+            >
+              <PlayingCard
+                card={playingCard.card}
+                size="md"
+                className="animate-card-play-to-discard shadow-2xl shadow-black/70"
+              />
+            </div>
+          )}
+
           {/* === Bottom hand area === */}
           <div className="relative z-20 shrink-0 bg-gradient-to-t from-background via-background/85 to-transparent pb-safe pt-6 sm:pt-8">
             <div className="fan-hand hand-scroll relative flex items-end justify-center overflow-x-auto sm:overflow-visible no-scrollbar px-4 pt-8 pb-1 min-h-[5.5rem] sm:min-h-[6.2rem]">
-              {hand.map((card, i) => {
-                const n = hand.length;
+              {visibleHand.map((card, visibleIndex) => {
+                const originalIndex = hand.findIndex((handCard) => sameCard(handCard, card));
+                const i = originalIndex < 0 ? visibleIndex : originalIndex;
+                const cardId = stableCardId(card);
+                const n = visibleHand.length;
                 const mid = (n - 1) / 2;
-                const offset = i - mid;
+                const offset = visibleIndex - mid;
                 const spread = Math.min(7, 26 / Math.max(n, 1));
                 const rot = offset * spread;
                 const arc = offset * offset * 1.6;
                 const isSelected = selected === i;
-                const playable = myTurn && isCardPlayable(card, topDiscard, activeSuit, pendingDraw);
+                const playable =
+                  myTurn && isCardPlayable(card, topDiscard, activeSuit, pendingDraw);
                 const cardState = isSelected
                   ? "selected"
                   : playable
@@ -995,7 +1075,11 @@ function Game() {
                 const showPlay = isSelected && playable && canAct;
                 return (
                   <div
-                    key={i}
+                    key={cardId}
+                    ref={(node) => {
+                      if (node) handCardRefs.current.set(cardId, node);
+                      else handCardRefs.current.delete(cardId);
+                    }}
                     className={cn(
                       "fan-card-wrap group relative shrink-0 transition-transform duration-150 ease-out will-change-transform",
                       playable && "hover:z-40",
@@ -1005,16 +1089,16 @@ function Game() {
                         ? `translateY(-26px) rotate(${rot * 0.3}deg) scale(1.06)`
                         : `translateY(${arc}px) rotate(${rot}deg)`,
                       transformOrigin: "bottom center",
-                      zIndex: isSelected ? 50 : 10 + i,
-                      marginLeft: i === 0 ? 0 : "-1.9rem",
+                      zIndex: isSelected ? 50 : 10 + visibleIndex,
+                      marginLeft: visibleIndex === 0 ? 0 : "-1.9rem",
                     }}
                   >
                     <PlayingCard
                       card={card}
                       size="md"
                       state={cardState}
-                      animation={playingIdx === i ? "play" : !dealt ? "deal" : undefined}
-                      animationDelay={!dealt ? i * 70 : undefined}
+                      animation={!dealt ? "deal" : undefined}
+                      animationDelay={!dealt ? visibleIndex * 70 : undefined}
                       onClick={() => handlePlay(i)}
                       className="shrink-0 shadow-xl shadow-black/50"
                     />
@@ -1040,7 +1124,6 @@ function Game() {
               })}
             </div>
           </div>
-
         </main>
 
         <ChatPanel messages={messages} session={session} />
