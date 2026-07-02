@@ -93,8 +93,12 @@ export interface GameState {
   status: "playing" | "finished";
   pending_draw: number;
   turn_version: number;
-  turn_started_at: string;
-  turn_deadline_at: string;
+  turn_timer_enabled: boolean;
+  turn_timer_paused: boolean;
+  turn_timer_duration_ms: number;
+  turn_started_at: string | null;
+  turn_deadline_at: string | null;
+  turn_remaining_ms: number | null;
   last_action_id: string | null;
   last_action_player_id: string | null;
   last_action_signature: string | null;

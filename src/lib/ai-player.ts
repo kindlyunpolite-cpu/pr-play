@@ -12,7 +12,7 @@ import type { CardData, Suit } from "@/components/cards";
 import { PORTRAITS } from "./portraits";
 import type { GameState, RoomEventType } from "@/types/room";
 import { createVisibleActionSignature } from "@/lib/game-actions";
-import { createTurnClock } from "@/lib/rooms.functions";
+import { createNextTurnClock } from "@/lib/rooms.functions";
 
 // ---------- Pure helpers (safe to import anywhere) ----------
 
@@ -408,7 +408,7 @@ export async function runAiTurn(roomId: string): Promise<void> {
         type: "draw",
         drawCount: draw.cards.length,
       });
-      const turnClock = createTurnClock();
+      const turnClock = createNextTurnClock(freshGameState);
       const { data: updated } = await supabaseAdmin
         .from("game_states")
         .update({
@@ -464,7 +464,7 @@ export async function runAiTurn(roomId: string): Promise<void> {
     const finished = hand.length === 0;
     const actionAt = new Date();
     const finishedAt = actionAt.toISOString();
-    const turnClock = finished ? {} : createTurnClock(actionAt);
+    const turnClock = finished ? {} : createNextTurnClock(freshGameState, actionAt);
     const visibleSignature = createVisibleActionSignature({
       type: decision.chosenSuit ? "suit-change" : "play",
       card,

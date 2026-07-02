@@ -30,6 +30,7 @@ import {
   drawCard,
   playCard,
   applyTurnTimeout,
+  updateTurnTimerMode,
   leaveRoom,
 } from "@/lib/rooms.functions";
 import { clearSession, loadSession } from "@/lib/room-session";
@@ -118,6 +119,7 @@ function Game() {
   const callDrawCard = useServerFn(drawCard);
   const callPlayCard = useServerFn(playCard);
   const callApplyTurnTimeout = useServerFn(applyTurnTimeout);
+  const callUpdateTurnTimerMode = useServerFn(updateTurnTimerMode);
   const callLeave = useServerFn(leaveRoom);
   const callAcceptRematch = useServerFn(acceptRematch);
   const callDeclineRematch = useServerFn(declineRematch);
@@ -125,6 +127,7 @@ function Game() {
   const [leaving, setLeaving] = useState(false);
   const [busyRematch, setBusyRematch] = useState<"accept" | "decline" | null>(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [timerModeBusy, setTimerModeBusy] = useState<"pause" | "enable" | null>(null);
   const [nowMs, setNowMs] = useState(() => Date.now());
 
   useEffect(() => {
@@ -179,6 +182,29 @@ function Game() {
   const aiTriggerRef = useRef<string | null>(null);
   const timeoutTriggerRef = useRef<string | null>(null);
 
+  const updateTimerMode = async (
+    next: { enabled?: boolean; paused?: boolean },
+    busy: "pause" | "enable",
+  ) => {
+    if (!session) return;
+    setTimerModeBusy(busy);
+    try {
+      await callUpdateTurnTimerMode({
+        data: {
+          playerId: session.playerId,
+          sessionToken: session.sessionToken,
+          ...next,
+        },
+      });
+      await resync();
+    } catch (error) {
+      console.debug("[game] timer mode update failed", error);
+      toast.error("Časovač se nepodařilo upravit.");
+    } finally {
+      setTimerModeBusy(null);
+    }
+  };
+
   const sortedPlayers = useMemo(() => [...players].sort((a, b) => a.seat - b.seat), [players]);
   const rotatedPlayers = useMemo(
     () => rotatePlayersFrom(sortedPlayers, session?.playerId),
@@ -202,10 +228,17 @@ function Game() {
     ? Date.parse(gameState.turn_started_at)
     : Number.NaN;
   const turnDurationMs =
-    Number.isFinite(turnDeadlineMs) && Number.isFinite(turnStartedMs)
+    gameState?.turn_timer_duration_ms ??
+    (Number.isFinite(turnDeadlineMs) && Number.isFinite(turnStartedMs)
       ? Math.max(0, turnDeadlineMs - turnStartedMs)
-      : 30_000;
-  const turnRemainingMs = Number.isFinite(turnDeadlineMs) ? turnDeadlineMs - nowMs : 0;
+      : 30_000);
+  const timerEnabled = gameState?.turn_timer_enabled ?? true;
+  const timerPaused = gameState?.turn_timer_paused ?? false;
+  const turnRemainingMs = timerPaused
+    ? (gameState?.turn_remaining_ms ?? turnDurationMs)
+    : Number.isFinite(turnDeadlineMs)
+      ? turnDeadlineMs - nowMs
+      : (gameState?.turn_remaining_ms ?? 0);
   const myTurn =
     gameState?.status === "playing" && gameState?.current_player_id === session?.playerId;
   const activePlayer = players.find((p) => p.id === gameState?.current_player_id) ?? me;
@@ -392,6 +425,8 @@ function Game() {
       !room?.id ||
       gameState?.status !== "playing" ||
       !gameState.current_player_id ||
+      !timerEnabled ||
+      timerPaused ||
       !gameState.turn_deadline_at
     ) {
       return;
@@ -409,7 +444,11 @@ function Game() {
 
       void callApplyTurnTimeout({ data: { roomId: room.id } })
         .then((result) => {
-          if (result && "notExpired" in result && result.notExpired) {
+          if (
+            result &&
+            (("notExpired" in result && result.notExpired) ||
+              ("timerInactive" in result && result.timerInactive))
+          ) {
             timeoutTriggerRef.current = null;
           }
           return resync();
@@ -432,6 +471,8 @@ function Game() {
     gameState?.current_player_id,
     gameState?.status,
     gameState?.turn_deadline_at,
+    timerEnabled,
+    timerPaused,
     gameState?.turn_version,
     resync,
     room?.id,
@@ -727,6 +768,38 @@ function Game() {
                     </div>
                   )}
 
+                  {me?.is_host && gameState?.status === "playing" && (
+                    <div className="absolute right-3 top-3 z-40 flex items-center gap-1.5 rounded-full border border-white/10 bg-black/65 px-2 py-1 shadow-lg shadow-black/35 backdrop-blur-md">
+                      <RoomButton
+                        size="sm"
+                        variant="secondary"
+                        onClick={() =>
+                          void updateTimerMode({ paused: !timerPaused, enabled: true }, "pause")
+                        }
+                        disabled={!timerEnabled || timerModeBusy !== null}
+                        loading={timerModeBusy === "pause"}
+                        className="px-2 py-1 text-[10px]"
+                      >
+                        {timerPaused ? "Pokračovat" : "Pozastavit"}
+                      </RoomButton>
+                      <RoomButton
+                        size="sm"
+                        variant={timerEnabled ? "secondary" : "primary"}
+                        onClick={() =>
+                          void updateTimerMode(
+                            timerEnabled ? { enabled: false } : { enabled: true, paused: false },
+                            "enable",
+                          )
+                        }
+                        disabled={timerModeBusy !== null}
+                        loading={timerModeBusy === "enable"}
+                        className="px-2 py-1 text-[10px]"
+                      >
+                        {timerEnabled ? "Vypnout čas" : "Zapnout čas"}
+                      </RoomButton>
+                    </div>
+                  )}
+
                   {gameFinished && (
                     <div className="absolute inset-x-6 top-1/2 z-20 -translate-y-1/2 rounded-3xl border border-[color:var(--gold)]/30 bg-black/70 p-4 text-center shadow-2xl shadow-black/60 backdrop-blur-md sm:inset-x-16">
                       <Trophy className="mx-auto mb-2 h-6 w-6 text-[color:var(--gold)]" />
@@ -851,7 +924,7 @@ function Game() {
                           player={p}
                           placement={pos}
                           compactMobile
-                          turnRemainingMs={p.isTurn ? turnRemainingMs : undefined}
+                          turnRemainingMs={p.isTurn && timerEnabled ? turnRemainingMs : undefined}
                           turnDurationMs={p.isTurn ? turnDurationMs : undefined}
                         />
                       </div>
@@ -871,7 +944,7 @@ function Game() {
                         (you.actionPulse === "draw" || you.actionPulse === "play") && "animate-seat-action-pulse",
                       )}
                     >
-                      {you.isTurn && (
+                      {you.isTurn && timerEnabled && (
                         <div className="absolute -top-9 left-1/2 z-[2] flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-[color:var(--gold)]/55 bg-black/80 pl-1 pr-2 py-0.5 shadow-lg shadow-black/40">
                           <HudCountdown
                             remainingMs={turnRemainingMs}
