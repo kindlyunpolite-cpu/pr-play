@@ -445,6 +445,20 @@
     animation: pile-bump 220ms ease-out;
   }
 
+  /* Danger-state glow behind a seat portrait when an opponent has 1-2 cards */
+  @keyframes danger-glow {
+    0%,
+    100% {
+      opacity: 0.35;
+    }
+    50% {
+      opacity: 0.7;
+    }
+  }
+  .danger-glow {
+    animation: danger-glow 2.2s ease-in-out infinite;
+  }
+
   @keyframes seat-action-pulse {
     0%,
     100% {
