@@ -311,7 +311,7 @@
     0% { transform: translateY(0) scale(1); opacity: 1; }
     100% { transform: translateY(-90px) scale(0.92) rotate(6deg); opacity: 0; }
   }
-  .animate-card-play { animation: card-play 22s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+  .animate-card-play { animation: card-play .22s cubic-bezier(0.4, 0, 0.2, 1) forwards; }
 
   /* Discard pile bump — quick squash when a new card lands */
   @keyframes pile-bump {
