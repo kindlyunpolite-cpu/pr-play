@@ -840,7 +840,13 @@ function Game() {
                         : "right-0 top-1/2 translate-x-[18%] sm:translate-x-[30%] -translate-y-1/2";
                   return (
                     <div key={p.id} className={cn("absolute z-30 pointer-events-auto", cls)}>
-                      <Opponent player={p} placement={pos} compactMobile />
+                      <Opponent
+                        player={p}
+                        placement={pos}
+                        compactMobile
+                        turnRemainingMs={p.isTurn ? turnRemainingMs : undefined}
+                        turnDurationMs={p.isTurn ? turnDurationMs : undefined}
+                      />
                     </div>
                   );
                 })}
