@@ -679,23 +679,8 @@ function Game() {
                     </div>
                   )}
 
-                  {recentActions.length > 0 && (
-                    <div className="absolute left-2 top-[4.75rem] z-10 w-44 rounded-xl border border-white/10 bg-black/48 px-2.5 py-2 shadow-xl shadow-black/35 backdrop-blur-md sm:w-56">
-                      <div className="mb-1 text-[8px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-                        Poslední akce
-                      </div>
-                      <ol className="space-y-1">
-                        {recentActions.slice(0, 3).map((action) => (
-                          <li
-                            key={action.id}
-                            className="truncate text-[10px] leading-tight text-foreground/86"
-                          >
-                            {actionText(action, players)}
-                          </li>
-                        ))}
-                      </ol>
-                    </div>
-                  )}
+
+
 
                   {aceSkip && (
                     <div className="absolute inset-x-6 top-12 z-20 rounded-3xl border border-[color:var(--gold)]/35 bg-black/70 px-4 py-3 text-center shadow-2xl shadow-black/50 backdrop-blur-md sm:inset-x-16">
