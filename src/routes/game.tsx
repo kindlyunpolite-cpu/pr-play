@@ -765,7 +765,7 @@ function Game() {
                   )}
 
                   {recentActions.length > 0 && (
-                    <div className="absolute left-2 top-10 z-20 w-44 rounded-xl border border-white/10 bg-black/48 px-2.5 py-2 shadow-xl shadow-black/35 backdrop-blur-md sm:w-56">
+                    <div className="absolute left-2 top-[4.75rem] z-10 w-44 rounded-xl border border-white/10 bg-black/48 px-2.5 py-2 shadow-xl shadow-black/35 backdrop-blur-md sm:w-56">
                       <div className="mb-1 text-[8px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
                         Poslední akce
                       </div>
