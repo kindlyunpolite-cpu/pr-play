@@ -16,7 +16,7 @@ import {
   type Suit,
 } from "@/components/cards";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, Sparkles, Trophy } from "lucide-react";
+import { Loader2, Trophy } from "lucide-react";
 import { SUIT_LABEL, isRedSuit } from "@/components/cards/types";
 import { SuitIcon } from "@/components/cards/SuitIcon";
 import { cn } from "@/lib/utils";
@@ -478,14 +478,8 @@ function Game() {
     !busyAction &&
     !gameFinished &&
     gameState.status === "playing";
-  const selectedCard = selected === null ? null : (hand[selected] ?? null);
-  const selectedPlayable =
-    !!selectedCard &&
-    (pendingDraw > 0
-      ? selectedCard.rank === "7"
-      : selectedCard.rank === "Q" ||
-        selectedCard.suit === activeSuit ||
-        selectedCard.rank === topDiscard.rank);
+
+
 
   const submitRematchVote = async (accepted: boolean) => {
     if (!session || !gameFinished || busyRematch) return;
@@ -772,27 +766,40 @@ function Game() {
                   {/* Center: deck + pile */}
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="center-stage relative z-[1] flex items-center gap-6 sm:gap-10">
-                      <button
-                        type="button"
-                        onClick={() => void handleDraw()}
-                        disabled={!canAct}
-                        className="pointer-events-auto flex flex-col items-center gap-2 rounded-2xl p-1 -m-1 transition active:scale-95 disabled:opacity-60"
-                        aria-label="Lízni"
-                      >
-                        <CardStack
-                          key={drawNonce}
-                          count={gameState?.deck.length ?? 0}
-                          maxVisible={3}
-                          size="md"
-                          layout="stack"
-                          className={drawNonce ? "animate-card-draw" : ""}
-                        />
-                        <span className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground/80 tabular-nums">
-                          {pendingDraw > 0
-                            ? `Trest · ${pendingDraw}`
-                            : `Balíček · ${gameState?.deck.length ?? 0}`}
-                        </span>
-                      </button>
+                      <div className="flex flex-col items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void handleDraw()}
+                          disabled={!canAct}
+                          className="pointer-events-auto flex flex-col items-center gap-1.5 rounded-2xl p-1 -m-1 transition active:scale-95 disabled:opacity-60"
+                          aria-label="Vezmi kartu"
+                        >
+                          <CardStack
+                            key={drawNonce}
+                            count={gameState?.deck.length ?? 0}
+                            maxVisible={3}
+                            size="md"
+                            layout="stack"
+                            className={drawNonce ? "animate-card-draw" : ""}
+                          />
+                          <span className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground/80 tabular-nums">
+                            {pendingDraw > 0
+                              ? `Trest · ${pendingDraw}`
+                              : `Balíček · ${gameState?.deck.length ?? 0}`}
+                          </span>
+                        </button>
+                        {/* Draw action attached to the deck */}
+                        <RoomButton
+                          size="sm"
+                          variant={pendingDraw > 0 ? "primary" : "secondary"}
+                          onClick={() => void handleDraw()}
+                          disabled={!canAct}
+                          loading={busyAction === "draw"}
+                          className="min-w-[5.5rem] px-3 py-1 text-[11px]"
+                        >
+                          {pendingDraw > 0 ? `Vezmi ${pendingDraw}` : "Vezmi"}
+                        </RoomButton>
+                      </div>
 
                       <div className="flex flex-col items-center gap-2">
                         <div
@@ -819,49 +826,11 @@ function Game() {
                       </div>
                     </div>
                   </div>
+
                 </div>
 
-                <div className="absolute bottom-3 left-3 z-40 sm:bottom-4 sm:left-4">
-                  <span
-                    className={cn(
-                      "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-[0.18em]",
-                      myTurn
-                        ? "bg-gradient-to-r from-[color:var(--gold)]/25 to-transparent text-[color:var(--gold)] ring-1 ring-[color:var(--gold)]/40"
-                        : "bg-white/5 text-muted-foreground ring-1 ring-white/8",
-                    )}
-                  >
-                    <Sparkles className="h-3 w-3" />
-                    {gameFinished ? "Dohráno" : myTurn ? "Tvůj tah" : "Čekej"}
-                  </span>
-                </div>
 
-                <div className="absolute bottom-3 right-3 z-40 flex items-center gap-2 sm:bottom-4 sm:right-4">
-                  <RoomButton
-                    size="sm"
-                    variant="secondary"
-                    onClick={() => void handleDraw()}
-                    disabled={!canAct}
-                    loading={busyAction === "draw"}
-                  >
-                    {pendingDraw > 0 ? `Lízni ${pendingDraw}` : "Lízni"}
-                  </RoomButton>
-                  <RoomButton
-                    size="sm"
-                    variant="primary"
-                    disabled={!canAct || selected === null || !selectedPlayable}
-                    loading={busyAction === "play"}
-                    onClick={() => {
-                      if (selected === null) return;
-                      if (hand[selected]?.rank === "Q") {
-                        setSuitPickerIndex(selected);
-                        return;
-                      }
-                      void submitPlay(selected);
-                    }}
-                  >
-                    Zahraj
-                  </RoomButton>
-                </div>
+
 
                 {/* === Seats anchored to the table rim ===
                     Each portrait translates by 50% of its own size so it sits
@@ -895,7 +864,7 @@ function Game() {
 
                 {/* Self seat — compact portrait sitting on bottom rail.
                     Kept small so the hand gets the visual priority. */}
-                <div className="absolute z-30 left-1/2 bottom-0 -translate-x-1/2 translate-y-[55%] pointer-events-none">
+                <div className="absolute z-30 left-1/2 bottom-0 -translate-x-1/2 translate-y-[10%] pointer-events-none">
                   <div className="flex flex-col items-center">
                     <div
                       key={you.isTurn ? `me-turn-${gameState?.turn_version ?? 0}` : "me-idle"}
@@ -935,8 +904,8 @@ function Game() {
           </div>
 
           {/* === Bottom hand area === */}
-          <div className="relative z-20 shrink-0 bg-gradient-to-t from-background via-background/85 to-transparent pb-safe pt-2">
-            <div className="fan-hand hand-scroll relative flex items-end justify-center overflow-x-auto sm:overflow-visible no-scrollbar px-4 pt-1 pb-1 min-h-[4.5rem] sm:min-h-[5.2rem]">
+          <div className="relative z-20 shrink-0 bg-gradient-to-t from-background via-background/85 to-transparent pb-safe pt-6 sm:pt-8">
+            <div className="fan-hand hand-scroll relative flex items-end justify-center overflow-x-auto sm:overflow-visible no-scrollbar px-4 pt-8 pb-1 min-h-[5.5rem] sm:min-h-[6.2rem]">
               {hand.map((card, i) => {
                 const n = hand.length;
                 const mid = (n - 1) / 2;
@@ -953,6 +922,7 @@ function Game() {
                     : myTurn
                       ? "disabled"
                       : "idle";
+                const showPlay = isSelected && playable && canAct;
                 return (
                   <div
                     key={i}
@@ -962,7 +932,7 @@ function Game() {
                     )}
                     style={{
                       transform: isSelected
-                        ? `translateY(-22px) rotate(${rot * 0.3}deg) scale(1.06)`
+                        ? `translateY(-26px) rotate(${rot * 0.3}deg) scale(1.06)`
                         : `translateY(${arc}px) rotate(${rot}deg)`,
                       transformOrigin: "bottom center",
                       zIndex: isSelected ? 50 : 10 + i,
@@ -978,11 +948,29 @@ function Game() {
                       onClick={() => handlePlay(i)}
                       className="shrink-0 shadow-xl shadow-black/50"
                     />
+                    {showPlay && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (card.rank === "Q") {
+                            setSuitPickerIndex(i);
+                            return;
+                          }
+                          void submitPlay(i);
+                        }}
+                        disabled={busyAction === "play"}
+                        className="absolute left-1/2 -top-7 z-[60] -translate-x-1/2 whitespace-nowrap rounded-full border border-[color:var(--gold)]/60 bg-[color:var(--gold)] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--primary-foreground)] shadow-lg shadow-black/60 animate-scale-in transition active:scale-95 disabled:opacity-60"
+                      >
+                        Zahraj
+                      </button>
+                    )}
                   </div>
                 );
               })}
             </div>
           </div>
+
         </main>
 
         <ChatPanel messages={messages} session={session} />
