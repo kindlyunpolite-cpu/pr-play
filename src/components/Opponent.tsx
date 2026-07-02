@@ -35,6 +35,9 @@ interface SeatProps {
   compactMobile?: boolean;
   /** Self/own player styling — slightly less dominant. */
   self?: boolean;
+  /** When set, renders a compact countdown ring on the active player's panel. */
+  turnRemainingMs?: number;
+  turnDurationMs?: number;
 }
 
 /**
