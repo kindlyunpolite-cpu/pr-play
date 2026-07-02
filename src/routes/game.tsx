@@ -870,7 +870,7 @@ function Game() {
 
                 {/* Self seat — compact portrait sitting on bottom rail.
                     Kept small so the hand gets the visual priority. */}
-                <div className="absolute z-30 left-1/2 bottom-0 -translate-x-1/2 translate-y-[55%] pointer-events-none">
+                <div className="absolute z-30 left-1/2 bottom-0 -translate-x-1/2 translate-y-[10%] pointer-events-none">
                   <div className="flex flex-col items-center">
                     <div
                       key={you.isTurn ? `me-turn-${gameState?.turn_version ?? 0}` : "me-idle"}
