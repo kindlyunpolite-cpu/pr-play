@@ -52,11 +52,6 @@ function stableCardId(card: CardData, index?: number) {
   return card.id ?? `${card.rank}-${card.suit}-${index ?? "unknown"}`;
 }
 
-function sameCard(a: CardData | null | undefined, b: CardData | null | undefined) {
-  if (!a || !b) return false;
-  if (a.id || b.id) return a.id === b.id;
-  return a.rank === b.rank && a.suit === b.suit;
-}
 const SUITS: Suit[] = ["hearts", "diamonds", "clubs", "spades"];
 const SUIT_SYMBOL: Record<Suit, string> = {
   hearts: "♥",
@@ -183,6 +178,7 @@ function Game() {
     id: string;
     from: DOMRect;
     to: DOMRect;
+    previousDiscardPile: CardData[];
   } | null>(null);
   const [pileNonce, setPileNonce] = useState(0);
   const [drawNonce, setDrawNonce] = useState(0);
@@ -193,6 +189,8 @@ function Game() {
   const [pulsingPlayerId, setPulsingPlayerId] = useState<string | null>(null);
 
   const busyActionRef = useRef(false);
+  const localPendingPlayPlayerIdRef = useRef<string | null>(null);
+  const playAnimationTimeoutRef = useRef<number | null>(null);
   const handCardRefs = useRef(new Map<string, HTMLDivElement>());
   const discardPileRef = useRef<HTMLDivElement | null>(null);
   const aceSkipToastRef = useRef<string | null>(null);
@@ -233,15 +231,13 @@ function Game() {
   );
   const hand = session ? (gameState?.hands[session.playerId] ?? []) : [];
   const topDiscard = gameState?.discard_pile.at(-1) ?? FALLBACK_CARD;
+  const pendingPlayedCardId = playingCard?.id ?? null;
   const visibleHand = hand
     .map((card, index) => ({ card, index, id: stableCardId(card, index) }))
-    .filter((item) => item.id !== playingCard?.id);
-  const visibleDiscardCards =
-    playingCard &&
-    gameState?.discard_pile.length &&
-    sameCard(gameState.discard_pile.at(-1), playingCard.card)
-      ? gameState.discard_pile.slice(0, -1)
-      : (gameState?.discard_pile ?? []);
+    .filter((item) => item.id !== pendingPlayedCardId);
+  const visibleDiscardCards = playingCard
+    ? playingCard.previousDiscardPile
+    : (gameState?.discard_pile ?? []);
   const visibleTopDiscard = visibleDiscardCards.at(-1) ?? topDiscard;
   const discardPile: [CardData, ...CardData[]] = visibleDiscardCards.length
     ? [visibleDiscardCards[0] ?? visibleTopDiscard, ...visibleDiscardCards.slice(1)]
@@ -510,7 +506,8 @@ function Game() {
 
     if (latestAction.type === "draw") setDrawNonce((n) => n + 1);
     if (latestAction.type === "play" || latestAction.type === "suit-change") {
-      setPileNonce((n) => n + 1);
+      const isLocalPendingPlay = latestAction.playerId === localPendingPlayPlayerIdRef.current;
+      if (!isLocalPendingPlay) setPileNonce((n) => n + 1);
     }
 
     const hideAction = window.setTimeout(() => setVisibleActionId(null), 4_500);
@@ -522,10 +519,19 @@ function Game() {
   }, [latestAction?.id]);
 
   useEffect(() => {
+    if (playingCard) return;
     setDealt(false);
-    const t = setTimeout(() => setDealt(true), hand.length * 70 + 600);
+    const t = setTimeout(() => setDealt(true), visibleHand.length * 70 + 600);
     return () => clearTimeout(t);
-  }, [hand.length]);
+  }, [playingCard, visibleHand.length]);
+
+  useEffect(() => {
+    return () => {
+      if (playAnimationTimeoutRef.current !== null) {
+        window.clearTimeout(playAnimationTimeoutRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!aceSkip || aceSkipToastRef.current === aceSkip.actionId) return;
@@ -597,9 +603,26 @@ function Game() {
     const from = handCardRefs.current.get(id)?.getBoundingClientRect();
     const to = discardPileRef.current?.getBoundingClientRect();
     if (!from || !to) return;
+    if (!isCardPlayable(card, topDiscard, activeSuit, pendingDraw)) {
+      toast.error(
+        pendingDraw > 0 ? "Musíš zahrát sedmu nebo líznout trest" : "Tuto kartu nelze zahrát",
+      );
+      return;
+    }
     busyActionRef.current = true;
+    localPendingPlayPlayerIdRef.current = session.playerId;
     setBusyAction("play");
-    setPlayingCard({ card, id, from, to });
+    if (playAnimationTimeoutRef.current !== null) {
+      window.clearTimeout(playAnimationTimeoutRef.current);
+      playAnimationTimeoutRef.current = null;
+    }
+    setPlayingCard({
+      card,
+      id,
+      from,
+      to,
+      previousDiscardPile: gameState.discard_pile,
+    });
     try {
       await callPlayCard({
         data: {
@@ -613,13 +636,14 @@ function Game() {
       });
       setSelected(null);
       setSuitPickerIndex(null);
-      setPileNonce((n) => n + 1);
     } catch (error) {
       const msg = error instanceof Error ? error.message : "Nepodařilo se zahrát kartu";
       if (!/stale|není.*tah|not your turn/i.test(msg)) toast.error(msg);
     } finally {
-      window.setTimeout(() => {
+      playAnimationTimeoutRef.current = window.setTimeout(() => {
         setPlayingCard(null);
+        localPendingPlayPlayerIdRef.current = null;
+        playAnimationTimeoutRef.current = null;
         busyActionRef.current = false;
         setBusyAction(null);
       }, PLAY_ANIMATION_MS);
@@ -633,12 +657,7 @@ function Game() {
       return;
     }
     const card = hand[i];
-    if (
-      !card ||
-      (pendingDraw > 0
-        ? card.rank !== "7"
-        : card.rank !== "Q" && card.suit !== activeSuit && card.rank !== topDiscard.rank)
-    ) {
+    if (!card || !isCardPlayable(card, topDiscard, activeSuit, pendingDraw)) {
       toast.error(
         pendingDraw > 0 ? "Musíš zahrát sedmu nebo líznout trest" : "Tuto kartu nelze zahrát",
       );

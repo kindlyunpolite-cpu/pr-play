@@ -443,7 +443,7 @@
     }
   }
   .animate-card-play-to-discard {
-    animation: card-play-to-discard 20s cubic-bezier(0.22, 1, 0.36, 1) both;
+    animation: card-play-to-discard 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   /* Discard pile bump — quick squash when a new card lands */
