@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { Crown, Wifi, WifiOff, Trophy, Star } from "lucide-react";
 import { useState } from "react";
+import { HudCountdown } from "@/components/ui-room/HudPanel";
 
 export interface OpponentData {
   id: string;
@@ -34,6 +35,9 @@ interface SeatProps {
   compactMobile?: boolean;
   /** Self/own player styling — slightly less dominant. */
   self?: boolean;
+  /** When set, renders a compact countdown ring on the active player's panel. */
+  turnRemainingMs?: number;
+  turnDurationMs?: number;
 }
 
 /**
@@ -46,10 +50,16 @@ export function Opponent({
   compact = false,
   compactMobile = false,
   self = false,
+  turnRemainingMs,
+  turnDurationMs,
 }: SeatProps) {
   const [expanded, setExpanded] = useState(false);
   const online = player.online ?? true;
   const accent = player.accent ?? "oklch(0.82 0.14 85)";
+  const showTimer =
+    player.isTurn &&
+    typeof turnRemainingMs === "number" &&
+    typeof turnDurationMs === "number";
 
   const portraitSize = compact
     ? "h-20 w-16"
@@ -175,10 +185,17 @@ export function Opponent({
             </span>
           </div>
           <div className="flex shrink-0 items-center gap-1">
-            {player.isTurn && (
-              <span className="rounded-sm border border-[color:var(--gold)]/55 bg-[color:var(--gold)]/14 px-1.5 py-px text-[8px] font-bold uppercase tracking-[0.12em] text-[color:var(--gold)]">
-                Na tahu
-              </span>
+            {showTimer ? (
+              <HudCountdown
+                remainingMs={turnRemainingMs!}
+                durationMs={turnDurationMs!}
+              />
+            ) : (
+              player.isTurn && (
+                <span className="rounded-sm border border-[color:var(--gold)]/55 bg-[color:var(--gold)]/14 px-1.5 py-px text-[8px] font-bold uppercase tracking-[0.12em] text-[color:var(--gold)]">
+                  Na tahu
+                </span>
+              )
             )}
             {player.badge && (
               <span

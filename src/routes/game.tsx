@@ -6,7 +6,7 @@ import { ChatPanel } from "@/components/ChatPanel";
 import { Opponent, type OpponentData, type SeatPlacement } from "@/components/Opponent";
 import { RoomShell } from "@/components/ui-room/RoomShell";
 import { RoomButton } from "@/components/ui-room/RoomButton";
-import { HudPanel, HudLabel, HudCountdown } from "@/components/ui-room/HudPanel";
+import { HudCountdown } from "@/components/ui-room/HudPanel";
 import {
   PlayingCard,
   CardStack,
@@ -171,7 +171,7 @@ function Game() {
   const [suitPickerIndex, setSuitPickerIndex] = useState<number | null>(null);
   const [visibleActionId, setVisibleActionId] = useState<string | null>(null);
   const [pulsingPlayerId, setPulsingPlayerId] = useState<string | null>(null);
-  const [recentActions, setRecentActions] = useState<GameActionEvent[]>([]);
+  
   const busyActionRef = useRef(false);
   const aceSkipToastRef = useRef<string | null>(null);
   const aiTriggerRef = useRef<string | null>(null);
@@ -320,26 +320,6 @@ function Game() {
       pulsingPlayerId === session?.playerId && latestAction?.type === "draw" ? "draw" : undefined,
   };
 
-  const activeIndicatorPlayer = useMemo(() => {
-    const player = activePlayer ?? me;
-    const portrait = getPortrait(player?.avatar ?? session?.avatar);
-    return {
-      id: player?.id ?? session?.playerId ?? "turn",
-      name: player?.nickname ?? you.name,
-      avatar: portrait.src,
-      accent: portrait.accent,
-    };
-  }, [
-    activePlayer?.avatar,
-    activePlayer?.id,
-    activePlayer?.nickname,
-    me?.avatar,
-    me?.id,
-    me?.nickname,
-    session?.avatar,
-    session?.playerId,
-    you.name,
-  ]);
 
   useEffect(() => {
     if (room?.status === "waiting") navigate({ to: "/waiting", search: { code: room.code } });
@@ -401,9 +381,6 @@ function Game() {
     if (!latestAction) return;
 
     console.debug("[game] last action updated", latestAction);
-    setRecentActions((prev) =>
-      [latestAction, ...prev.filter((a) => a.id !== latestAction.id)].slice(0, 5),
-    );
     setVisibleActionId(latestAction.id);
     setPulsingPlayerId(latestAction.playerId);
 
@@ -631,94 +608,9 @@ function Game() {
                       "radial-gradient(ellipse at center, color-mix(in oklab, var(--primary) 10%, transparent) 0%, transparent 62%)",
                   }}
                 >
-                  {/* HUD — four corner panels, board-game style */}
-                  {gameState?.status === "playing" && (
-                    <HudPanel className="absolute top-2 left-2 z-20" tone="active">
-                      <div className="flex items-center gap-2.5 pr-1">
-                        <div
-                          className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full ring-2 ring-offset-2 ring-offset-black/40"
-                          style={{
-                            ["--tw-ring-color" as string]:
-                              activeIndicatorPlayer.accent ?? "oklch(0.82 0.14 85)",
-                          }}
-                        >
-                          <img
-                            src={activeIndicatorPlayer.avatar}
-                            alt=""
-                            className="h-full w-full object-cover object-top"
-                            draggable={false}
-                          />
-                        </div>
-                        <div className="flex min-w-0 flex-col leading-tight">
-                          <HudLabel>Na tahu</HudLabel>
-                          <span className="max-w-[7rem] truncate text-sm font-bold text-foreground">
-                            {activeIndicatorPlayer.name}
-                          </span>
-                        </div>
-                      </div>
-                    </HudPanel>
-                  )}
+                  {/* HUD is integrated into player seats and the discard pile —
+                      no detached floating panels around the table. */}
 
-                  <HudPanel
-                    className="absolute top-2 right-2 z-20"
-                    tone={isRedSuit(activeSuit) ? "danger" : "default"}
-                  >
-                    <div className="flex items-center gap-2.5 pr-1">
-                      <div
-                        className={cn(
-                          "flex h-9 w-9 items-center justify-center rounded-lg bg-[color:var(--card-face)] shadow-inner",
-                          isRedSuit(activeSuit)
-                            ? "text-[color:var(--suit-red)]"
-                            : "text-[color:var(--suit-dark)]",
-                        )}
-                      >
-                        <SuitIcon suit={activeSuit} className="h-5 w-5" />
-                      </div>
-                      <div className="flex flex-col leading-tight">
-                        <HudLabel>Barva</HudLabel>
-                        <span className="text-sm font-bold tracking-wide text-foreground">
-                          {SUIT_LABEL[activeSuit]}
-                        </span>
-                      </div>
-                    </div>
-                  </HudPanel>
-
-                  {/* Bottom-left: room code */}
-                  <HudPanel className="absolute bottom-2 left-2 z-20">
-                    <div className="flex flex-col leading-tight px-0.5">
-                      <HudLabel>Místnost</HudLabel>
-                      <span className="font-mono text-sm font-bold tracking-[0.32em] text-foreground">
-                        {code}
-                      </span>
-                    </div>
-                  </HudPanel>
-
-                  {/* Bottom-right: countdown */}
-                  {gameState?.status === "playing" && (
-                    <HudPanel
-                      className="absolute bottom-2 right-2 z-20"
-                      tone={
-                        Math.ceil(turnRemainingMs / 1000) < 5
-                          ? "danger"
-                          : Math.ceil(turnRemainingMs / 1000) < 10
-                            ? "warning"
-                            : "default"
-                      }
-                    >
-                      <div className="flex items-center gap-2.5 pr-1">
-                        <HudCountdown
-                          remainingMs={turnRemainingMs}
-                          durationMs={turnDurationMs}
-                        />
-                        <div className="flex flex-col leading-tight">
-                          <HudLabel>Časovač</HudLabel>
-                          <span className="text-sm font-bold tabular-nums text-foreground">
-                            {Math.max(0, Math.ceil(turnRemainingMs / 1000))} s
-                          </span>
-                        </div>
-                      </div>
-                    </HudPanel>
-                  )}
 
                   {pendingDraw > 0 && (
                     <div className="absolute left-1/2 top-2 z-20 -translate-x-1/2 rounded-full bg-red-950/80 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-red-100 ring-1 ring-red-400/40 shadow-lg shadow-red-950/50 backdrop-blur-md">
@@ -764,23 +656,8 @@ function Game() {
                     </div>
                   )}
 
-                  {recentActions.length > 0 && (
-                    <div className="absolute left-2 top-[4.75rem] z-10 w-44 rounded-xl border border-white/10 bg-black/48 px-2.5 py-2 shadow-xl shadow-black/35 backdrop-blur-md sm:w-56">
-                      <div className="mb-1 text-[8px] font-bold uppercase tracking-[0.18em] text-muted-foreground">
-                        Poslední akce
-                      </div>
-                      <ol className="space-y-1">
-                        {recentActions.slice(0, 3).map((action) => (
-                          <li
-                            key={action.id}
-                            className="truncate text-[10px] leading-tight text-foreground/86"
-                          >
-                            {actionText(action, players)}
-                          </li>
-                        ))}
-                      </ol>
-                    </div>
-                  )}
+
+
 
                   {aceSkip && (
                     <div className="absolute inset-x-6 top-12 z-20 rounded-3xl border border-[color:var(--gold)]/35 bg-black/70 px-4 py-3 text-center shadow-2xl shadow-black/50 backdrop-blur-md sm:inset-x-16">
@@ -858,8 +735,23 @@ function Game() {
                       </button>
 
                       <div className="flex flex-col items-center gap-2">
-                        <div key={pileNonce} className={pileNonce ? "animate-pile-bump" : ""}>
+                        <div
+                          key={pileNonce}
+                          className={cn("relative", pileNonce && "animate-pile-bump")}
+                        >
                           <DiscardPile cards={discardPile} size="md" recent />
+                          {/* Current suit — small icon badge attached to top-right of the discard pile. */}
+                          <div
+                            aria-label={`Aktivní barva: ${SUIT_LABEL[activeSuit]}`}
+                            className={cn(
+                              "absolute -top-2 -right-2 z-[3] flex h-7 w-7 items-center justify-center rounded-full bg-[color:var(--card-face)] ring-2 ring-[color:var(--gold)]/60 shadow-lg shadow-black/60",
+                              isRedSuit(activeSuit)
+                                ? "text-[color:var(--suit-red)]"
+                                : "text-[color:var(--suit-dark)]",
+                            )}
+                          >
+                            <SuitIcon suit={activeSuit} className="h-4 w-4" />
+                          </div>
                         </div>
                         <span className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground/80">
                           Odhoz
@@ -925,7 +817,13 @@ function Game() {
                         : "right-0 top-1/2 translate-x-[18%] sm:translate-x-[30%] -translate-y-1/2";
                   return (
                     <div key={p.id} className={cn("absolute z-30 pointer-events-auto", cls)}>
-                      <Opponent player={p} placement={pos} compactMobile />
+                      <Opponent
+                        player={p}
+                        placement={pos}
+                        compactMobile
+                        turnRemainingMs={p.isTurn ? turnRemainingMs : undefined}
+                        turnDurationMs={p.isTurn ? turnDurationMs : undefined}
+                      />
                     </div>
                   );
                 })}
@@ -942,9 +840,15 @@ function Game() {
                       )}
                     >
                       {you.isTurn && (
-                        <span className="absolute -top-5 left-1/2 z-[2] -translate-x-1/2 whitespace-nowrap rounded-sm border border-[color:var(--gold)]/55 bg-black/75 px-1.5 py-px text-[8px] font-bold uppercase tracking-[0.12em] text-[color:var(--gold)] shadow-lg shadow-black/40">
-                          Na tahu
-                        </span>
+                        <div className="absolute -top-9 left-1/2 z-[2] flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-[color:var(--gold)]/55 bg-black/80 pl-1 pr-2 py-0.5 shadow-lg shadow-black/40">
+                          <HudCountdown
+                            remainingMs={turnRemainingMs}
+                            durationMs={turnDurationMs}
+                          />
+                          <span className="whitespace-nowrap text-[8px] font-bold uppercase tracking-[0.14em] text-[color:var(--gold)]">
+                            Na tahu
+                          </span>
+                        </div>
                       )}
                       <img
                         src={you.avatar}
