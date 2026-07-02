@@ -304,28 +304,36 @@
     60% { transform: translateY(4px) scale(1.03); opacity: 1; }
     100% { transform: translateY(0) scale(1); opacity: 1; }
   }
-  .animate-card-draw { animation: card-draw 360ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .animate-card-draw { animation: card-draw 220ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 
   /* Play — lifts off and fades toward the pile */
   @keyframes card-play {
     0% { transform: translateY(0) scale(1); opacity: 1; }
     100% { transform: translateY(-90px) scale(0.92) rotate(6deg); opacity: 0; }
   }
-  .animate-card-play { animation: card-play 320ms cubic-bezier(0.4, 0, 0.2, 1) forwards; }
+  .animate-card-play { animation: card-play 220ms cubic-bezier(0.4, 0, 0.2, 1) forwards; }
 
   /* Discard pile bump — quick squash when a new card lands */
   @keyframes pile-bump {
     0% { transform: scale(1); }
-    40% { transform: scale(1.06); }
+    45% { transform: scale(1.06); }
     100% { transform: scale(1); }
   }
-  .animate-pile-bump { animation: pile-bump 260ms ease-out; }
+  .animate-pile-bump { animation: pile-bump 220ms ease-out; }
 
   @keyframes seat-action-pulse {
     0%, 100% { box-shadow: 0 0 0 0 oklch(0.82 0.14 85 / 0); }
-    35% { box-shadow: 0 0 0 5px oklch(0.82 0.14 85 / 0.28), 0 0 24px 2px oklch(0.82 0.14 85 / 0.35); }
+    45% { box-shadow: 0 0 0 4px oklch(0.82 0.14 85 / 0.32), 0 0 20px 2px oklch(0.82 0.14 85 / 0.38); }
   }
-  .animate-seat-action-pulse { animation: seat-action-pulse 820ms ease-out both; }
+  .animate-seat-action-pulse { animation: seat-action-pulse 220ms ease-out both; }
+
+  /* Turn arrival — one-shot fade-in ring on the newly active player */
+  @keyframes turn-arrive {
+    0% { box-shadow: 0 0 0 0 oklch(0.82 0.14 85 / 0); opacity: 0.6; }
+    60% { box-shadow: 0 0 0 6px oklch(0.82 0.14 85 / 0.35), 0 0 22px 4px oklch(0.82 0.14 85 / 0.32); opacity: 1; }
+    100% { box-shadow: 0 0 0 0 oklch(0.82 0.14 85 / 0); opacity: 1; }
+  }
+  .animate-turn-arrive { animation: turn-arrive 220ms ease-out both; }
 
   @keyframes last-action-pop {
     0% { transform: translateY(8px) scale(0.96); opacity: 0; }
