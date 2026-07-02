@@ -811,7 +811,7 @@ function Game() {
                           <div
                             aria-label={`Aktivní barva: ${SUIT_LABEL[activeSuit]}`}
                             className={cn(
-                              "absolute -top-4 -right-9 z-[3] flex h-8 w-8 items-center justify-center rounded-full bg-[color:var(--card-face)] ring-[1.5px] ring-[color:var(--gold)]/55 shadow-[0_8px_20px_-4px_rgba(0,0,0,0.7)]",
+                              "absolute -top-9 -right-9 z-[3] flex h-8 w-8 items-center justify-center rounded-full bg-[color:var(--card-face)] ring-[1.5px] ring-[color:var(--gold)]/55 shadow-[0_8px_20px_-4px_rgba(0,0,0,0.7)]",
                               isRedSuit(activeSuit)
                                 ? "text-[color:var(--suit-red)]"
                                 : "text-[color:var(--suit-dark)]",
