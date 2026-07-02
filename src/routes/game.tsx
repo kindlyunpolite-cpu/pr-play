@@ -6,6 +6,7 @@ import { TurnIndicator } from "@/components/TurnIndicator";
 import { Opponent, type OpponentData, type SeatPlacement } from "@/components/Opponent";
 import { RoomShell } from "@/components/ui-room/RoomShell";
 import { RoomButton } from "@/components/ui-room/RoomButton";
+import { HudPanel, HudLabel, HudCountdown } from "@/components/ui-room/HudPanel";
 import {
   PlayingCard,
   CardStack,
