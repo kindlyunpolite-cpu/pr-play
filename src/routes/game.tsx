@@ -807,22 +807,19 @@ function Game() {
                           className={cn("relative", pileNonce && "animate-pile-bump")}
                         >
                           <DiscardPile cards={discardPile} size="md" recent />
-                          {/* Current suit — small icon badge attached to top-right of the discard pile. */}
+                          {/* Current suit marker — placed outside the card, above and to the right. */}
                           <div
                             aria-label={`Aktivní barva: ${SUIT_LABEL[activeSuit]}`}
                             className={cn(
-                              "absolute -top-2 -right-2 z-[3] flex h-7 w-7 items-center justify-center rounded-full bg-[color:var(--card-face)] ring-2 ring-[color:var(--gold)]/60 shadow-lg shadow-black/60",
+                              "absolute -top-9 -right-9 z-[3] flex h-8 w-8 items-center justify-center rounded-full bg-[color:var(--card-face)] ring-[1.5px] ring-[color:var(--gold)]/55 shadow-[0_8px_20px_-4px_rgba(0,0,0,0.7)]",
                               isRedSuit(activeSuit)
                                 ? "text-[color:var(--suit-red)]"
                                 : "text-[color:var(--suit-dark)]",
                             )}
                           >
-                            <SuitIcon suit={activeSuit} className="h-4 w-4" />
+                            <SuitIcon suit={activeSuit} className="h-5 w-5" />
                           </div>
                         </div>
-                        <span className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground/80">
-                          Odhoz
-                        </span>
                       </div>
                     </div>
                   </div>

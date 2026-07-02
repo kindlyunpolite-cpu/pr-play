@@ -56,10 +56,18 @@ export function Opponent({
   const [expanded, setExpanded] = useState(false);
   const online = player.online ?? true;
   const accent = player.accent ?? "oklch(0.82 0.14 85)";
+  const danger = player.cardCount > 0 && player.cardCount <= 2;
   const showTimer =
     player.isTurn &&
     typeof turnRemainingMs === "number" &&
     typeof turnDurationMs === "number";
+
+  const cardCountLabel =
+    player.cardCount === 1
+      ? "karta"
+      : player.cardCount >= 2 && player.cardCount <= 4
+        ? "karty"
+        : "karet";
 
   const portraitSize = compact
     ? "h-20 w-16"
@@ -108,6 +116,12 @@ export function Opponent({
               "radial-gradient(ellipse at center, var(--seat-accent) 0%, transparent 70%)",
           }}
         />
+        {danger && (
+          <div
+            aria-hidden
+            className="danger-glow absolute -inset-1 rounded-[40%] bg-red-500/20 blur-2xl"
+          />
+        )}
         {/* Floor disc / shadow under the character */}
         <div
           aria-hidden
@@ -149,12 +163,14 @@ export function Opponent({
           "border backdrop-blur-xl transition-all duration-300",
           panelWidth,
           panelAnchor,
-            player.isTurn
-              ? "border-[color:var(--gold)] animate-turn ring-2 ring-[color:var(--gold)]/70 shadow-[0_12px_32px_-8px_rgba(0,0,0,0.78),0_0_28px_-4px_var(--seat-accent)]"
+          player.isTurn
+            ? "border-[color:var(--gold)] animate-turn ring-2 ring-[color:var(--gold)]/70 shadow-[0_12px_32px_-8px_rgba(0,0,0,0.78),0_0_28px_-4px_var(--seat-accent)]"
+            : danger
+              ? "border-red-500/45 shadow-[0_10px_24px_-10px_rgba(0,0,0,0.78),0_0_28px_-4px_rgba(239,68,68,0.35)]"
               : "border-white/12 shadow-[0_10px_24px_-10px_rgba(0,0,0,0.78)] hover:border-[color:var(--gold)]/35",
-            (player.actionPulse === "draw" || player.actionPulse === "play") &&
-              "animate-seat-action-pulse",
-          )}
+          (player.actionPulse === "draw" || player.actionPulse === "play") &&
+            "animate-seat-action-pulse",
+        )}
         style={{
           background:
             "linear-gradient(180deg, oklch(0.18 0.025 160 / 0.92) 0%, oklch(0.105 0.02 160 / 0.96) 100%)",
@@ -213,20 +229,18 @@ export function Opponent({
           </div>
         </div>
 
-        {/* Stats row: cards + chips */}
+        {/* Stats row: card count + chips */}
         <div className="flex items-center justify-between gap-2 px-3 py-2">
-          <div className="flex items-center gap-1">
-            <div className="flex gap-[2px]">
-              {Array.from({ length: Math.min(player.cardCount, 6) }).map((_, i) => (
-                <div
-                  key={i}
-                  className="h-3 w-[4px] rounded-[1px] bg-gradient-to-b from-[color:var(--card-back)] to-[color:var(--card-back)]/50 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]"
-                />
-              ))}
-            </div>
-            <span className="text-[10px] font-mono tabular-nums text-muted-foreground ml-1">
-              ×{player.cardCount}
-            </span>
+          <div
+            className={cn(
+              "flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-bold tracking-wide tabular-nums shadow-md",
+              danger
+                ? "border-red-400/50 bg-red-950/45 text-red-100 shadow-[0_0_16px_rgba(239,68,68,0.35)]"
+                : "border-white/10 bg-black/40 text-foreground",
+            )}
+          >
+            <div className="h-3.5 w-2.5 rounded-[2px] bg-gradient-to-b from-[color:var(--card-back)] to-[color:var(--card-back)]/50 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.12)]" />
+            <span>{player.cardCount} {cardCountLabel}</span>
           </div>
           <div className="flex items-center gap-1 text-[10px] font-mono tabular-nums">
             <span className="h-1.5 w-1.5 rounded-full bg-[color:var(--gold)] shadow-[0_0_6px_var(--gold)]" />
