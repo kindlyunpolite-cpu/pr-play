@@ -34,7 +34,7 @@ import {
 } from "@/lib/rooms.functions";
 import { clearSession, loadSession } from "@/lib/room-session";
 import { toast } from "sonner";
-import { createGameActionEvent } from "@/lib/game-actions";
+import { createGameActionEvent, isCardPlayable } from "@/lib/game-actions";
 import { triggerAiTurn } from "@/lib/ai-player";
 
 export const Route = createFileRoute("/game")({
@@ -403,7 +403,7 @@ function Game() {
 
       void callApplyTurnTimeout({ data: { roomId: room.id } })
         .then((result) => {
-          if (result?.notExpired) {
+          if (result && "notExpired" in result && result.notExpired) {
             timeoutTriggerRef.current = null;
           }
           return resync();
@@ -933,10 +933,21 @@ function Game() {
                 const rot = offset * spread;
                 const arc = offset * offset * 1.6;
                 const isSelected = selected === i;
+                const playable = myTurn && isCardPlayable(card, topDiscard, activeSuit, pendingDraw);
+                const cardState = isSelected
+                  ? "selected"
+                  : playable
+                    ? "playable"
+                    : myTurn
+                      ? "disabled"
+                      : "idle";
                 return (
                   <div
                     key={i}
-                    className="fan-card-wrap group relative shrink-0 transition-transform duration-300 ease-out will-change-transform"
+                    className={cn(
+                      "fan-card-wrap group relative shrink-0 transition-transform duration-150 ease-out will-change-transform",
+                      playable && "hover:z-40",
+                    )}
                     style={{
                       transform: isSelected
                         ? `translateY(-22px) rotate(${rot * 0.3}deg) scale(1.06)`
@@ -946,22 +957,15 @@ function Game() {
                       marginLeft: i === 0 ? 0 : "-1.9rem",
                     }}
                   >
-                    <div className="transition-transform duration-300 ease-out group-hover:-translate-y-5 group-hover:scale-[1.05] group-focus-within:-translate-y-5 group-active:translate-y-0 group-active:scale-95">
-                      <PlayingCard
-                        card={card}
-                        size="md"
-                        state={
-                          myTurn && (pendingDraw === 0 || card.rank === "7") ? "idle" : "disabled"
-                        }
-                        animation={playingIdx === i ? "play" : !dealt ? "deal" : undefined}
-                        animationDelay={!dealt ? i * 70 : undefined}
-                        onClick={() => handlePlay(i)}
-                        className={cn(
-                          "shrink-0 shadow-xl shadow-black/50 cursor-pointer",
-                          isSelected && "ring-2 ring-[color:var(--gold)] glow-primary",
-                        )}
-                      />
-                    </div>
+                    <PlayingCard
+                      card={card}
+                      size="md"
+                      state={cardState}
+                      animation={playingIdx === i ? "play" : !dealt ? "deal" : undefined}
+                      animationDelay={!dealt ? i * 70 : undefined}
+                      onClick={() => handlePlay(i)}
+                      className="shrink-0 shadow-xl shadow-black/50"
+                    />
                   </div>
                 );
               })}

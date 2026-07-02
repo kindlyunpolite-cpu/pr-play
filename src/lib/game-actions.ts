@@ -54,3 +54,16 @@ export function createGameActionEvent(input: {
     at: input.at ?? new Date().toISOString(),
   };
 }
+
+/** Client-safe playability check — mirrors server-side rules in rooms.functions.ts. */
+export function isCardPlayable(
+  card: CardData,
+  topCard: CardData,
+  activeSuit: Suit | null,
+  pendingDraw: number,
+): boolean {
+  if (pendingDraw > 0) return card.rank === "7";
+  if (card.rank === "Q") return true;
+  return card.suit === (activeSuit ?? topCard.suit) || card.rank === topCard.rank;
+}
+
