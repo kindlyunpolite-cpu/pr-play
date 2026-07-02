@@ -1,4 +1,4 @@
-@import "tailwindcss" source(none);
+``@import "tailwindcss" source(none);
 @source "../src";
 @import "tw-animate-css";
 
@@ -304,7 +304,7 @@
     60% { transform: translateY(4px) scale(1.03); opacity: 1; }
     100% { transform: translateY(0) scale(1); opacity: 1; }
   }
-  .animate-card-draw { animation: card-draw 220ms cubic-bezier(0.22, 1, 0.36, 1) both; }
+.animate-card-draw{ animation: .22s cubic-bezier(.22, 1, .36, 1) both card-draw; }
 
   /* Play — lifts off and fades toward the pile */
   @keyframes card-play {
