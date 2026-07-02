@@ -191,6 +191,7 @@ function Waiting() {
       await callStart({
         data: { playerId: session.playerId, sessionToken: session.sessionToken },
       });
+      navigate({ to: "/game", replace: true });
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Nelze spustit hru");
     } finally {
