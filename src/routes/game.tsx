@@ -772,27 +772,40 @@ function Game() {
                   {/* Center: deck + pile */}
                   <div className="absolute inset-0 flex items-center justify-center">
                     <div className="center-stage relative z-[1] flex items-center gap-6 sm:gap-10">
-                      <button
-                        type="button"
-                        onClick={() => void handleDraw()}
-                        disabled={!canAct}
-                        className="pointer-events-auto flex flex-col items-center gap-2 rounded-2xl p-1 -m-1 transition active:scale-95 disabled:opacity-60"
-                        aria-label="Lízni"
-                      >
-                        <CardStack
-                          key={drawNonce}
-                          count={gameState?.deck.length ?? 0}
-                          maxVisible={3}
-                          size="md"
-                          layout="stack"
-                          className={drawNonce ? "animate-card-draw" : ""}
-                        />
-                        <span className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground/80 tabular-nums">
-                          {pendingDraw > 0
-                            ? `Trest · ${pendingDraw}`
-                            : `Balíček · ${gameState?.deck.length ?? 0}`}
-                        </span>
-                      </button>
+                      <div className="flex flex-col items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => void handleDraw()}
+                          disabled={!canAct}
+                          className="pointer-events-auto flex flex-col items-center gap-1.5 rounded-2xl p-1 -m-1 transition active:scale-95 disabled:opacity-60"
+                          aria-label="Vezmi kartu"
+                        >
+                          <CardStack
+                            key={drawNonce}
+                            count={gameState?.deck.length ?? 0}
+                            maxVisible={3}
+                            size="md"
+                            layout="stack"
+                            className={drawNonce ? "animate-card-draw" : ""}
+                          />
+                          <span className="text-[9px] uppercase tracking-[0.18em] text-muted-foreground/80 tabular-nums">
+                            {pendingDraw > 0
+                              ? `Trest · ${pendingDraw}`
+                              : `Balíček · ${gameState?.deck.length ?? 0}`}
+                          </span>
+                        </button>
+                        {/* Draw action attached to the deck */}
+                        <RoomButton
+                          size="sm"
+                          variant={pendingDraw > 0 ? "primary" : "secondary"}
+                          onClick={() => void handleDraw()}
+                          disabled={!canAct}
+                          loading={busyAction === "draw"}
+                          className="min-w-[5.5rem] px-3 py-1 text-[11px]"
+                        >
+                          {pendingDraw > 0 ? `Vezmi ${pendingDraw}` : "Vezmi"}
+                        </RoomButton>
+                      </div>
 
                       <div className="flex flex-col items-center gap-2">
                         <div
@@ -819,6 +832,7 @@ function Game() {
                       </div>
                     </div>
                   </div>
+
                 </div>
 
                 <div className="absolute bottom-3 left-3 z-40 sm:bottom-4 sm:left-4">
