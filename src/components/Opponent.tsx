@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { Crown, Wifi, WifiOff, Trophy, Star } from "lucide-react";
 import { useState } from "react";
+import { HudCountdown } from "@/components/ui-room/HudPanel";
 
 export interface OpponentData {
   id: string;
