@@ -48,8 +48,8 @@ export const Route = createFileRoute("/game")({
 const FALLBACK_CARD: CardData = { suit: "hearts", rank: "10" };
 const PLAY_ANIMATION_MS = 320;
 
-function stableCardId(card: CardData) {
-  return card.id ?? `${card.rank}-${card.suit}`;
+function stableCardId(card: CardData, index?: number) {
+  return card.id ?? `${card.rank}-${card.suit}-${index ?? "unknown"}`;
 }
 
 const SUITS: Suit[] = ["hearts", "diamonds", "clubs", "spades"];
@@ -189,6 +189,7 @@ function Game() {
   const [pulsingPlayerId, setPulsingPlayerId] = useState<string | null>(null);
 
   const busyActionRef = useRef(false);
+  const localPendingPlayPlayerIdRef = useRef<string | null>(null);
   const playAnimationTimeoutRef = useRef<number | null>(null);
   const handCardRefs = useRef(new Map<string, HTMLDivElement>());
   const discardPileRef = useRef<HTMLDivElement | null>(null);
@@ -505,7 +506,7 @@ function Game() {
 
     if (latestAction.type === "draw") setDrawNonce((n) => n + 1);
     if (latestAction.type === "play" || latestAction.type === "suit-change") {
-      const isLocalPendingPlay = playingCard && latestAction.playerId === session?.playerId;
+      const isLocalPendingPlay = latestAction.playerId === localPendingPlayPlayerIdRef.current;
       if (!isLocalPendingPlay) setPileNonce((n) => n + 1);
     }
 
@@ -515,7 +516,7 @@ function Game() {
       window.clearTimeout(hideAction);
       window.clearTimeout(stopPulse);
     };
-  }, [latestAction?.id, latestAction?.playerId, latestAction?.type, playingCard, session?.playerId]);
+  }, [latestAction?.id]);
 
   useEffect(() => {
     if (playingCard) return;
@@ -609,6 +610,7 @@ function Game() {
       return;
     }
     busyActionRef.current = true;
+    localPendingPlayPlayerIdRef.current = session.playerId;
     setBusyAction("play");
     if (playAnimationTimeoutRef.current !== null) {
       window.clearTimeout(playAnimationTimeoutRef.current);
@@ -640,6 +642,7 @@ function Game() {
     } finally {
       playAnimationTimeoutRef.current = window.setTimeout(() => {
         setPlayingCard(null);
+        localPendingPlayPlayerIdRef.current = null;
         playAnimationTimeoutRef.current = null;
         busyActionRef.current = false;
         setBusyAction(null);
