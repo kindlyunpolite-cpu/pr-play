@@ -12,7 +12,11 @@ import type { CardData, Suit } from "@/components/cards";
 import { PORTRAITS } from "./portraits";
 import type { GameState, RoomEventType } from "@/types/room";
 import { createVisibleActionSignature } from "@/lib/game-actions";
-import { createNextTurnClock } from "@/lib/rooms.functions";
+import {
+  createNextTurnClock,
+  startRematchIfAllAccepted,
+  withAiRematchVotes,
+} from "@/lib/rooms.functions";
 
 // ---------- Pure helpers (safe to import anywhere) ----------
 
@@ -493,6 +497,9 @@ export async function runAiTurn(roomId: string): Promise<void> {
         last_action_signature: visibleSignature,
         ...turnClock,
         processed_actions: processedActions as unknown as Json,
+        rematch_votes: finished
+          ? (withAiRematchVotes(freshPlayers) as unknown as Json)
+          : (freshGameState.rematch_votes as unknown as Json),
         updated_at: finishedAt,
       })
       .eq("room_id", roomId)
@@ -530,6 +537,10 @@ export async function runAiTurn(roomId: string): Promise<void> {
         .from("rooms")
         .update({ status: "finished", finished_at: finishedAt })
         .eq("id", roomId);
+      await startRematchIfAllAccepted(roomId, {
+        current_player_id: freshCurrent.id,
+        rematch_votes: withAiRematchVotes(freshPlayers),
+      });
       return;
     }
     await wait(1000);

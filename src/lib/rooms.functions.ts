@@ -41,9 +41,8 @@ export function createTurnClock(
 
   return {
     turn_started_at: now.toISOString(),
-    turn_deadline_at: enabled && !paused
-      ? new Date(now.getTime() + remainingMs).toISOString()
-      : null,
+    turn_deadline_at:
+      enabled && !paused ? new Date(now.getTime() + remainingMs).toISOString() : null,
     turn_remaining_ms: enabled && paused ? remainingMs : null,
   };
 }
@@ -297,11 +296,64 @@ async function resolveFailedTurnMutation(
 async function loadTurnPlayers(roomId: string) {
   const { data: players, error } = await supabaseAdmin
     .from("players")
-    .select("id, seat, nickname")
+    .select("id, seat, nickname, is_ai")
     .eq("room_id", roomId)
     .order("seat", { ascending: true });
   if (error || !players || players.length < 2) throw new Error("Could not load players");
   return players;
+}
+
+export function withAiRematchVotes(
+  players: { id: string; is_ai?: boolean | null }[],
+  existingVotes: RematchVotes = {},
+) {
+  const votes: RematchVotes = {};
+  for (const player of players) {
+    votes[player.id] = player.is_ai ? true : existingVotes[player.id] === true;
+  }
+  return votes;
+}
+
+async function loadActiveRematchPlayers(roomId: string) {
+  const { data: players, error } = await supabaseAdmin
+    .from("players")
+    .select("id, seat, is_ai")
+    .eq("room_id", roomId)
+    .eq("connected", true)
+    .order("seat", { ascending: true });
+  if (error || !players || players.length < 2) return null;
+  return players;
+}
+
+export async function startRematchIfAllAccepted(
+  roomId: string,
+  gameState: { current_player_id: string | null; rematch_votes: RematchVotes },
+) {
+  const activePlayers = await loadActiveRematchPlayers(roomId);
+  if (!activePlayers) return false;
+
+  const votes = withAiRematchVotes(activePlayers, gameState.rematch_votes);
+  if (!activePlayers.every((roomPlayer) => votes[roomPlayer.id] === true)) return false;
+
+  const previousStarterId =
+    gameState.current_player_id &&
+    activePlayers.some((roomPlayer) => roomPlayer.id === gameState.current_player_id)
+      ? gameState.current_player_id
+      : activePlayers[0].id;
+  const firstPlayerId = nextPlayerId(activePlayers, previousStarterId, 1);
+
+  const { data: claimedRoom, error: roomError } = await supabaseAdmin
+    .from("rooms")
+    .update({ status: "playing", started_at: new Date().toISOString(), finished_at: null })
+    .eq("id", roomId)
+    .eq("status", "finished")
+    .select("id")
+    .maybeSingle();
+  if (roomError) throw new Error("Failed to start rematch");
+  if (!claimedRoom) return false;
+
+  await initializeGame(roomId, activePlayers, firstPlayerId);
+  return true;
 }
 
 async function normalizeWaitingRoom(roomId: string) {
@@ -1288,6 +1340,9 @@ export const playCard = createServerFn({ method: "POST" })
         last_action_signature: visibleSignature,
         ...turnClock,
         processed_actions: processedActions as unknown as Json,
+        rematch_votes: finished
+          ? (withAiRematchVotes(await loadTurnPlayers(player.room_id)) as unknown as Json)
+          : (gameState.rematch_votes as unknown as Json),
         updated_at: finishedAt,
       })
       .eq("room_id", player.room_id)
@@ -1313,6 +1368,10 @@ export const playCard = createServerFn({ method: "POST" })
         .update({ status: "finished", finished_at: finishedAt })
         .eq("id", player.room_id);
       await recordFinishedGame(player.room_id, player.id, finishedAt);
+      await startRematchIfAllAccepted(player.room_id, {
+        current_player_id: player.id,
+        rematch_votes: withAiRematchVotes(await loadTurnPlayers(player.room_id)),
+      });
     }
 
     await Promise.all([
@@ -1358,40 +1417,12 @@ async function updateRematchVote(playerId: string, sessionToken: string, accepte
 
   if (!accepted) return { ok: true, started: false };
 
-  const { data: connectedPlayers, error: playersError } = await supabaseAdmin
-    .from("players")
-    .select("id, seat")
-    .eq("room_id", player.room_id)
-    .eq("connected", true)
-    .order("seat", { ascending: true });
-  if (playersError || !connectedPlayers || connectedPlayers.length < 2) {
-    return { ok: true, started: false };
-  }
+  const started = await startRematchIfAllAccepted(player.room_id, {
+    current_player_id: gameState.current_player_id,
+    rematch_votes: votes,
+  });
 
-  if (!connectedPlayers.every((roomPlayer) => votes[roomPlayer.id] === true)) {
-    return { ok: true, started: false };
-  }
-
-  const previousStarterId =
-    gameState.current_player_id &&
-    connectedPlayers.some((roomPlayer) => roomPlayer.id === gameState.current_player_id)
-      ? gameState.current_player_id
-      : connectedPlayers[0].id;
-  const firstPlayerId = nextPlayerId(connectedPlayers, previousStarterId, 1);
-
-  const { data: claimedRoom, error: roomError } = await supabaseAdmin
-    .from("rooms")
-    .update({ status: "playing", started_at: new Date().toISOString(), finished_at: null })
-    .eq("id", player.room_id)
-    .eq("status", "finished")
-    .select("id")
-    .maybeSingle();
-  if (roomError) throw new Error("Failed to start rematch");
-  if (!claimedRoom) return { ok: true, started: false };
-
-  await initializeGame(player.room_id, connectedPlayers, firstPlayerId);
-
-  return { ok: true, started: true };
+  return { ok: true, started };
 }
 
 export const acceptRematch = createServerFn({ method: "POST" })
