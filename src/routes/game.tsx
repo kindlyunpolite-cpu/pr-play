@@ -768,47 +768,37 @@ function Game() {
                     </div>
                   )}
 
-                  {(me?.is_host || !timerEnabled || timerPaused) &&
-                    gameState?.status === "playing" && (
-                      <div className="absolute right-3 top-3 z-40 flex max-w-[calc(100%-1.5rem)] items-center gap-1.5 rounded-full border border-[color:var(--gold)]/25 bg-black/75 px-2 py-1 shadow-lg shadow-black/35 backdrop-blur-md">
-                        <span className="whitespace-nowrap px-1 text-[9px] font-bold uppercase tracking-[0.16em] text-[color:var(--gold)]/85">
-                          {!timerEnabled ? "Čas vypnutý" : timerPaused ? "Čas pozastaven" : "Časovač"}
-                        </span>
-                        {me?.is_host && (
-                          <>
-                            <RoomButton
-                              size="sm"
-                              variant="secondary"
-                              onClick={() =>
-                                void updateTimerMode({ paused: !timerPaused, enabled: true }, "pause")
-                              }
-                              disabled={!timerEnabled || timerModeBusy !== null}
-                              loading={timerModeBusy === "pause"}
-                              className="px-2 py-1 text-[10px]"
-                            >
-                              {timerPaused ? "Pokračovat" : "Pozastavit"}
-                            </RoomButton>
-                            <RoomButton
-                              size="sm"
-                              variant={timerEnabled ? "secondary" : "primary"}
-                              onClick={() =>
-                                void updateTimerMode(
-                                  timerEnabled
-                                    ? { enabled: false }
-                                    : { enabled: true, paused: false },
-                                  "enable",
-                                )
-                              }
-                              disabled={timerModeBusy !== null}
-                              loading={timerModeBusy === "enable"}
-                              className="px-2 py-1 text-[10px]"
-                            >
-                              {timerEnabled ? "Vypnout čas" : "Zapnout čas"}
-                            </RoomButton>
-                          </>
-                        )}
-                      </div>
-                    )}
+                  {me?.is_host && gameState?.status === "playing" && (
+                    <div className="absolute right-3 top-3 z-40 flex items-center gap-1.5 rounded-full border border-white/10 bg-black/65 px-2 py-1 shadow-lg shadow-black/35 backdrop-blur-md">
+                      <RoomButton
+                        size="sm"
+                        variant="secondary"
+                        onClick={() =>
+                          void updateTimerMode({ paused: !timerPaused, enabled: true }, "pause")
+                        }
+                        disabled={!timerEnabled || timerModeBusy !== null}
+                        loading={timerModeBusy === "pause"}
+                        className="px-2 py-1 text-[10px]"
+                      >
+                        {timerPaused ? "Pokračovat" : "Pozastavit"}
+                      </RoomButton>
+                      <RoomButton
+                        size="sm"
+                        variant={timerEnabled ? "secondary" : "primary"}
+                        onClick={() =>
+                          void updateTimerMode(
+                            timerEnabled ? { enabled: false } : { enabled: true, paused: false },
+                            "enable",
+                          )
+                        }
+                        disabled={timerModeBusy !== null}
+                        loading={timerModeBusy === "enable"}
+                        className="px-2 py-1 text-[10px]"
+                      >
+                        {timerEnabled ? "Vypnout čas" : "Zapnout čas"}
+                      </RoomButton>
+                    </div>
+                  )}
 
                   {gameFinished && (
                     <div className="absolute inset-x-6 top-1/2 z-20 -translate-y-1/2 rounded-3xl border border-[color:var(--gold)]/30 bg-black/70 p-4 text-center shadow-2xl shadow-black/60 backdrop-blur-md sm:inset-x-16">
