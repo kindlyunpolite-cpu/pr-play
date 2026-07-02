@@ -16,7 +16,7 @@ import {
   type Suit,
 } from "@/components/cards";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, Sparkles, Trophy } from "lucide-react";
+import { Loader2, Trophy } from "lucide-react";
 import { SUIT_LABEL, isRedSuit } from "@/components/cards/types";
 import { SuitIcon } from "@/components/cards/SuitIcon";
 import { cn } from "@/lib/utils";
