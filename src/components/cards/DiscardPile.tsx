@@ -2,6 +2,10 @@ import { cn } from "@/lib/utils";
 import { PlayingCard } from "./PlayingCard";
 import type { CardData, CardSize } from "./types";
 
+function cardKey(card: CardData) {
+  return card.id ?? `${card.rank}-${card.suit}`;
+}
+
 export interface DiscardPileProps {
   /** Top card is rendered last (on top). Pass at least one. */
   cards: [CardData, ...CardData[]];
@@ -27,22 +31,22 @@ export function DiscardPile({ cards, size = "md", recent = false, className }: D
           size === "xl"
             ? "6.5rem"
             : size === "lg"
-            ? "5.25rem"
-            : size === "md"
-            ? "4.25rem"
-            : size === "sm"
-            ? "3rem"
-            : "1.75rem",
+              ? "5.25rem"
+              : size === "md"
+                ? "4.25rem"
+                : size === "sm"
+                  ? "3rem"
+                  : "1.75rem",
         height:
           size === "xl"
             ? "9.5rem"
             : size === "lg"
-            ? "7.7rem"
-            : size === "md"
-            ? "6.2rem"
-            : size === "sm"
-            ? "4.5rem"
-            : "2.5rem",
+              ? "7.7rem"
+              : size === "md"
+                ? "6.2rem"
+                : size === "sm"
+                  ? "4.5rem"
+                  : "2.5rem",
       }}
     >
       {stack.map((card, i) => {
@@ -51,7 +55,7 @@ export function DiscardPile({ cards, size = "md", recent = false, className }: D
         const opacity = isTop ? 1 : 0.55 - (top - i - 1) * 0.15;
         return (
           <PlayingCard
-            key={i}
+            key={cardKey(card)}
             card={card}
             size={size}
             state={isTop && recent ? "recent" : "idle"}
