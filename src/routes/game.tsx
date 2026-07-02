@@ -877,7 +877,21 @@ function Game() {
                         : "right-0 top-1/2 translate-x-[18%] sm:translate-x-[30%] -translate-y-1/2";
                   return (
                     <div key={p.id} className={cn("absolute z-30 pointer-events-auto", cls)}>
-                      <Opponent
+                      <div
+                        key={p.isTurn ? `turn-${gameState?.turn_version ?? 0}` : "idle"}
+                        className={cn("rounded-2xl", p.isTurn && "animate-turn-arrive")}
+                      >
+                        <Opponent
+                          player={p}
+                          placement={pos}
+                          compactMobile
+                          turnRemainingMs={p.isTurn ? turnRemainingMs : undefined}
+                          turnDurationMs={p.isTurn ? turnDurationMs : undefined}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
                         player={p}
                         placement={pos}
                         compactMobile
