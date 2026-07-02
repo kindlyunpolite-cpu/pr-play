@@ -342,8 +342,8 @@
 
   @keyframes card-played {
     0% {
-      transform: translateY(-30px) rotate(15deg) scale(1.05);
-      opacity: 0;
+      transform: translateY(-130px) rotate(85deg) scale(1.05);
+      opacity: .5;
     }
     60% {
       transform: translateY(2px) rotate(2deg) scale(1.02);
@@ -355,12 +355,12 @@
     }
   }
   //.animate-card-played
-  {
-    animation: card-played 240ms cubic-bezier(0.22, 1, 0.36, 1);
-  }
+  //{
+    //animation: card-played 240ms cubic-bezier(0.22, 1, 0.36, 1);
+ // }
 
   .animate-card-played {
-    animation: card-played 20s cubic-bezier(0.22, 1, 0.36, 1);
+    animation: card-played 240ms cubic-bezier(0.22, 1, 0.36, 1);
   }
 
   @keyframes card-active {
