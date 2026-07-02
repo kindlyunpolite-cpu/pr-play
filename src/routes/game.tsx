@@ -910,8 +910,8 @@ function Game() {
           </div>
 
           {/* === Bottom hand area === */}
-          <div className="relative z-20 shrink-0 bg-gradient-to-t from-background via-background/85 to-transparent pb-safe pt-2">
-            <div className="fan-hand hand-scroll relative flex items-end justify-center overflow-x-auto sm:overflow-visible no-scrollbar px-4 pt-1 pb-1 min-h-[4.5rem] sm:min-h-[5.2rem]">
+          <div className="relative z-20 shrink-0 bg-gradient-to-t from-background via-background/85 to-transparent pb-safe pt-6 sm:pt-8">
+            <div className="fan-hand hand-scroll relative flex items-end justify-center overflow-x-auto sm:overflow-visible no-scrollbar px-4 pt-8 pb-1 min-h-[5.5rem] sm:min-h-[6.2rem]">
               {hand.map((card, i) => {
                 const n = hand.length;
                 const mid = (n - 1) / 2;
@@ -928,6 +928,7 @@ function Game() {
                     : myTurn
                       ? "disabled"
                       : "idle";
+                const showPlay = isSelected && playable && canAct;
                 return (
                   <div
                     key={i}
@@ -937,7 +938,7 @@ function Game() {
                     )}
                     style={{
                       transform: isSelected
-                        ? `translateY(-22px) rotate(${rot * 0.3}deg) scale(1.06)`
+                        ? `translateY(-26px) rotate(${rot * 0.3}deg) scale(1.06)`
                         : `translateY(${arc}px) rotate(${rot}deg)`,
                       transformOrigin: "bottom center",
                       zIndex: isSelected ? 50 : 10 + i,
@@ -953,11 +954,29 @@ function Game() {
                       onClick={() => handlePlay(i)}
                       className="shrink-0 shadow-xl shadow-black/50"
                     />
+                    {showPlay && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (card.rank === "Q") {
+                            setSuitPickerIndex(i);
+                            return;
+                          }
+                          void submitPlay(i);
+                        }}
+                        disabled={busyAction === "play"}
+                        className="absolute left-1/2 -top-7 z-[60] -translate-x-1/2 whitespace-nowrap rounded-full border border-[color:var(--gold)]/60 bg-[color:var(--gold)] px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-[color:var(--primary-foreground)] shadow-lg shadow-black/60 animate-scale-in transition active:scale-95 disabled:opacity-60"
+                      >
+                        Zahraj
+                      </button>
+                    )}
                   </div>
                 );
               })}
             </div>
           </div>
+
         </main>
 
         <ChatPanel messages={messages} session={session} />
