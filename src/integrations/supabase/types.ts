@@ -222,6 +222,7 @@ export type Database = {
           last_seen_at: string
           nickname: string
           room_id: string
+          user_id: string | null
           seat: number
         }
         Insert: {
@@ -235,6 +236,7 @@ export type Database = {
           last_seen_at?: string
           nickname: string
           room_id: string
+          user_id?: string | null
           seat: number
         }
         Update: {
@@ -248,6 +250,7 @@ export type Database = {
           last_seen_at?: string
           nickname?: string
           room_id?: string
+          user_id?: string | null
           seat?: number
         }
         Relationships: [
@@ -259,6 +262,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      profiles: {
+        Row: {
+          auth_provider: string
+          avatar_path: string | null
+          avatar_url: string | null
+          created_at: string
+          id: string
+          internal_auth_email: string | null
+          login_slug: string
+          nick: string
+          recovery_email: string | null
+          updated_at: string
+        }
+        Insert: {
+          auth_provider?: string
+          avatar_path?: string | null
+          avatar_url?: string | null
+          created_at?: string
+          id: string
+          internal_auth_email?: string | null
+          login_slug: string
+          nick: string
+          recovery_email?: string | null
+          updated_at?: string
+        }
+        Update: {
+          auth_provider?: string
+          avatar_path?: string | null
+          avatar_url?: string | null
+          created_at?: string
+          id?: string
+          internal_auth_email?: string | null
+          login_slug?: string
+          nick?: string
+          recovery_email?: string | null
+          updated_at?: string
+        }
+        Relationships: []
       }
       room_events: {
         Row: {

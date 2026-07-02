@@ -12,6 +12,9 @@ import { Sparkles, Dice5, Dices, ArrowRight, Loader2, LogOut, LogIn, Check, Penc
 import { Tooltip, TooltipTrigger, TooltipContent, TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { createRoom, joinRoom } from "@/lib/rooms.functions";
+import { createQuickAccount, getMyProfile, resolveNickLogin, reserveSocialNick } from "@/lib/accounts.functions";
+import { supabase } from "@/integrations/supabase/client";
+import { getSupabaseAccessToken } from "@/lib/account-session";
 import {
   saveSession,
   saveProfile,
@@ -83,9 +86,21 @@ function Lobby() {
   const [submitting, setSubmitting] = useState<"create" | "join" | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [hasSavedProfile, setHasSavedProfile] = useState(false);
+  const [accountOpen, setAccountOpen] = useState(false);
+  const [accountMode, setAccountMode] = useState<"login" | "signup">("login");
+  const [accountNick, setAccountNick] = useState("");
+  const [accountPassword, setAccountPassword] = useState("");
+  const [recoveryEmail, setRecoveryEmail] = useState("");
+  const [accountSubmitting, setAccountSubmitting] = useState(false);
+  const [authProfile, setAuthProfile] = useState<{ id: string; nick: string } | null>(null);
+  const [socialNeedsNick, setSocialNeedsNick] = useState(false);
   const navigate = useNavigate();
   const callCreate = useServerFn(createRoom);
   const callJoin = useServerFn(joinRoom);
+  const callCreateAccount = useServerFn(createQuickAccount);
+  const callResolveLogin = useServerFn(resolveNickLogin);
+  const callGetMyProfile = useServerFn(getMyProfile);
+  const callReserveSocialNick = useServerFn(reserveSocialNick);
   useReconnect({
     showMissingError: false,
     showExpiredError: false,
@@ -96,6 +111,23 @@ function Lobby() {
   }, [initialCode]);
 
   useEffect(() => {
+    const loadAuthProfile = async () => {
+      const accessToken = await getSupabaseAccessToken();
+      const profile = await callGetMyProfile({ data: { accessToken } });
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (profile?.nick) {
+        setAuthProfile({ id: profile.id, nick: profile.nick });
+        setNick(profile.nick);
+        setHasSavedProfile(true);
+        setSocialNeedsNick(false);
+      } else if (sessionData.session?.user) {
+        setSocialNeedsNick(true);
+        setAccountMode("signup");
+        setAccountOpen(true);
+      }
+    };
+    loadAuthProfile().catch(() => undefined);
+
     const profile = loadProfile();
     if (!profile) return;
     setHasSavedProfile(true);
@@ -111,7 +143,7 @@ function Lobby() {
   const joinIntent = code.length > 0;
 
   const submit = async (mode: "create" | "join") => {
-    const nickname = nick.trim();
+    const nickname = (authProfile?.nick ?? nick).trim();
     if (nickname.length < 2) {
       toast.error("Zadej přezdívku");
       return;
@@ -122,10 +154,11 @@ function Lobby() {
     }
     setSubmitting(mode);
     try {
+      const accessToken = await getSupabaseAccessToken();
       const result =
         mode === "create"
-          ? await callCreate({ data: { nickname, avatar: portraitId } })
-          : await callJoin({ data: { code, nickname, avatar: portraitId } });
+          ? await callCreate({ data: { nickname, avatar: portraitId, accessToken } })
+          : await callJoin({ data: { code, nickname, avatar: portraitId, accessToken } });
       saveSession({
         roomCode: result.roomCode,
         roomId: result.roomId,
@@ -151,7 +184,51 @@ function Lobby() {
     saveProfile({ nickname: trimmed, avatar: portraitId });
   }, [nick, portraitId]);
 
-  const handleLogout = () => {
+  const handleAccountSubmit = async () => {
+    const nextNick = accountNick.trim();
+    if (nextNick.length < 2 || (!socialNeedsNick && accountPassword.length < 6)) {
+      toast.error(socialNeedsNick ? "Zadej nick" : "Zadej nick a heslo alespoň 6 znaků");
+      return;
+    }
+    setAccountSubmitting(true);
+    try {
+      if (socialNeedsNick) {
+        const accessToken = await getSupabaseAccessToken();
+        await callReserveSocialNick({ data: { accessToken, nick: nextNick, provider: "google" } });
+      } else {
+        const authEmail = accountMode === "signup"
+          ? (await callCreateAccount({ data: { nick: nextNick, password: accountPassword, recoveryEmail } })).authEmail
+          : (await callResolveLogin({ data: { nick: nextNick } })).authEmail;
+        const { error } = await supabase.auth.signInWithPassword({ email: authEmail, password: accountPassword });
+        if (error) throw new Error("Nick nebo heslo nesedí.");
+      }
+      const accessToken = await getSupabaseAccessToken();
+      const profile = await callGetMyProfile({ data: { accessToken } });
+      if (profile?.nick) {
+        setAuthProfile({ id: profile.id, nick: profile.nick });
+        setNick(profile.nick);
+        saveProfile({ nickname: profile.nick, avatar: portraitId });
+        setHasSavedProfile(true);
+        setSocialNeedsNick(false);
+      }
+      setAccountOpen(false);
+      toast.success(accountMode === "signup" ? "Nick je zabraný" : "Jsi přihlášený");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message.replace(/^Error:\s*/i, "") : "Přihlášení se nepovedlo");
+    } finally {
+      setAccountSubmitting(false);
+    }
+  };
+
+  const handleGoogleLogin = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: "google" });
+    if (error) toast.error("Google přihlášení není nakonfigurované. TODO: zapnout Google provider v Supabase.");
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setAuthProfile(null);
+    setSocialNeedsNick(false);
     clearSession();
     clearProfile();
     setHasSavedProfile(false);
@@ -204,37 +281,47 @@ function Lobby() {
 
             <div className="min-w-0 flex-1">
               <label className="mb-1.5 block text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
-                Tvoje přezdívka
+                {authProfile ? "Zabraný nick" : "Tvoje přezdívka"}
               </label>
               <div className="flex gap-2">
                 <input
-                  value={nick}
+                  value={authProfile?.nick ?? nick}
                   onChange={(e) => setNick(e.target.value)}
+                  disabled={Boolean(authProfile)}
                   maxLength={16}
                   placeholder="Tvoje jméno"
-                  className="control-pill w-full px-3 py-2.5 text-base outline-none transition focus:border-[color:var(--gold)]/50"
+                  className="control-pill w-full px-3 py-2.5 text-base outline-none transition focus:border-[color:var(--gold)]/50 disabled:cursor-not-allowed disabled:opacity-70"
                 />
-                <TooltipProvider delayDuration={200}>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button
-                        type="button"
-                        onClick={() => setNick(randomName(nick.trim()))}
-                        className="shrink-0 flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 text-muted-foreground transition hover:text-[color:var(--gold)] hover:border-[color:var(--gold)]/50 active:scale-95"
-                        aria-label="Náhodná přezdívka"
-                      >
-                        <Dices className="h-5 w-5" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent side="top">
-                      <p>Náhodná přezdívka</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                {!authProfile && (
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <button
+                          type="button"
+                          onClick={() => setNick(randomName(nick.trim()))}
+                          className="shrink-0 flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 text-muted-foreground transition hover:text-[color:var(--gold)] hover:border-[color:var(--gold)]/50 active:scale-95"
+                          aria-label="Náhodná přezdívka"
+                        >
+                          <Dices className="h-5 w-5" />
+                        </button>
+                      </TooltipTrigger>
+                      <TooltipContent side="top">
+                        <p>Náhodná přezdívka</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
               </div>
             </div>
           </div>
         </RoomPanel>
+
+        <div className="mb-3 grid gap-2">
+          <RoomButton variant="secondary" size="md" block onClick={() => setAccountOpen(true)} icon={<LogIn className="h-4 w-4" />}>
+            Zabrat nick / přihlásit se
+          </RoomButton>
+          <p className="text-center text-[11px] text-muted-foreground">Hrát jako host zůstává hlavní cesta — účet je volitelný.</p>
+        </div>
 
         {/* New Game */}
         <RoomButton
@@ -304,11 +391,41 @@ function Lobby() {
               className="inline-flex items-center gap-1.5 rounded-full border border-white/8 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.22em] text-muted-foreground transition hover:border-[color:var(--gold)]/40 hover:text-[color:var(--gold)]"
             >
               <LogOut className="h-3 w-3" />
-              Odhlásit
+              {authProfile ? "Odhlásit účet" : "Zapomenout hosta"}
             </button>
           </div>
         )}
       </main>
+
+      <Dialog open={accountOpen} onOpenChange={setAccountOpen}>
+        <DialogContent className="max-w-sm border-white/10 bg-[color:var(--card)]">
+          <DialogHeader>
+            <DialogTitle className="font-display text-lg">Zabrat nick / přihlásit se</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 pt-2">
+            <p className="text-sm text-muted-foreground">Účet je volitelný. Hodí se jen pokud si chcete zabrat svůj nick, později nahrát vlastní avatar a ukládat statistiky.</p>
+            {!socialNeedsNick && (
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setAccountMode("login")} className={cn("control-pill flex-1 px-3 py-2 text-sm", accountMode === "login" && "border-[color:var(--gold)]/60")}>Přihlásit</button>
+                <button type="button" onClick={() => setAccountMode("signup")} className={cn("control-pill flex-1 px-3 py-2 text-sm", accountMode === "signup" && "border-[color:var(--gold)]/60")}>Zabrat nick</button>
+              </div>
+            )}
+            {socialNeedsNick && <p className="text-sm text-[color:var(--gold)]">Po Google přihlášení si vyber unikátní herní nick.</p>}
+            <input value={accountNick} onChange={(e) => setAccountNick(e.target.value)} maxLength={24} placeholder="Nick" className="control-pill w-full px-3 py-2 outline-none" />
+            {!socialNeedsNick && <input value={accountPassword} onChange={(e) => setAccountPassword(e.target.value)} type="password" placeholder="Heslo" className="control-pill w-full px-3 py-2 outline-none" />}
+            {!socialNeedsNick && accountMode === "signup" && (
+              <div className="space-y-1">
+                <input value={recoveryEmail} onChange={(e) => setRecoveryEmail(e.target.value)} type="email" placeholder="E-mail pro obnovu, nepovinné" className="control-pill w-full px-3 py-2 outline-none" />
+                <p className="text-[11px] text-muted-foreground">E-mail je nepovinný. Hodí se pro obnovu hesla. Bez e-mailu účet funguje, ale při zapomenutí hesla nemusí jít obnovit.</p>
+              </div>
+            )}
+            <RoomButton block onClick={handleAccountSubmit} loading={accountSubmitting} disabled={accountSubmitting}>
+              {socialNeedsNick || accountMode === "signup" ? "Zabrat nick" : "Přihlásit se"}
+            </RoomButton>
+            <button type="button" onClick={handleGoogleLogin} className="w-full text-xs text-muted-foreground underline underline-offset-4">Přihlásit přes Google (pokud je provider nakonfigurovaný)</button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Avatar picker */}
       <Dialog open={pickerOpen} onOpenChange={setPickerOpen}>
