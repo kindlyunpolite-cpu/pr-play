@@ -223,7 +223,6 @@ export type Database = {
           nickname: string
           room_id: string
           seat: number
-          token: string | null
         }
         Insert: {
           avatar?: string | null
@@ -237,7 +236,6 @@ export type Database = {
           nickname: string
           room_id: string
           seat: number
-          token?: string | null
         }
         Update: {
           avatar?: string | null
@@ -251,7 +249,6 @@ export type Database = {
           nickname?: string
           room_id?: string
           seat?: number
-          token?: string | null
         }
         Relationships: [
           {
