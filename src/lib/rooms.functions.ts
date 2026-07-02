@@ -385,7 +385,10 @@ async function initializeGame(roomId: string, players: { id: string }[], firstPl
     rematch_votes: {},
     updated_at: new Date().toISOString(),
   });
-  if (stateError) throw new Error("Failed to initialize game state");
+  if (stateError) {
+    console.error("[game] initializeGame upsert failed", stateError);
+    throw new Error(`Failed to initialize game state: ${stateError.message}`);
+  }
 }
 
 async function incrementPlayerStats(
