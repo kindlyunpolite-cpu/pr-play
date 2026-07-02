@@ -48,14 +48,12 @@ export const Route = createFileRoute("/game")({
 const FALLBACK_CARD: CardData = { suit: "hearts", rank: "10" };
 const PLAY_ANIMATION_MS = 320;
 
-function stableCardId(card: CardData) {
-  return card.id ?? `${card.rank}-${card.suit}`;
+function cardIdentity(card: CardData) {
+  return `${card.rank}-${card.suit}`;
 }
 
 function sameCard(a: CardData | null | undefined, b: CardData | null | undefined) {
-  if (!a || !b) return false;
-  if (a.id || b.id) return a.id === b.id;
-  return a.rank === b.rank && a.suit === b.suit;
+  return !!a && !!b && a.rank === b.rank && a.suit === b.suit;
 }
 const SUITS: Suit[] = ["hearts", "diamonds", "clubs", "spades"];
 const SUIT_SYMBOL: Record<Suit, string> = {
@@ -183,6 +181,7 @@ function Game() {
     id: string;
     from: DOMRect;
     to: DOMRect;
+    landed: boolean;
   } | null>(null);
   const [suppressedPlayedCard, setSuppressedPlayedCard] = useState<{
     card: CardData;
@@ -238,7 +237,7 @@ function Game() {
   const hand = session ? (gameState?.hands[session.playerId] ?? []) : [];
   const topDiscard = gameState?.discard_pile.at(-1) ?? FALLBACK_CARD;
   const visibleHand = suppressedPlayedCard
-    ? hand.filter((card) => stableCardId(card) !== suppressedPlayedCard.id)
+    ? hand.filter((card) => cardIdentity(card) !== suppressedPlayedCard.id)
     : hand;
   const visibleDiscardCards =
     playingCard &&
@@ -605,14 +604,17 @@ function Game() {
     if (!session || !gameState || !canAct || busyActionRef.current) return;
     const card = hand[cardIndex];
     if (!card) return;
-    const id = stableCardId(card);
+    const id = cardIdentity(card);
     const from = handCardRefs.current.get(id)?.getBoundingClientRect();
     const to = discardPileRef.current?.getBoundingClientRect();
     if (!from || !to) return;
     busyActionRef.current = true;
     setBusyAction("play");
-    setPlayingCard({ card, id, from, to });
+    setPlayingCard({ card, id, from, to, landed: false });
     setSuppressedPlayedCard({ card, id });
+    window.requestAnimationFrame(() => {
+      setPlayingCard((current) => (current?.id === id ? { ...current, landed: true } : current));
+    });
     const animationStartedAt = performance.now();
     let playAccepted = false;
     try {
@@ -653,7 +655,7 @@ function Game() {
   };
 
   const handlePlay = (i: number) => {
-    if (!canAct || playingCard) return;
+    if (!canAct || playingCard || suppressedPlayedCard) return;
     if (selected !== i) {
       setSelected(i);
       return;
@@ -1034,17 +1036,19 @@ function Game() {
                 {
                   left: 0,
                   top: 0,
-                  "--play-from-x": `${playingCard.from.left}px`,
-                  "--play-from-y": `${playingCard.from.top}px`,
-                  "--play-to-x": `${playingCard.to.left + (playingCard.to.width - playingCard.from.width) / 2}px`,
-                  "--play-to-y": `${playingCard.to.top + (playingCard.to.height - playingCard.from.height) / 2}px`,
+                  transform: playingCard.landed
+                    ? `translate3d(${playingCard.to.left + (playingCard.to.width - playingCard.from.width) / 2}px, ${
+                        playingCard.to.top + (playingCard.to.height - playingCard.from.height) / 2
+                      }px, 0) rotate(3deg)`
+                    : `translate3d(${playingCard.from.left}px, ${playingCard.from.top}px, 0) rotate(-2deg)`,
+                  transition: `transform ${PLAY_ANIMATION_MS}ms cubic-bezier(0.22, 1, 0.36, 1)`,
                 } as CSSProperties
               }
             >
               <PlayingCard
                 card={playingCard.card}
                 size="md"
-                className="animate-card-play-to-discard shadow-2xl shadow-black/70"
+                className="shadow-2xl shadow-black/70"
               />
             </div>
           )}
@@ -1055,7 +1059,7 @@ function Game() {
               {visibleHand.map((card, visibleIndex) => {
                 const originalIndex = hand.findIndex((handCard) => sameCard(handCard, card));
                 const i = originalIndex < 0 ? visibleIndex : originalIndex;
-                const cardId = stableCardId(card);
+                const cardId = cardIdentity(card);
                 const n = visibleHand.length;
                 const mid = (n - 1) / 2;
                 const offset = visibleIndex - mid;

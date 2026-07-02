@@ -108,8 +108,7 @@
       radial-gradient(ellipse 80% 55% at 50% 0%, oklch(0.18 0.04 175) 0%, transparent 58%),
       radial-gradient(ellipse 70% 40% at 16% 48%, oklch(0.34 0.08 42 / 0.2) 0%, transparent 62%),
       radial-gradient(ellipse 70% 42% at 84% 46%, oklch(0.46 0.16 315 / 0.14) 0%, transparent 64%),
-      radial-gradient(ellipse at bottom, oklch(0.09 0.03 160) 0%, transparent 62%),
-      var(--color-background);
+      radial-gradient(ellipse at bottom, oklch(0.09 0.03 160) 0%, transparent 62%), var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
     -webkit-font-smoothing: antialiased;
@@ -178,11 +177,7 @@
     inset: 0;
     border-radius: inherit;
     pointer-events: none;
-    background: radial-gradient(
-      ellipse 90% 70% at 50% 50%,
-      transparent 50%,
-      oklch(0 0 0 / 0.35) 100%
-    );
+    background: radial-gradient(ellipse 90% 70% at 50% 50%, transparent 50%, oklch(0 0 0 / 0.35) 100%);
   }
   .table-spotlight {
     position: absolute;
@@ -235,13 +230,7 @@
     background:
       radial-gradient(ellipse 50% 42% at 28% 45%, oklch(0.72 0.16 45 / 0.14) 0%, transparent 68%),
       radial-gradient(ellipse 48% 40% at 76% 40%, oklch(0.56 0.18 310 / 0.12) 0%, transparent 70%),
-      linear-gradient(
-        180deg,
-        oklch(0 0 0 / 0.18),
-        transparent 25%,
-        transparent 62%,
-        oklch(0 0 0 / 0.34)
-      );
+      linear-gradient(180deg, oklch(0 0 0 / 0.18), transparent 25%, transparent 62%, oklch(0 0 0 / 0.34));
   }
   .control-pill {
     border-radius: 9999px;
@@ -262,8 +251,7 @@
   }
   .card-back {
     background:
-      repeating-linear-gradient(45deg, oklch(0.52 0.17 25) 0 6px, oklch(0.42 0.15 25) 6px 12px),
-      var(--color-card-back);
+      repeating-linear-gradient(45deg, oklch(0.52 0.17 25) 0 6px, oklch(0.42 0.15 25) 6px 12px), var(--color-card-back);
     box-shadow:
       0 0 0 1.5px oklch(0.98 0.01 90 / 0.95) inset,
       0 0 0 3px oklch(0.4 0.15 25) inset,
@@ -355,7 +343,7 @@
   @keyframes card-played {
     0% {
       transform: translateY(-130px) rotate(85deg) scale(1.05);
-      opacity: 0.1;
+      opacity: .1;
     }
     60% {
       transform: translateY(2px) rotate(2deg) scale(1.02);
@@ -390,8 +378,8 @@
   /* Dealing — slides + flips in from the deck position */
   @keyframes card-deal {
     0% {
-      transform: translate3d(var(--deal-from-x, 0), var(--deal-from-y, -120px), 0)
-        rotate(var(--deal-from-rot, -25deg)) scale(0.85);
+      transform: translate3d(var(--deal-from-x, 0), var(--deal-from-y, -120px), 0) rotate(var(--deal-from-rot, -25deg))
+        scale(0.85);
       opacity: 0;
     }
     60% {
@@ -439,23 +427,6 @@
   }
   .animate-card-play {
     animation: card-play 0.22s cubic-bezier(0.4, 0, 0.2, 1) forwards;
-  }
-
-  @keyframes card-play-to-discard {
-    0% {
-      transform: translate3d(var(--play-from-x), var(--play-from-y), 0) scale(1.06) rotate(-2deg);
-      opacity: 1;
-    }
-    72% {
-      opacity: 1;
-    }
-    100% {
-      transform: translate3d(var(--play-to-x), var(--play-to-y), 0) scale(1) rotate(3deg);
-      opacity: 0.98;
-    }
-  }
-  .animate-card-play-to-discard {
-    animation: card-play-to-discard 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
   /* Discard pile bump — quick squash when a new card lands */
@@ -614,7 +585,6 @@
     .animate-card-deal,
     .animate-card-draw,
     .animate-card-play,
-    .animate-card-play-to-discard,
     .animate-card-played,
     .animate-card-tap,
     .animate-pile-bump,
