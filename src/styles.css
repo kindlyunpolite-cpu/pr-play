@@ -410,6 +410,7 @@
     .animate-winner::after,
     .animate-card-active,
     .animate-turn { animation: none !important; }
+    .animate-turn-arrive { animation: none !important; }
     .card-playable { animation: none !important; }
     .card-face { transition: none !important; }
     .card-face:hover { transform: none !important; }
