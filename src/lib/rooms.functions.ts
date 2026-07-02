@@ -23,7 +23,14 @@ function genToken() {
 const SUITS: Suit[] = ["hearts", "diamonds", "clubs", "spades"];
 const RANKS: Rank[] = ["7", "8", "9", "10", "J", "Q", "K", "A"];
 const DEAL_COUNT = 4;
-const TURN_DURATION_MS = 30_000;
+export const TURN_DURATION_MS = 30_000;
+
+export function createTurnClock(now = new Date()) {
+  return {
+    turn_started_at: now.toISOString(),
+    turn_deadline_at: new Date(now.getTime() + TURN_DURATION_MS).toISOString(),
+  };
+}
 
 const SUIT_NAMES: Record<Suit, string> = {
   hearts: "Hearts",
@@ -318,6 +325,8 @@ async function initializeGame(roomId: string, players: { id: string }[], firstPl
   const firstDiscard = deck.shift();
   if (!firstDiscard) throw new Error("Could not initialize deck");
 
+  const turnClock = createTurnClock();
+
   const { error: stateError } = await supabaseAdmin.from("game_states").upsert({
     room_id: roomId,
     deck: deck as unknown as Json,
@@ -329,6 +338,7 @@ async function initializeGame(roomId: string, players: { id: string }[], firstPl
     status: "playing",
     pending_draw: 0,
     turn_version: 0,
+    ...turnClock,
 
     last_action_id: null,
     last_action_player_id: null,
@@ -882,7 +892,7 @@ export const applyTurnTimeout = createServerFn({ method: "POST" })
     if (deadline > now) return { ok: true, notExpired: true };
 
     const timeoutActionId = `timeout:${gameState.turn_version}:${gameState.current_player_id}`;
-    const signature = "timeout";
+    const signature = `timeout:${gameState.turn_version}:${gameState.current_player_id}`;
     const duplicate = resolveDuplicateAction(
       gameState.processed_actions,
       timeoutActionId,
@@ -896,7 +906,8 @@ export const applyTurnTimeout = createServerFn({ method: "POST" })
     const activePlayerId = gameState.current_player_id;
     const activePlayer = players.find((p) => p.id === activePlayerId);
     const activeHand = [...(hands[activePlayerId] ?? [])];
-    const draw = takeDrawableCards(gameState.deck, gameState.discard_pile, 1);
+    const drawCount = gameState.pending_draw > 0 ? gameState.pending_draw : 1;
+    const draw = takeDrawableCards(gameState.deck, gameState.discard_pile, drawCount);
     activeHand.push(...draw.cards);
     hands[activePlayerId] = activeHand;
 
@@ -905,7 +916,12 @@ export const applyTurnTimeout = createServerFn({ method: "POST" })
       [timeoutActionId]: { playerId: activePlayerId, signature },
     };
     const nextTurnPlayerId = nextPlayerId(players, activePlayerId, gameState.direction);
-    const updatedAt = now.toISOString();
+    const turnClock = createTurnClock(now);
+    const updatedAt = turnClock.turn_started_at;
+    const visibleSignature = createVisibleActionSignature({
+      type: "draw",
+      drawCount: draw.cards.length,
+    });
 
     const { data: updated, error } = await supabaseAdmin
       .from("game_states")
@@ -915,11 +931,12 @@ export const applyTurnTimeout = createServerFn({ method: "POST" })
         hands: hands as unknown as Json,
         current_player_id: nextTurnPlayerId,
         active_suit: gameState.active_suit,
-        pending_draw: gameState.pending_draw,
+        pending_draw: 0,
         turn_version: gameState.turn_version + 1,
         last_action_id: timeoutActionId,
         last_action_player_id: activePlayerId,
-        last_action_signature: signature,
+        last_action_signature: visibleSignature,
+        ...turnClock,
         processed_actions: processedActions as unknown as Json,
         updated_at: updatedAt,
       })
@@ -1004,6 +1021,7 @@ export const drawCard = createServerFn({ method: "POST" })
       type: "draw",
       drawCount: draw.cards.length,
     });
+    const turnClock = createTurnClock();
 
     const { data: updated, error } = await supabaseAdmin
       .from("game_states")
@@ -1018,8 +1036,9 @@ export const drawCard = createServerFn({ method: "POST" })
         last_action_id: data.actionId,
         last_action_player_id: player.id,
         last_action_signature: visibleSignature,
+        ...turnClock,
         processed_actions: processedActions as unknown as Json,
-        updated_at: new Date().toISOString(),
+        updated_at: turnClock.turn_started_at,
       })
       .eq("room_id", player.room_id)
       .eq("current_player_id", player.id)
@@ -1130,7 +1149,9 @@ export const playCard = createServerFn({ method: "POST" })
       ...gameState.processed_actions,
       [data.actionId]: { playerId: player.id, signature },
     };
-    const finishedAt = new Date().toISOString();
+    const actionAt = new Date();
+    const finishedAt = actionAt.toISOString();
+    const turnClock = finished ? {} : createTurnClock(actionAt);
     const visibleSignature = createVisibleActionSignature({
       type: data.chosenSuit ? "suit-change" : "play",
       card,
@@ -1154,6 +1175,7 @@ export const playCard = createServerFn({ method: "POST" })
         last_action_id: data.actionId,
         last_action_player_id: player.id,
         last_action_signature: visibleSignature,
+        ...turnClock,
         processed_actions: processedActions as unknown as Json,
         updated_at: finishedAt,
       })
